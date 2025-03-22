@@ -47,6 +47,17 @@ public:
 
 
 
+    /* ---   Mouse To Center   --- */
+
+    // Флаг контроля Мыши в центре Экрана
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings System|Saving",
+        meta = (DisplayName = "Hold Mouse in Center?"))
+    bool bMouseToCenter = true;
+    //-------------------------------------------
+
+
+
 private:
 
     /* ---   Mouse To Center   --- */
@@ -62,9 +73,6 @@ private:
 
     // Текущий центр экрана по оси Y
     int32 SizeCenterY = 0;
-
-    // Флаг контроля Мыши в центре Экрана
-    bool bMouseToCenter = true;
 
     //
 
