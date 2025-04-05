@@ -15,6 +15,9 @@ public class FPS : ModuleRules
             "Engine",
             "InputCore",
 
+            // Core:
+            "PhysicsCore",
+
             // Online:
             "OnlineSubsystem",
             "OnlineSubsystemUtils",
