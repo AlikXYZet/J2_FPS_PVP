@@ -12,6 +12,18 @@
 
 
 
+/* ---   Pre-declaration of classes   --- */
+
+// UE:
+class USphereComponent;
+class UProjectileMovementComponent;
+
+// Plugins:
+class UNiagaraComponent;
+//--------------------------------------------------------------------------------------
+
+
+
 UCLASS()
 class FPS_API AProjectile : public AActor
 {
@@ -27,6 +39,42 @@ public:
 
 
 
+    /* ---   Components   --- */
+
+    // Сферическая коллизии Снаряда
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    USphereComponent* SphereComponent = nullptr;
+
+    // Компонент статического Меша визуализации Снаряда
+    // @note    Эффективнее будет заменить на Particle или Niagara System
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UStaticMeshComponent* ProjectileMesh = nullptr;
+
+    // Компонент Партикла визуализации Снаряда
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UParticleSystemComponent* FXComponent = nullptr;
+
+    // Компонент Партикла визуализации Снаряда
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UNiagaraComponent* NiagaraFXComponent = nullptr;
+
+    // Компонент перемещения Снаряда
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UProjectileMovementComponent* ProjectileMovement = nullptr;
+    //-------------------------------------------
+
+
+
 protected:
 
     /* ---   Base   --- */
@@ -38,4 +86,12 @@ protected:
 
 
 public:
+
+
+private:
+
+    /* ---   Base   --- */
+
+    void Clearing();
+    //-------------------------------------------
 };

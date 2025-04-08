@@ -21,6 +21,10 @@ public class FPS : ModuleRules
             // Online:
             "OnlineSubsystem",
             "OnlineSubsystemUtils",
+
+            // Niagara
+            "Niagara",
+            "NiagaraCore"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });

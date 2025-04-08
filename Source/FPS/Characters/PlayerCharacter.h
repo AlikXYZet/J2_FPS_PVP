@@ -12,14 +12,6 @@
 
 
 
-/* ---   Delegates   --- */
-
-// Делегат: При Новом режиме перемещения
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNewAimingState, bool, Aiming);
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Pre-declaration of classes   --- */
 
 // UE:
@@ -39,15 +31,6 @@ class FPS_API APlayerCharacter : public ACharacter
 
 public:
 
-    /* ---   Delegates   --- */
-
-    // Делегат: При Новом режиме перемещения
-    UPROPERTY(BlueprintAssignable)
-    FOnNewAimingState OnNewAimingState;
-    //-------------------------------------------
-
-
-
     /* ---   Constructors   --- */
 
     // Sets default values for this character's properties
@@ -58,17 +41,23 @@ public:
 
     /* ---   Components   --- */
 
-    // Компонент Слотов Оружия и взаимодействия с ним
+    /* Компонент дочернего Актора Оружия */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UChildActorComponent* ChildWeaponActor = nullptr;
+
+    // Камера от первого лица
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UCameraComponent* FirstPersonCamera = nullptr;
+
+    // Компонент Слотов Оружия и взаимодействия с самим Оружием
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
     UWeaponSlotsComponent* WeaponSlotsComponent = nullptr;
-
-    // Компонент дочернего Актора Оружия
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        Category = "Components",
-        meta = (AllowPrivateAccess = "true"))
-    UChildActorComponent* ChildWeaponActor;
     //-------------------------------------------
 
 
@@ -116,15 +105,6 @@ public:
 
     /** Ввод передвижения: вправо-влево */
     void MoveRight(float Value);
-
-    /** Ввод стрельбы */
-    void OnFire();
-
-    /** Начать Прицеливание */
-    void Aiming();
-
-    /** Прекратить Прицеливание */
-    void StopAiming();
     //-------------------------------------------
 
 

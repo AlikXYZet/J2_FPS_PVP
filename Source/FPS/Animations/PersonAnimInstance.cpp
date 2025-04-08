@@ -56,7 +56,6 @@ void UPersonAnimInstance::SetTimeForUpdateAnimation(const float iTime)
 void UPersonAnimInstance::BaseInit()
 {
     // PlayerOwner
-
     PlayerOwner = Cast<APlayerCharacter>(TryGetPawnOwner());
 
     if (!PlayerOwner)

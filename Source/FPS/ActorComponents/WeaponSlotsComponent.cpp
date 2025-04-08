@@ -3,6 +3,9 @@
 // Base:
 #include "WeaponSlotsComponent.h"
 
+// UE:
+#include "Engine/DataTable.h"
+
 // Interaction:
 #include "FPS/Combat/WeaponFrame.h"
 #include "FPS/Combat/Projectile.h"
@@ -173,7 +176,7 @@ void UWeaponSlotsComponent::WeaponSlotsComponentInit()
 
         if (CurrentWeaponFrame)
         {
-            CurrentWeaponFrame->SetCurrentWeaponSlotsComponent(this);
+            CurrentWeaponFrame->SetPtrToPtrCurrentWeaponSlots(&CurentSlot);
             CurrentWeaponFrame->UpdateWeaponByName(CurentSlot->WeaponType);
         }
         else

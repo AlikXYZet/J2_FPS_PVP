@@ -6,8 +6,8 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 
-// UE:
-#include "Engine/DataTable.h"
+// Structs:
+#include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
 
 // Generated:
 #include "WeaponSlotsComponent.generated.h"
@@ -17,46 +17,12 @@
 
 /* ---   Pre-declaration of classes   --- */
 
+// UE:
+class UDataTable;
+
 // Interaction:
 class AWeaponFrame;
 class AProjectile;
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Structs   --- */
-
-/* Структура данных слота:
-Оружие и его расходники
-*/
-USTRUCT(BlueprintType)
-struct FWeaponSlotData
-{
-    GENERATED_BODY()
-
-    /* ---   Slot Data   --- */
-
-    // Тип Оружия, занимаемый данный Слот
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Slot Data")
-    FName WeaponType = "NONE";
-
-    // Количество всех Патронов без учёта подготовленных
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Slot Data")
-    int32 NumAllCartridge = 0;
-
-    // Количество подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Slot Data")
-    int32 NumPreparedCartridges = 0;
-
-    // Заряжено ли оружие?
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Slot Data")
-    bool bIsWeaponLoaded = false;
-    //-------------------------------------------
-};
 //--------------------------------------------------------------------------------------
 
 
@@ -104,7 +70,7 @@ public:
 
     /* ---   Weapon Slots | Data   --- */
 
-    // Таблица данных местоположения фигур
+    // Таблица данных Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Slots | Data",
         meta = (RequiredAssetDataTags = "RowStructure=WeaponData"))
@@ -115,7 +81,7 @@ public:
 
     /* ---   Weapon Slots | Control   --- */
 
-    // Массив со слотами (данными) оружия
+    // Массив со слотами (данными) Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Slots | Control")
     TArray<FWeaponSlotData> WeaponSlots = { FWeaponSlotData() };
@@ -173,7 +139,7 @@ private:
 
     /* ---   Weapon Slots | Control   --- */
 
-    // Массив со слотами (данными) оружия
+    // Указатель на текущий Каркас Оружия
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Slots | Check")
     AWeaponFrame* CurrentWeaponFrame = nullptr;

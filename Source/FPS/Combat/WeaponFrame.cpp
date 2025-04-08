@@ -8,7 +8,6 @@
 
 // Interaction:
 #include "Projectile.h"
-#include "FPS/ActorComponents/WeaponSlotsComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
 //--------------------------------------------------------------------------------------
 
@@ -33,11 +32,15 @@ AWeaponFrame::AWeaponFrame()
     WeaponSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Skeletal Mesh"));
     WeaponSkeletalMesh->SetupAttachment(RootComponent);
     WeaponSkeletalMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+    WeaponSkeletalMesh->SetCollisionProfileName(TEXT("NoCollision"));
+    WeaponSkeletalMesh->SetGenerateOverlapEvents(false);
 
     // Компонент статического Меша Оружия
     WeaponStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon Static Mesh"));
     WeaponStaticMesh->SetupAttachment(RootComponent);
     WeaponStaticMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+    WeaponStaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+    WeaponStaticMesh->SetGenerateOverlapEvents(false);
 
     // Направляющая Выстрела (красный)
     ShootGuidance = CreateDefaultSubobject<UArrowComponent>(TEXT("Shoot Guidance"));
@@ -80,11 +83,6 @@ void AWeaponFrame::BeginPlay()
 
     WeaponFrameInit();
     SetupPlayerInputs();
-
-    if (ParentPlayerCharacter)
-    {
-        StopAiming();
-    }
 }
 
 void AWeaponFrame::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -97,14 +95,14 @@ void AWeaponFrame::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 
 
-/* ---   Weapon | Editor   --- */
+/* ---   Weapon Frame | Editor   --- */
 
 void AWeaponFrame::LoadDataFromWeaponsDataTable()
 {
     if (SelectedWeapon != "NONE")
     {
         // Получение
-        SelectedWeaponData = *WeaponsDataTable->FindRow<FWeaponData>(SelectedWeapon, "LoadDataFromWeaponsDataTable()");
+        SelectedWeaponData = WeaponsDataTable->FindRow<FWeaponData>(SelectedWeapon, "LoadDataFromWeaponsDataTable()");
 
         UpdateWeaponOnSelectedData();
     }
@@ -117,33 +115,33 @@ void AWeaponFrame::SaveCurrentDataInWeaponsDataTable()
         // Меш:
         if (WeaponSkeletalMesh->SkeletalMesh)
         {
-            SelectedWeaponData.SkeletalMesh = WeaponSkeletalMesh->SkeletalMesh;
-            SelectedWeaponData.MeshTransform = WeaponSkeletalMesh->GetRelativeTransform();
+            SelectedWeaponData->SkeletalMesh = WeaponSkeletalMesh->SkeletalMesh;
+            SelectedWeaponData->MeshTransform = WeaponSkeletalMesh->GetRelativeTransform();
         }
         else if (WeaponStaticMesh->GetStaticMesh())
         {
-            SelectedWeaponData.StaticMesh = WeaponStaticMesh->GetStaticMesh();
-            SelectedWeaponData.MeshTransform = WeaponStaticMesh->GetRelativeTransform();
+            SelectedWeaponData->StaticMesh = WeaponStaticMesh->GetStaticMesh();
+            SelectedWeaponData->MeshTransform = WeaponStaticMesh->GetRelativeTransform();
         }
 
         // Направляющие:
-        SelectedWeaponData.ShootGuidanceTransform = ShootGuidance->GetRelativeTransform();
-        SelectedWeaponData.CaseDropGuidanceTransform = CaseDropGuidance->GetRelativeTransform();
-        SelectedWeaponData.StorageDropGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
+        SelectedWeaponData->ShootGuidanceTransform = ShootGuidance->GetRelativeTransform();
+        SelectedWeaponData->CaseDropGuidanceTransform = CaseDropGuidance->GetRelativeTransform();
+        SelectedWeaponData->StorageDropGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
 
         // Сохранение
-        WeaponsDataTable->AddRow(SelectedWeapon, SelectedWeaponData);
+        WeaponsDataTable->AddRow(SelectedWeapon, *SelectedWeaponData);
     }
 }
 //--------------------------------------------------------------------------------------
 
 
 
-/* ---   Weapon | Data   --- */
+/* ---   Weapon Frame | Data   --- */
 
-void AWeaponFrame::SetCurrentWeaponSlotsComponent(UWeaponSlotsComponent* iNewComponent)
+void AWeaponFrame::SetPtrToPtrCurrentWeaponSlots(FWeaponSlotData** iPtrToPtr)
 {
-    CurrentWeaponSlotsComponent = iNewComponent;
+    PtrToPtrCurrentWeaponSlots = iPtrToPtr;
 }
 
 void AWeaponFrame::UpdateWeaponByName(const FName& iName)
@@ -156,7 +154,7 @@ void AWeaponFrame::UpdateWeaponByName(const FName& iName)
 
         if (lRow)
         {
-            SelectedWeaponData = *lRow;
+            SelectedWeaponData = lRow;
 
             UpdateWeaponOnSelectedData();
         }
@@ -176,71 +174,66 @@ TArray<FName> AWeaponFrame::GetRowNamesFromWeaponsDataTable() const
 void AWeaponFrame::UpdateWeaponOnSelectedData()
 {
     // Меш:
-    if (SelectedWeaponData.SkeletalMesh)
+    if (SelectedWeaponData->SkeletalMesh)
     {
-        WeaponSkeletalMesh->SetSkeletalMesh(SelectedWeaponData.SkeletalMesh);
-        WeaponSkeletalMesh->SetRelativeTransform(SelectedWeaponData.MeshTransform);
+        WeaponSkeletalMesh->SetSkeletalMesh(SelectedWeaponData->SkeletalMesh);
+        WeaponSkeletalMesh->SetRelativeTransform(SelectedWeaponData->MeshTransform);
         WeaponStaticMesh->SetStaticMesh(nullptr);
     }
-    else if (SelectedWeaponData.StaticMesh)
+    else if (SelectedWeaponData->StaticMesh)
     {
-        WeaponStaticMesh->SetStaticMesh(SelectedWeaponData.StaticMesh);
-        WeaponStaticMesh->SetRelativeTransform(SelectedWeaponData.MeshTransform);
+        WeaponStaticMesh->SetStaticMesh(SelectedWeaponData->StaticMesh);
+        WeaponStaticMesh->SetRelativeTransform(SelectedWeaponData->MeshTransform);
         WeaponSkeletalMesh->SetSkeletalMesh(nullptr);
     }
 
     // Направляющие:
-    ShootGuidance->SetRelativeTransform(SelectedWeaponData.ShootGuidanceTransform);
-    CaseDropGuidance->SetRelativeTransform(SelectedWeaponData.CaseDropGuidanceTransform);
-    StorageDropGuidance->SetRelativeTransform(SelectedWeaponData.StorageDropGuidanceTransform);
+    ShootGuidance->SetRelativeTransform(SelectedWeaponData->ShootGuidanceTransform);
+    CaseDropGuidance->SetRelativeTransform(SelectedWeaponData->CaseDropGuidanceTransform);
+    StorageDropGuidance->SetRelativeTransform(SelectedWeaponData->StorageDropGuidanceTransform);
 }
 //--------------------------------------------------------------------------------------
 
 
 
-/* ---   Weapon | Control   --- */
+/* ---   Weapon Frame | Control   --- */
 
 void AWeaponFrame::Fire()
 {
-    if (CurrentWeaponSlotsComponent)
+    if (PtrToPtrCurrentWeaponSlots)
     {
-        FWeaponSlotData* lSlotData = &CurrentWeaponSlotsComponent->GetCurrentSlotData();
-
-        if (lSlotData)
+        if ((*PtrToPtrCurrentWeaponSlots)->bIsWeaponLoaded
+            && (*PtrToPtrCurrentWeaponSlots)->NumPreparedCartridges)
         {
-            if (lSlotData->bIsWeaponLoaded
-                && lSlotData->NumPreparedCartridges)
+            if (SelectedWeaponData->ProjectileType)
             {
-
+                GetWorld()->SpawnActor<AProjectile>(
+                    SelectedWeaponData->ProjectileType.Get(),
+                    ShootGuidance->GetComponentTransform());
             }
-            else if (lSlotData->NumAllCartridge)
-            {
-                Reload();
-            }
+        }
+        else if ((*PtrToPtrCurrentWeaponSlots)->NumAllCartridge)
+        {
+            Reload();
         }
     }
 }
 
 void AWeaponFrame::Reload()
 {
-    if (CurrentWeaponSlotsComponent)
+    if (PtrToPtrCurrentWeaponSlots)
     {
-        FWeaponSlotData* lSlotData = &CurrentWeaponSlotsComponent->GetCurrentSlotData();
-
-        if (lSlotData)
+        if ((*PtrToPtrCurrentWeaponSlots)->NumAllCartridge)
         {
-            if (lSlotData->NumAllCartridge)
+            // Обойма не заполнена?
+            if ((*PtrToPtrCurrentWeaponSlots)->NumPreparedCartridges < SelectedWeaponData->MaxPreparedCartridges)
             {
-                // Обойма не заполнена?
-                if (lSlotData->NumPreparedCartridges < SelectedWeaponData.MaxPreparedCartridges)
-                {
 
-                }
-                // Оружие не заряжено?
-                else if (lSlotData->bIsWeaponLoaded && SelectedWeaponData.bIsLoadable)
-                {
+            }
+            // Оружие не заряжено?
+            else if ((*PtrToPtrCurrentWeaponSlots)->bIsWeaponLoaded && SelectedWeaponData->bIsLoadable)
+            {
 
-                }
             }
         }
     }
@@ -248,12 +241,12 @@ void AWeaponFrame::Reload()
 
 void AWeaponFrame::Aiming()
 {
-    PlayCharacterAnim(SelectedWeaponData.Aiming);
+    PlayCharacterAnim(SelectedWeaponData->Aiming);
 }
 
 void AWeaponFrame::StopAiming()
 {
-    PlayCharacterAnim(SelectedWeaponData.FromHip);
+    PlayCharacterAnim(SelectedWeaponData->FromHip);
 }
 
 void AWeaponFrame::WeaponFrameInit()
@@ -263,6 +256,34 @@ void AWeaponFrame::WeaponFrameInit()
     if (!ParentPlayerCharacter)
     {
         UE_LOG(LogTemp, Warning, TEXT("'%s'::WeaponFrameInit: ParentPlayerCharacter is NOT"),
+            *GetNameSafe(this));
+    }
+
+    if (WeaponsDataTable)
+    {
+        if (WeaponsDataTable->GetRowNames().IsValidIndex(0))
+        {
+            FName lFirstName = WeaponsDataTable->GetRowNames()[0];
+
+            if (lFirstName.IsValid())
+            {
+                SelectedWeaponData = WeaponsDataTable->FindRow<FWeaponData>(lFirstName, "WeaponFrameInit");
+
+                if (ParentPlayerCharacter)
+                {
+                    StopAiming();
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("'%s'::WeaponFrameInit: WeaponsDataTable WITHOUT Data"),
+                    *GetNameSafe(this));
+            }
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("'%s'::WeaponFrameInit: WeaponsDataTable is NOT"),
             *GetNameSafe(this));
     }
 }

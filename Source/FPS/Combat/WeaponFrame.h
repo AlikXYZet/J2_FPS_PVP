@@ -6,8 +6,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
-// UE:
-#include "Engine/DataTable.h"
+// Structs:
+#include "FPS/Tools/Structs/Arsenal/WeaponData.h"
+#include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
 
 // Generated:
 #include "WeaponFrame.generated.h"
@@ -18,107 +19,12 @@
 /* ---   Pre-declaration of classes   --- */
 
 // UE:
-class UDataTable;
 class UArrowComponent;
 
 // Interaction:
 class UWeaponSlotsComponent;
 class AProjectile;
 class APlayerCharacter;
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Structs   --- */
-
-/* Структура данных Оружия:
-визуализация, анимации и характеристики
-*/
-USTRUCT(BlueprintType)
-struct FWeaponData : public FTableRowBase
-{
-    GENERATED_BODY()
-
-
-    /* ---   Visualization   --- */
-
-    /* Скелетный Меш Оружия */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization",
-        meta = (EditCondition = "StaticMesh==nullptr"))
-    USkeletalMesh* SkeletalMesh = nullptr;
-
-    // Статический Меш Оружия
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization",
-        meta = (EditCondition = "SkeletalMesh==nullptr"))
-    UStaticMesh* StaticMesh = nullptr;
-
-    // Трансформация Меша Оружия
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization")
-    FTransform MeshTransform;
-
-    // Трансформация Направляющей Выстрела
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization")
-    FTransform ShootGuidanceTransform;
-
-    // Трансформация Направляющей вылета Гильзы
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization")
-    FTransform CaseDropGuidanceTransform;
-
-    // Трансформация Направляющей выпадения Накопителя
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization")
-    FTransform StorageDropGuidanceTransform;
-    //-------------------------------------------
-
-
-    /* ---   Animations   --- */
-
-    /** От Бедра */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations")
-    UAnimMontage* FromHip = nullptr;
-
-    // Прицеливание
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations")
-    UAnimMontage* Aiming = nullptr;
-
-    // Перезарядка от Бедра
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations")
-    UAnimMontage* Reload = nullptr;
-
-    // Перезарядка при Прицеливании
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations")
-    UAnimMontage* ReloadWhenAiming = nullptr;
-    //-------------------------------------------
-
-
-    /* ---   Specifications   --- */
-
-    /* Оружие заряжаемое? */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Specifications")
-    bool bIsLoadable = true;
-
-    // Максимальное Количество подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Specifications")
-    int32 MaxPreparedCartridges = 0;
-    //-------------------------------------------
-
-
-    /* ---   Constructors   --- */
-
-    FWeaponData() {};
-    //-------------------------------------------
-};
 //--------------------------------------------------------------------------------------
 
 
@@ -188,7 +94,7 @@ protected:
 
 public:
 
-    /* ---   Weapon | Editor   --- */
+    /* ---   Weapon Frame | Editor   --- */
 
     /** Выгрузить Данные для выбранного Оружия из Таблицу Данных Оружий */
     UFUNCTION(CallInEditor,
@@ -203,9 +109,9 @@ public:
 
 
 
-    /* ---   Weapon | Data   --- */
+    /* ---   Weapon Frame | Data   --- */
 
-    // Таблица данных местоположения фигур
+    /* Таблица данных местоположения фигур */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Frame | Data",
         meta = (RequiredAssetDataTags = "RowStructure=WeaponData"))
@@ -217,20 +123,13 @@ public:
         meta = (GetOptions = "GetRowNamesFromWeaponsDataTable"))
     FName SelectedWeapon = "NONE";
 
-    // Данные выбранного Оружия из Таблицы
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Frame | Data")
-    FWeaponData SelectedWeaponData;
-
     //
 
-    // Сохранить указатель на текущий Компонент оружейных Слотов
-    // @note    Организует прямую связь "Слот" <=> "Оружие"
-    UFUNCTION(BlueprintCallable,
-        Category = "Weapon Frame | Data")
-    void SetCurrentWeaponSlotsComponent(UWeaponSlotsComponent* NewComponent);
+    /** Сохранить Указатель на Указатель текущего Слота
+    * @note    Организует прямую связь "текущий Слот" <=> "Оружие" */
+    void SetPtrToPtrCurrentWeaponSlots(FWeaponSlotData** PtrToPtr);
 
-    // Обновить Оружие по его Имени
+    /** Обновить Оружие по его Имени */
     UFUNCTION(BlueprintCallable,
         Category = "Weapon Frame | Data")
     void UpdateWeaponByName(const FName& Name);
@@ -238,7 +137,7 @@ public:
 
 
 
-    /* ---   Weapon | Control   --- */
+    /* ---   Weapon Frame | Control   --- */
 
     /** Управление Оружием: Стрельба */
     void Fire();
@@ -255,14 +154,22 @@ public:
 
 
 
+    /* ---   Weapon Frame | Direction of Fire   --- */
+
+
+    //-------------------------------------------
+
+
+
 private:
 
-    /* ---   Weapon | Data   --- */
+    /* ---   Weapon Frame | Data   --- */
 
-    // Массив со слотами (данными) оружия
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Frame | Check")
-    UWeaponSlotsComponent* CurrentWeaponSlotsComponent = nullptr;
+    // Указатель на Указатель текущего слота
+    FWeaponSlotData** PtrToPtrCurrentWeaponSlots;
+
+    // Указатель на Данные выбранного Оружия из Таблицы
+    FWeaponData* SelectedWeaponData;
 
     //
 
@@ -276,7 +183,7 @@ private:
 
 
 
-    /* ---   Weapon | Control   --- */
+    /* ---   Weapon Frame | Control   --- */
 
     // Игрок-Владелец для данного Оружия
     APlayerCharacter* ParentPlayerCharacter = nullptr;
