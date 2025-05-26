@@ -6,6 +6,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+// Plugins:
+#include "NiagaraComponent.h"
+
 // Generated:
 #include "Projectile.generated.h"
 //--------------------------------------------------------------------------------------
@@ -17,9 +20,6 @@
 // UE:
 class USphereComponent;
 class UProjectileMovementComponent;
-
-// Plugins:
-class UNiagaraComponent;
 //--------------------------------------------------------------------------------------
 
 
@@ -92,6 +92,16 @@ private:
 
     /* ---   Base   --- */
 
-    void Clearing();
+    FORCEINLINE void Clearing()
+    {
+        if (ProjectileMesh && !ProjectileMesh->GetStaticMesh())
+            ProjectileMesh->DestroyComponent();
+
+        if (FXComponent && !FXComponent->Template)
+            FXComponent->DestroyComponent();
+
+        if (NiagaraFXComponent && !NiagaraFXComponent->GetAsset())
+            NiagaraFXComponent->DestroyComponent();
+    };
     //-------------------------------------------
 };

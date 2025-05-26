@@ -4,7 +4,7 @@
 #include "PickableActor.h"
 
 // Interaction:
-#include "FPS/ActorComponents/PickupComponent.h"
+#include "FPS/ActorComponents/Properties/InteractiveComponent.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -32,7 +32,7 @@ APickableActor::APickableActor()
     /* ---   Non-scene Components   --- */
 
     // Компонент Подбора данного Актора
-    PickupComponent = CreateDefaultSubobject<UPickupComponent>(TEXT("Explosive Component"));
+    InteractiveComponent = CreateDefaultSubobject<UInteractiveComponent>(TEXT("Explosive Component"));
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------

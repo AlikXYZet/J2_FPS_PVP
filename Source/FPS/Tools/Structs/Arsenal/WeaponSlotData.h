@@ -21,8 +21,9 @@ struct FWeaponSlotData
 
     // Тип Оружия, занимаемый данный Слот
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Slot Data")
-    FName WeaponType = "NONE";
+        Category = "Slot Data",
+        meta = (GetOptions = "GetAllWeaponsNames"))
+    FName WeaponType = NAME_None;
 
     // Количество всех Патронов без учёта подготовленных
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -19,7 +19,7 @@ class UCameraComponent;
 
 // Interaction:
 class UFPS_CharacterMovementComponent;
-class UWeaponSlotsComponent;
+class UWeaponControlComponent;
 //--------------------------------------------------------------------------------------
 
 
@@ -33,7 +33,7 @@ public:
 
     /* ---   Constructors   --- */
 
-    // Sets default values for this character's properties
+    // Конструктор, используемый для подмены стандартного "UCharacterMovementComponent"
     APlayerCharacter(const FObjectInitializer& ObjectInitializer);
     //-------------------------------------------
 
@@ -41,23 +41,29 @@ public:
 
     /* ---   Components   --- */
 
-    /* Компонент дочернего Актора Оружия */
+    /* Камера от Первого лица */
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
-    UChildActorComponent* ChildWeaponActor = nullptr;
+    UCameraComponent* FPCamera = nullptr;
 
-    // Камера от первого лица
+    // Меш визуализации от Первого лица
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
-    UCameraComponent* FirstPersonCamera = nullptr;
+    USkeletalMeshComponent* FPMesh = nullptr;
+
+    //-------------------------------------------
+
+
+
+    /* ---   Non-scene Components   --- */
 
     // Компонент Слотов Оружия и взаимодействия с самим Оружием
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
-    UWeaponSlotsComponent* WeaponSlotsComponent = nullptr;
+    UWeaponControlComponent* WeaponControl = nullptr;
     //-------------------------------------------
 
 
@@ -84,13 +90,13 @@ public:
 
 
 
-    /* ---   Base   --- */
+    /* ---   Net   --- */
 
-    // Кость, после которой прячем отображение в Меше
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Player Character|Components",
-        meta = (GetOptions = "GetBoneNamesInMesh"))
-    FName HiddenBone = "NONE";
+    /** Метод, позволяющий субъекту реплицировать подобъекты в своем Актор-канале */
+    virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
+    /** Используется для регистрации реплицируемых Переменных и Компонентов */
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     //-------------------------------------------
 
 
@@ -99,13 +105,36 @@ public:
 
     // Called to bind functionality to input
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-    /** Ввод передвижения: вперёд-назад */
-    void MoveForward(float Value);
-
-    /** Ввод передвижения: вправо-влево */
-    void MoveRight(float Value);
     //-------------------------------------------
+
+
+
+    /* ---   Movement Speed   --- */
+
+    /* Скорость Ходьбы (лёгкого бега) */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Player Character|Movement Speed")
+    float WalkSpeed = 600;
+
+    // Скорость Спринта
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Player Character|Movement Speed")
+    float SprintSpeed = 800;
+
+    //
+
+    /** Изменить значение максимальной скорости */
+    void SetMaxWalkSpeed(const float& Value);
+
+    /** Обновить значение максимальной скорости через Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_SetMaxWalkSpeed(const float& Value);
+
+    /** Обновить значение максимальной скорости у Всех, кроме владельца */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetMaxWalkSpeed(const float& Value);
+    //-------------------------------------------
+
 
 
 private:
@@ -114,13 +143,32 @@ private:
 
     /** Очистка от неиспользуемых компонентов */
     void Cleaning();
+    //-------------------------------------------
 
-    /** Получение наименований Сокетов текущего Меша */
-    UFUNCTION()
-    TArray<FName> GetBoneSocketsInMesh() const;
 
-    /** Получение наименований Костей текущего Меша */
-    UFUNCTION()
-    TArray<FName> GetBoneNamesInMesh() const;
+
+    /* ---   Inputs   --- */
+
+    /** Ввод передвижения: вперёд-назад */
+    void MoveForward(float Value);
+
+    /** Ввод передвижения: вправо-влево */
+    void MoveRight(float Value);
+
+    /** Скорость передвижения: Спринт */
+    void Sprint();
+
+    /** Скорость передвижения: Ходьба (лёгкий бег) */
+    void StopSprint();
+    //-------------------------------------------
+
+
+
+    /* ---   Movement Speed   --- */
+
+    /* Биты команд и состояний Спринта
+    @note   b0 - Команда: Включить спринт
+    @note   b1 - Состояние: Включён спринт  */
+    uint8 IsSprinting = 0;
     //-------------------------------------------
 };

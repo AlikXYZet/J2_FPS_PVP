@@ -4,7 +4,7 @@
 #include "ExplosiveActor.h"
 
 // Interaction:
-#include "FPS/ActorComponents/ExplosiveComponent.h"
+#include "FPS/ActorComponents/Properties/ExplosiveComponent.h"
 //--------------------------------------------------------------------------------------
 
 

@@ -5,7 +5,6 @@
 
 // Interaction:
 #include "PickableActor.h"
-#include "FPS/ActorComponents/PickupComponent.h"
 //--------------------------------------------------------------------------------------
 
 

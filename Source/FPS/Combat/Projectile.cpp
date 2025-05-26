@@ -6,10 +6,6 @@
 // UE:
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "Particles/ParticleSystemComponent.h"
-
-// Plugins:
-#include "NiagaraComponent.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -68,23 +64,5 @@ void AProjectile::BeginPlay()
     Super::BeginPlay();
 
     Clearing();
-}
-
-void AProjectile::Clearing()
-{
-    if (ProjectileMesh && !ProjectileMesh->GetStaticMesh())
-    {
-        ProjectileMesh->DestroyComponent();
-    }
-
-    if (FXComponent && !FXComponent->Template)
-    {
-        FXComponent->DestroyComponent();
-    }
-
-    if (NiagaraFXComponent && !NiagaraFXComponent->GetAsset())
-    {
-        NiagaraFXComponent->DestroyComponent();
-    }
 }
 //--------------------------------------------------------------------------------------

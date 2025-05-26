@@ -6,9 +6,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+// Тест
+#include "Templates/SharedPointer.h"
+
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 #include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
+
+// Interaction:
+#include "FPS/Characters/PlayerCharacter.h"
 
 // Generated:
 #include "WeaponFrame.generated.h"
@@ -20,11 +26,17 @@
 
 // UE:
 class UArrowComponent;
+class UCameraComponent;
+
+// Actor Components:
+class USmoothMovementComponent;
+class USmoothRotationComponent;
 
 // Interaction:
-class UWeaponSlotsComponent;
+class UWeaponControlComponent;
 class AProjectile;
 class APlayerCharacter;
+class AFPS_PlayerController;
 //--------------------------------------------------------------------------------------
 
 
@@ -48,33 +60,49 @@ public:
 
     // Компонент скелетного Меша Оружия
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "Components",
+        Category = "Components|Meshes",
         meta = (AllowPrivateAccess = "true"))
     USkeletalMeshComponent* WeaponSkeletalMesh = nullptr;
 
     // Компонент статического Меша Оружия
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "Components",
+        Category = "Components|Meshes",
         meta = (AllowPrivateAccess = "true"))
     UStaticMeshComponent* WeaponStaticMesh = nullptr;
 
+    //
+
     // Направляющая Выстрела (красный)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "Components",
+        Category = "Components|Arrows",
         meta = (AllowPrivateAccess = "true"))
     UArrowComponent* ShootGuidance = nullptr;
 
     // Направляющая вылета Гильзы (синий)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "Components",
+        Category = "Components|Arrows",
         meta = (AllowPrivateAccess = "true"))
     UArrowComponent* CaseDropGuidance = nullptr;
 
     // Направляющая выпадения Накопителя (зелёный): Магазина, Обоймы и т.п.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "Components",
+        Category = "Components|Arrows",
         meta = (AllowPrivateAccess = "true"))
     UArrowComponent* StorageDropGuidance = nullptr;
+
+    //
+
+    // Компонент плавного Перемещения
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components|Controls",
+        meta = (AllowPrivateAccess = "true"))
+    USmoothMovementComponent* SmoothMovementComponent;
+
+    // Компонент плавного Вращения
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components|Controls",
+        meta = (AllowPrivateAccess = "true"))
+    USmoothRotationComponent* SmoothRotationComponent;
     //-------------------------------------------
 
 
@@ -94,112 +122,125 @@ protected:
 
 public:
 
-    /* ---   Weapon Frame | Editor   --- */
+    /* ---   Base   --- */
 
-    /** Выгрузить Данные для выбранного Оружия из Таблицу Данных Оружий */
-    UFUNCTION(CallInEditor,
-        Category = "Editor")
-    void LoadDataFromWeaponsDataTable();
-
-    /** Сохранить текущие Данные в Таблицу Данных Оружий */
-    UFUNCTION(CallInEditor,
-        Category = "Editor")
-    void SaveCurrentDataInWeaponsDataTable();
+    // Function called every frame on this Actor
+    virtual void Tick(float DeltaSeconds) override;
     //-------------------------------------------
 
 
 
-    /* ---   Weapon Frame | Data   --- */
+    /* ---   Data   --- */
 
     /* Таблица данных местоположения фигур */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Frame | Data",
+        Category = "Weapon Frame|Data",
         meta = (RequiredAssetDataTags = "RowStructure=WeaponData"))
     UDataTable* WeaponsDataTable;
 
     // Текущее выбранное Оружие из Таблицы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Frame | Data",
+        Category = "Weapon Frame|Data",
         meta = (GetOptions = "GetRowNamesFromWeaponsDataTable"))
-    FName SelectedWeapon = "NONE";
+    FName SelectedWeapon = NAME_None;
 
     //
 
-    /** Сохранить Указатель на Указатель текущего Слота
-    * @note    Организует прямую связь "текущий Слот" <=> "Оружие" */
-    void SetPtrToPtrCurrentWeaponSlots(FWeaponSlotData** PtrToPtr);
-
     /** Обновить Оружие по его Имени */
     UFUNCTION(BlueprintCallable,
-        Category = "Weapon Frame | Data")
+        Category = "Weapon Frame|Data")
     void UpdateWeaponByName(const FName& Name);
     //-------------------------------------------
 
 
 
-    /* ---   Weapon Frame | Control   --- */
+    /* ===   For EDITOR only   === */
 
-    /** Управление Оружием: Стрельба */
-    void Fire();
+#if WITH_EDITOR
 
-    /** Управление Оружием: Перезарядка */
-    void Reload();
+    /* ---   Editor   --- */
 
-    /** Управление Оружием: Прицеливание */
-    void Aiming();
+    /** Выгрузить Данные для выбранного Оружия из Таблицы Данных Оружий */
+    UFUNCTION(CallInEditor,
+        Category = "Weapon Frame|Editor")
+    void LoadDataFromWeaponsDataTable();
 
-    /** Управление Оружием: Прекратить прицеливание */
-    void StopAiming();
+    /** Сохранить текущие Данные в Таблицу Данных Оружий */
+    UFUNCTION(CallInEditor,
+        Category = "Weapon Frame|Editor")
+    void SaveCurrentDataInWeaponsDataTable();
     //-------------------------------------------
-
-
-
-    /* ---   Weapon Frame | Direction of Fire   --- */
-
-
-    //-------------------------------------------
+#endif
+    //===========================================
 
 
 
 private:
 
-    /* ---   Weapon Frame | Data   --- */
-
-    // Указатель на Указатель текущего слота
-    FWeaponSlotData** PtrToPtrCurrentWeaponSlots;
+    /* ---   Data   --- */
 
     // Указатель на Данные выбранного Оружия из Таблицы
     FWeaponData* SelectedWeaponData;
 
     //
 
-    /** Получение Названий строк из таблицы WeaponsDataTable */
-    UFUNCTION()
-    TArray<FName> GetRowNamesFromWeaponsDataTable() const;
-
-    // Обновить Оружие по Данным
+    /** Обновить Оружие по Данным */
     void UpdateWeaponOnSelectedData();
     //-------------------------------------------
 
 
 
-    /* ---   Weapon Frame | Control   --- */
+    /* ---   Control   --- */
 
-    // Игрок-Владелец для данного Оружия
+    // Игрок-Владелец данного Оружия
     APlayerCharacter* ParentPlayerCharacter = nullptr;
 
     //
 
-    /** Предварительная инициализация Данных */
-    void WeaponFrameInit();
-
-    /** Настроить управление выбора Слота */
-    void SetupPlayerInputs();
-
-    /** Убрать управление выбора Слота */
-    void RemovePlayerInputs();
-
     /** Запустить Анимацию Персонажа с проверкой */
-    void PlayCharacterAnim(UAnimMontage* AnimMontage);
+    FORCEINLINE void PlayCharacterAnim(UAnimMontage* AnimMontage)
+    {
+        if (AnimMontage)
+            ParentPlayerCharacter->PlayAnimMontage(AnimMontage);
+        else
+            ParentPlayerCharacter->StopAnimMontage();
+    };
     //-------------------------------------------
+
+
+
+    /* ---   Direction Fire   --- */
+
+    //// Контроллер Игрока-Владельца данного Оружия
+    //AFPS_PlayerController* ParentPlayerController = nullptr;
+
+    //// Флаг отслеживания состояния прицеливания
+    //bool bIsAiming = false;
+
+    ////
+
+    ///** Повернуть в сторону Результата Трассировки */
+    //void RotateToTraceResult();
+
+    ///** Прикрепить данное Оружие к Руке */
+    //void AttachWhenStoppedAiming();
+
+    ///** Прикрепить данное Оружие к Камере */
+    //void AttachWhenAiming();
+    //-------------------------------------------
+
+
+
+    /* ===   For EDITOR only   === */
+
+#if WITH_EDITOR
+
+    /* ---   Data   --- */
+
+    /** Получение Названий строк из таблицы WeaponsDataTable */
+    UFUNCTION()
+    TArray<FName> GetRowNamesFromWeaponsDataTable() const;
+    //-------------------------------------------
+#endif
+    //===========================================
 };

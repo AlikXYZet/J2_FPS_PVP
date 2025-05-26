@@ -4,12 +4,15 @@
 #include "PersonAnimInstance.h"
 
 // UE:
-#include "Kismet/KismetSystemLibrary.h"
+#include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // Interaction:
+#include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
+#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
-#include "FPS/ActorComponents/FPS_CharacterMovementComponent.h"
+#include "FPS/Combat/WeaponFrame.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -19,8 +22,11 @@
 void UPersonAnimInstance::NativeInitializeAnimation()
 {
     Super::NativeInitializeAnimation();
+}
 
-    SoundsInit();
+void UPersonAnimInstance::NativeUninitializeAnimation()
+{
+    Super::NativeUninitializeAnimation();
 }
 
 void UPersonAnimInstance::NativeBeginPlay()
@@ -36,7 +42,14 @@ void UPersonAnimInstance::NativeBeginPlay()
 
 /* ---   Customized Base   --- */
 
-void UPersonAnimInstance::SetTimeForUpdateAnimation(const float iTime)
+void UPersonAnimInstance::CustomUpdateAnimation()
+{
+    CurrentMovementSpeed = PlayerOwner->GetVelocity().Size();
+
+    EventCustomUpdateAnimation();
+}
+
+void UPersonAnimInstance::SetTimeForUpdateAnimation(const float& iTime)
 {
     if (iTime > 0)
     {
@@ -55,31 +68,32 @@ void UPersonAnimInstance::SetTimeForUpdateAnimation(const float iTime)
 
 void UPersonAnimInstance::BaseInit()
 {
-    // PlayerOwner
     PlayerOwner = Cast<APlayerCharacter>(TryGetPawnOwner());
 
-    if (!PlayerOwner)
+    if (PlayerOwner)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::BaseInit: PlayerOwner is NOT"),
-            *GetNameSafe(this));
+        WeaponControlComponent = PlayerOwner->WeaponControl;
+
+        if (!WeaponControlComponent)
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlComponent is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
+            *GetNameSafe(this), *FString(__func__));
     }
 
     // Timer_CustomUpdateAnimation
     GetWorld()->GetTimerManager().SetTimer(Timer_CustomUpdateAnimation, this, &UPersonAnimInstance::CustomUpdateAnimation, TimeForCustomUpdateAnimation, true);
 }
-
-void UPersonAnimInstance::CustomUpdateAnimation()
-{
-    CurrentMovementSpeed = PlayerOwner->GetVelocity().Size();
-    CurrentMovementDirection = CalculateDirection(PlayerOwner->GetVelocity(), PlayerOwner->GetActorRotation());
-
-    EventCustomUpdateAnimation();
-}
 //--------------------------------------------------------------------------------------
 
 
 
-/* ---   Movement   --- */
+/* ---   Movement Mode   --- */
 
 void UPersonAnimInstance::MovementInit()
 {
@@ -89,8 +103,8 @@ void UPersonAnimInstance::MovementInit()
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::MovementInit: PlayerOwner is NOT"),
-            *GetNameSafe(this));
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
+            *GetNameSafe(this), *FString(__func__));
     }
 }
 
@@ -104,73 +118,11 @@ void UPersonAnimInstance::UpdateMovementMode(EMovementMode iMovementMode, uint8 
 
 
 
-/* ---   Sounds   --- */
+/* ---   Player Actions   --- */
 
-void UPersonAnimInstance::PlaySurfaceSound(const TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>& iSoundsMap)
+bool UPersonAnimInstance::CheckAction(const EActionVariations InAction) const
 {
-    if (PlayerOwner && iSoundsMap.Num())
-    {
-        FVector lLocation = PlayerOwner->GetActorLocation();
-        FHitResult lHitResult;
-
-        // Трассировка поверхности
-        if (UKismetSystemLibrary::LineTraceSingle(
-            GetWorld(),
-            lLocation,
-            lLocation - FVector(0.f, 0.f, 200.f),
-            ETraceTypeQuery::TraceTypeQuery1,
-            false,
-            TArray<AActor*>{PlayerOwner},
-            EDrawDebugTrace::Type::None,
-            lHitResult,
-            true))
-        {
-            // Поиск Звука из TMap
-            USoundBase* lSound = *iSoundsMap.Find(UGameplayStatics::GetSurfaceType(lHitResult));
-
-            if (!lSound)
-            {
-                // Поиск "резервного" Звука из TMap
-                lSound = *iSoundsMap.Find(EPhysicalSurface::SurfaceType_Default);
-            }
-
-            if (lSound)
-            {
-                // Воспроизвести звук
-                UGameplayStatics::PlaySoundAtLocation(GetWorld(), lSound, lHitResult.Location);
-            }
-        }
-    }
-}
-
-TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> UPersonAnimInstance::GetMapForSound(const UDataTable* SoundTable)
-{
-    if (SoundTable)
-    {
-        TArray<FSoundBySurfaceType*> lAllRows;
-
-        SoundTable->GetAllRows<FSoundBySurfaceType>("UPersonAnimInstance::GetMapForSound", lAllRows);
-
-        if (lAllRows.Num())
-        {
-            TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> lResult;
-
-            for (const FSoundBySurfaceType* lRow : lAllRows)
-            {
-                lResult.Add(EPhysicalSurface(lRow->SurfaceType), lRow->Sound);
-            }
-
-            return lResult;
-        }
-    }
-
-    return TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>();
-}
-
-void UPersonAnimInstance::SoundsInit()
-{
-    MapOfSurfaceSoundsWhenStep = GetMapForSound(SurfaceSoundsWhenStep);
-
-    MapOfSurfaceSoundsWhenLanding = GetMapForSound(SurfaceSoundsWhenLanding);
+    return WeaponControlComponent
+        && (WeaponControlComponent->CurrentActions & (uint8)InAction);
 }
 //--------------------------------------------------------------------------------------

@@ -43,6 +43,11 @@ struct FWeaponData : public FTableRowBase
         meta = (EditCondition = "SkeletalMesh==nullptr"))
     UStaticMesh* StaticMesh = nullptr;
 
+    // Тип используемого Снаряда
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Visualization")
+    TSubclassOf<AProjectile> ProjectileType;
+
     // Трансформация Меша Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Visualization")
@@ -62,6 +67,16 @@ struct FWeaponData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Visualization")
     FTransform StorageDropGuidanceTransform;
+
+    // Локация Оружия в положении от Бедра
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Visualization")
+    FVector HipLocation = FVector::ZeroVector;
+
+    // Локация Оружия при Прицеливании
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Visualization")
+    FVector AimingLocation = FVector::ZeroVector;
     //-------------------------------------------
 
 
@@ -100,11 +115,6 @@ struct FWeaponData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Specifications")
     int32 MaxPreparedCartridges = 0;
-
-    // Тип используемого Снаряда
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Specifications")
-    TSubclassOf<AProjectile> ProjectileType;
     //-------------------------------------------
 
 

@@ -15,7 +15,7 @@
 /* ---   Pre-declaration of classes   --- */
 
 // Interaction:
-class UPickupComponent;
+class UInteractiveComponent;
 //--------------------------------------------------------------------------------------
 
 
@@ -47,7 +47,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = Components,
         meta = (AllowPrivateAccess = "true"))
-    UPickupComponent* PickupComponent;
+    UInteractiveComponent* InteractiveComponent;
     //-------------------------------------------
 
 

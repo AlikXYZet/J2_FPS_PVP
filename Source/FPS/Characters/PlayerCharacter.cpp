@@ -6,10 +6,14 @@
 // UE:
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/ActorChannel.h"
+
+// Net:
+#include "Net/UnrealNetwork.h"
 
 // Interaction:
-#include "FPS/ActorComponents/FPS_CharacterMovementComponent.h"
-#include "FPS/ActorComponents/WeaponSlotsComponent.h"
+#include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
+#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
 #include "FPS/Combat/WeaponFrame.h"
 //--------------------------------------------------------------------------------------
 
@@ -17,6 +21,7 @@
 
 /* ---   Constructors   --- */
 
+// Конструктор с подменной стандартного "UCharacterMovementComponent"
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer.SetDefaultSubobjectClass<UFPS_CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
@@ -29,23 +34,30 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     /* ---   Components   --- */
 
     // Главный Мешь образа
-    GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -98.f));
+    GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
-    // Компонент дочернего Актора Оружия
-    ChildWeaponActor = CreateDefaultSubobject<UChildActorComponent>(TEXT("Child Weapon Actor"));
-    ChildWeaponActor->SetupAttachment(GetMesh(), "WeaponSocket_HandR");
+    // Камера от Первого лица
+    FPCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FP Camera"));
+    FPCamera->SetupAttachment(GetMesh(), "neck_01");
+    FPCamera->SetRelativeLocation(FVector(17.25f, -1.2f, -7.4f));
+    FPCamera->SetUsingAbsoluteRotation(true);
+    FPCamera->bUsePawnControlRotation = true;
 
-    // Камера от первого лица
-    FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("First Person Camera"));
-    FirstPersonCamera->SetupAttachment(GetMesh(), "neck_01");
-    FirstPersonCamera->SetRelativeLocation(FVector(17.25f, -1.2f, -7.4f));
-    FirstPersonCamera->SetUsingAbsoluteRotation(true);
+    // Мешь визуализации от Первого лица
+    FPMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FP Mesh"));
+    FPMesh->SetupAttachment(FPCamera);
+    FPMesh->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+    FPMesh->CastShadow = false;
+    //-------------------------------------------
 
-    FirstPersonCamera->bUsePawnControlRotation = true;
+
+    /* ---   Non-scene Components   --- */
 
     // Компонент Слотов Оружия и взаимодействия с ним
-    WeaponSlotsComponent = CreateDefaultSubobject<UWeaponSlotsComponent>(TEXT("Weapon Slots"));
+    WeaponControl = CreateDefaultSubobject<UWeaponControlComponent>(TEXT("Weapon Control Comp"));
+    WeaponControl->SetupAttachment(GetMesh(), "WeaponSocket_HandR");
+    WeaponControl->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -75,34 +87,45 @@ void APlayerCharacter::Cleaning()
 {
     if (GetController() == UGameplayStatics::GetPlayerController(GetWorld(), 0))
     {
-        GetMesh()->HideBoneByName(HiddenBone, EPhysBodyOp::PBO_None);
+        if (AActor* lWeapon = WeaponControl->GetChildActor())
+        {
+            lWeapon->AttachToComponent(
+                FPMesh,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                "WeaponSocket_HandR");
+        }
+
+        GetMesh()->SetVisibility(false);
+        GetMesh()->bCastHiddenShadow = true;
+        GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
     }
     else
     {
-        FirstPersonCamera->DestroyComponent();
+        FPMesh->DestroyComponent();
+        FPCamera->DestroyComponent();
     }
 }
+//--------------------------------------------------------------------------------------
 
-TArray<FName> APlayerCharacter::GetBoneSocketsInMesh() const
+
+
+/* ---   Net   --- */
+
+bool APlayerCharacter::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
 {
-    if (GetMesh())
-    {
-        return GetMesh()->GetAllSocketNames();
-    }
+    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-    return TArray<FName>();
+    if (WeaponControl)
+        WroteSomething |= Channel->ReplicateSubobject(WeaponControl, *Bunch, *RepFlags);
+
+    return WroteSomething;
 }
 
-TArray<FName> APlayerCharacter::GetBoneNamesInMesh() const
+void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-    if (GetMesh())
-    {
-        TArray<FName> lResult;
-        GetMesh()->GetBoneNames(lResult);
-        return lResult;
-    }
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    return TArray<FName>();
+    DOREPLIFETIME(APlayerCharacter, WeaponControl);
 }
 //--------------------------------------------------------------------------------------
 
@@ -121,6 +144,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+    PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &APlayerCharacter::Sprint);
+    PlayerInputComponent->BindAction("Sprint", IE_Released, this, &APlayerCharacter::StopSprint);
     //-------------------------------------------
     //===========================================
 
@@ -136,10 +162,38 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
     //-------------------------------------------
     //===========================================
+
+
+    /* ===   Components   === */
+
+    if (WeaponControl)
+        WeaponControl->SetupPlayerInputs();
+    //===========================================
 }
 
 void APlayerCharacter::MoveForward(float Value)
 {
+    if (Value > 0)
+    {
+        if (0b01 == (IsSprinting & 0b11))
+        {
+            // ВКЛ режим Спринта
+            IsSprinting |= 0b10;
+            SetMaxWalkSpeed(SprintSpeed);
+            WeaponControl->SetAction(EActionVariations::Block);
+        }
+    }
+    else
+    {
+        if (IsSprinting & 0b10)
+        {
+            // ВЫКЛ режим Спринта
+            IsSprinting ^= 0b10;
+            SetMaxWalkSpeed(WalkSpeed);
+            WeaponControl->StopAction(EActionVariations::Block);
+        }
+    }
+
     if (Value != 0.0f)
     {
         AddMovementInput(GetActorForwardVector(), Value);
@@ -152,5 +206,47 @@ void APlayerCharacter::MoveRight(float Value)
     {
         AddMovementInput(GetActorRightVector(), Value);
     }
+}
+
+void APlayerCharacter::Sprint()
+{
+    // ВКЛ бит команды Спринта
+    IsSprinting |= 0b01;
+}
+
+void APlayerCharacter::StopSprint()
+{
+    // ВЫКЛ биты команды и состояния Спринта
+    IsSprinting ^= 0b11;
+    SetMaxWalkSpeed(WalkSpeed);
+    WeaponControl->StopAction(EActionVariations::Block);
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Movement Speed   --- */
+
+void APlayerCharacter::SetMaxWalkSpeed(const float& Value)
+{
+    // Быстрое применение значения у Клиента-Владельца
+    GetCharacterMovement()->MaxWalkSpeed = Value;
+
+    Server_SetMaxWalkSpeed(Value);
+}
+
+void APlayerCharacter::Server_SetMaxWalkSpeed_Implementation(const float& Value)
+{
+    Multicast_SetMaxWalkSpeed(Value);
+}
+
+void APlayerCharacter::Multicast_SetMaxWalkSpeed_Implementation(const float& Value)
+{
+    // Фильтрация, если вызвал Владелец
+    if (IsLocallyControlled())
+        return;
+
+    if (GetCharacterMovement())
+        GetCharacterMovement()->MaxWalkSpeed = Value;
 }
 //--------------------------------------------------------------------------------------
