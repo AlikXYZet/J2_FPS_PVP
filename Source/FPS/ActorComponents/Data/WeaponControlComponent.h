@@ -6,13 +6,31 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 
+// Interfaces:
+#include "FPS/Tools/Interfaces/Movement/SpeedControllerInterface.h"
+
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 #include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
+#include "FPS/Tools/Structs/Movement/SpeedControlData.h"
 
 // Generated:
 #include "WeaponControlComponent.generated.h"
 //--------------------------------------------------------------------------------------
+
+
+
+/* ---   Delegates   --- */
+
+// Делегат: При старте смены Оружия
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartWeaponChanging);
+
+// Делегат: При удалении старого Оружия
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRemoveOldWeapon);
+
+// Делегат: При Старте Смены Оружия
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTakeNewWeapon);
+// ----------------------------------------------------------------------------------------------------
 
 
 
@@ -35,10 +53,15 @@ class AWeaponFrame;
 UENUM(meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class EActionVariations : uint8
 {
-    Aiming = 1 << 0,   // Прицеливание
-    Shooting = 1 << 1, // Стрельба
-    Restrict = 1 << 2, // Ограничение
-    Block = 1 << 3,    // Блокировка
+    Sprinting = 1 << 0,// Спринт (Быстрый бег)
+    Aiming = 1 << 1,   // Прицеливание
+    Shooting = 1 << 2, // Стрельба
+    //X = 1 << 3, // Резерв
+
+    //X = 1 << 4, // Резерв
+    //X = 1 << 5, // Резерв
+    //X = 1 << 6, // Резерв
+    Block = 1 << 7,    // Блокировка всего
 };
 ENUM_CLASS_FLAGS(EActionVariations)
 //--------------------------------------------------------------------------------------
@@ -47,11 +70,28 @@ ENUM_CLASS_FLAGS(EActionVariations)
 
 /** Компонент контроля Оружия Игрока */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class FPS_API UWeaponControlComponent : public UChildActorComponent
+class FPS_API UWeaponControlComponent : public UChildActorComponent, public ISpeedControllerInterface
 {
     GENERATED_BODY()
 
 public:
+
+    /* ---   Delegates   --- */
+
+    // Делегат: При старте смены Оружия
+    UPROPERTY(BlueprintAssignable)
+    FOnStartWeaponChanging OnStartWeaponChanging;
+
+    // Делегат: При удалении старого Оружия
+    UPROPERTY(BlueprintAssignable)
+    FOnRemoveOldWeapon OnRemoveOldWeapon;
+
+    // Делегат: При Старте Смены Оружия
+    UPROPERTY(BlueprintAssignable)
+    FOnTakeNewWeapon OnTakeNewWeapon;
+    //-------------------------------------------
+
+
 
     /* ---   Constructors   --- */
 
@@ -168,7 +208,8 @@ public:
 
     // Массив со слотами (данными) Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Control|Control")
+        Category = "Weapon Control|Control",
+        meta = (TitleProperty = "WeaponType"))
     TArray<FWeaponSlotData> WeaponSlots = { FWeaponSlotData() };
 
     //
@@ -222,20 +263,46 @@ public:
     //
 
     /** Управление Оружием: Задать Действие */
-    FORCEINLINE void SetAction(const EActionVariations& InAction)
+    FORCEINLINE void SetActionBit(const EActionVariations& InAction)
     {
-        SettingActions |= uint8(InAction);
-
-        UpdateCurrentActions();
+        if (SettingActions ^ (uint8)InAction)
+        {
+            SettingActions |= (uint8)InAction;
+            UpdateCurrentActions();
+        }
     };
 
     /** Управление Оружием: Прекратить Действие */
-    FORCEINLINE void StopAction(const EActionVariations& InAction)
+    FORCEINLINE void ResetActionBit(const EActionVariations& InAction)
     {
-        SettingActions ^= uint8(InAction);
-
-        UpdateCurrentActions();
+        if (SettingActions & (uint8)InAction)
+        {
+            SettingActions ^= (uint8)InAction;
+            UpdateCurrentActions();
+        }
     };
+
+    /** Проверка действий Игрока
+    @param  Action - Проверяемое действие */
+    FORCEINLINE bool CheckAction(const EActionVariations& Action) const
+    {
+        return CheckActions((uint8)Action);
+    };
+
+    /** Проверка одного из действий Игрока
+    @param  Action - Проверяемое действие */
+    bool CheckActions(const EActionVariations& Action, ...) const;
+    //-------------------------------------------
+
+
+
+    /* ---   Character Movement Speed   --- */
+
+    /** Задать значение скорости */
+    UFUNCTION(BlueprintCallable,
+        Category = "Speed Control",
+        meta = (AutoCreateRefTerm = "Mode"))
+    void SetSpeedControl(const ESpeedVariations& Mode) override;
     //-------------------------------------------
 
 
@@ -257,27 +324,33 @@ private:
 
     /* ---   Data   --- */
 
-    // Указатель на текущий Слот (элемент массива) оружия
-    FWeaponSlotData* CurrentSlot = nullptr;
-    // PS: Итератор излишен...
-    //-------------------------------------------
-
-
-
-    /* ---   Switching   --- */
-
     // Указатель на текущий Каркас Оружия
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Control|Check")
     AWeaponFrame* CurrentWeaponFrame = nullptr;
 
+    // Указатель на текущий Слот (элемент массива) оружия
+    FWeaponSlotData* CurrentSlot = nullptr;
+    // PS: Итератор излишен...
+
+    // Указатель на Данные выбранного Оружия из Таблицы
+    FWeaponData* CurrentWeaponData;
+
     //
 
-    /** Инициализация Данных */
-    void SwitchingInit();
+    void DataInit();
 
     /** Проверка количества Слотов */
     void CheckNumOfSlots();
+
+    /** Запустить Анимацию Персонажа с проверкой */
+    //FORCEINLINE void PlayCharacterAnim(UAnimMontage* AnimMontage)
+    //{
+    //    if (AnimMontage)
+    //        PlayerOwner->PlayAnimMontage(AnimMontage);
+    //    else
+    //        PlayerOwner->StopAnimMontage();
+    //};
     //-------------------------------------------
 
 
@@ -287,6 +360,9 @@ private:
     // Отслеживание задания Действий Игрока
     uint8 SettingActions = 0;
 
+    // Таймер для контроля Действий
+    FTimerHandle Timer_ActionControl;
+
     //
 
     /** Обновить данные о Текущих действиях с предварительной проверкой */
@@ -295,44 +371,109 @@ private:
     /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
     UFUNCTION(Server, Reliable)
     void Server_SetCurrentActions(const uint8& Value);
-    //-------------------------------------------
 
-
-
-    /* ---   Actions | Started   --- */
-
-    /** Управление Оружием: Прицеливаться */
-    void Aiming();
-
-    /** Управление Оружием: Стрелять */
-    void Fire();
-
-    /** Управление Оружием: Перезарядить */
-    void Reloading();
-
-    /** Управление Оружием: Задать Ограниченное Действие */
-    FORCEINLINE void SetRestrictedAction(const EActionVariations& InAction)
+    /** Проверка действий Игрока
+    @param  ActionsBits - Биты проверяемых действий */
+    FORCEINLINE bool CheckActions(const uint8& ActionsBits) const
     {
-        if (CurrentActions < (uint8)EActionVariations::Restrict)
-            SetAction(InAction);
+        return CurrentActions & ActionsBits;
     };
     //-------------------------------------------
 
 
 
-    /* ---   Actions | Stopped   --- */
+    /* ---   Actions | Set   --- */
+
+    // Указатель на новый Слот Оружия. Используется для контроля смены оружия
+    FWeaponSlotData* NewSlotForChangingWeapons = nullptr;
+
+    //
+
+    /** Управление Оружием: Спринт */
+    void SetSprinting();
+
+    /** Управление Оружием: Прицеливаться */
+    void SetAiming();
+
+    /** Управление Оружием: Стрелять */
+    void SetShooting();
+
+    /** Управление Оружием: Перезарядить */
+    void SetReloading();
+
+    /** Управление Оружием: Сменить Оружие */
+    void SetChanging(FWeaponSlotData* NewSlot);
+
+    /** Управление Оружием: Ограничивать Действия */
+    bool SetBlocking(const EActionVariations& InAction);
+    //-------------------------------------------
+
+
+
+    /* ---   Actions | Reset   --- */
+
+    /** Управление Оружием: Прекратить Спринт */
+    void ResetSprinting();
 
     /** Управление Оружием: Прекратить Прицеливаться */
-    void StopAiming();
+    void ResetAiming();
 
     /** Управление Оружием: Прекратить Стрелять */
-    void StopFire();
+    void ResetShooting();
 
-    /** Управление Оружием: Прекратить Перезарядку */
-    void StopReloading();
+    /** Управление Оружием: Прекратить Ограничивать Действия */
+    void ResetBlocking();
+    //-------------------------------------------
 
-    /** Управление Оружием: Прекратить смену Оружия */
-    void StopChanging();
+
+
+    /* ---   Actions | Start   --- */
+
+    /** Запуск Действия: Спринт */
+    void StartSprinting();
+
+    /** Запуск Действия: Прицеливаться */
+    void StartAiming();
+
+    /** Запуск Действия: Стрелять */
+    void StartShooting();
+
+    /** Запуск Действия: Перезарядка */
+    void StartReloading();
+
+    /** Запуск Действия: Убрать старое Оружие */
+    void RemoveOldWeapon();
+
+    /** Запуск Действия: Сменить Слот Оружия */
+    void ChangeWeaponSlot();
+
+    /** Запуск Действия: Взять новое Оружие */
+    void TakeNewWeapon();
+    //-------------------------------------------
+
+
+
+    /* ---   Actions | Stop   --- */
+
+    /** Останов Действия: Спринт */
+    void StopSprinting();
+
+    /** Останов Действия: Прицеливаться */
+    void StopAiming();
+
+    /** Запуск Действия: Стрелять */
+    void StopShooting();
+
+    /** Останов Действия: Прекратить Ограничивать Действия */
+    void StopBlockingActions();
+    //-------------------------------------------
+
+
+
+    /* ---   Character Movement Speed   --- */
+
+    /** Инициализация контроля Скорости */
+    void InitSpeedControl() override;
     //-------------------------------------------
 
 
@@ -343,9 +484,12 @@ private:
 
     /* ---   Inputs   --- */
 
-    /* Получить имена всех Функций-Предикатов Актора-Владельца */
+    /* Получить имена зарегистрированных Групп Действий */
     UFUNCTION()
     TArray<FName> GetActionGroupsNames();
+
+    /* Проверить группы входных данных */
+    void CheckInputsGroups();
     //-------------------------------------------
 
 

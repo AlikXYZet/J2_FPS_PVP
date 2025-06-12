@@ -59,8 +59,8 @@ void USmoothMovementComponent::CurrentComponentInit()
 
     if (!CurrentActor)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s': CurrentActor is NOT"),
-            *GetNameSafe(this));
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentActor is NOT"),
+            *GetNameSafe(this), *FString(__func__));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -175,9 +175,8 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
             }
             //-------------------------------------------
 
-
-            //UE_LOG(LogTemp, Error, TEXT("'%s': lNewSpeed_Vector = %s"),
-            //    *GetNameSafe(this), *(lNewSpeed_Vector.ToString()));
+            //UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lNewSpeed_Vector == %s"),
+            //    *GetNameSafe(this), *FString(__func__), *(lNewSpeed_Vector.ToString()));
 
             // Сделать шаг (Плавное перемещение)
             if (bUseRelativeLocation)

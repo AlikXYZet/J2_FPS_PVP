@@ -6,6 +6,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+// Interface:
+//#include "FPS/Tools/Interfaces/Properties/InteractiveInterface.h"
+
 // Generated:
 #include "PickableActor.generated.h"
 //--------------------------------------------------------------------------------------
@@ -21,7 +24,7 @@ class UInteractiveComponent;
 
 
 UCLASS()
-class FPS_API APickableActor : public AActor
+class FPS_API APickableActor : public AActor//, public IInteractiveInterface
 {
     GENERATED_BODY()
 

@@ -89,8 +89,8 @@ void UFPS_GameInstance::SettingsSavingInit()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::SettingsSavingInit: MusicSoundClass is NOT"),
-                    *GetNameSafe(this));
+                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: MusicSoundClass is NOT"),
+                    *GetNameSafe(this), *FString(__func__));
             }
 
             if (EffectsSoundClass)
@@ -105,14 +105,14 @@ void UFPS_GameInstance::SettingsSavingInit()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::SettingsSavingInit: EffectsSoundClass is NOT"),
-                    *GetNameSafe(this));
+                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: EffectsSoundClass is NOT"),
+                    *GetNameSafe(this), *FString(__func__));
             }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::SettingsSavingInit: SoundMix is NOT"),
-                *GetNameSafe(this));
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: SoundMix is NOT"),
+                *GetNameSafe(this), *FString(__func__));
         }
         //-------------------------------------------
     }

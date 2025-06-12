@@ -121,8 +121,8 @@ public:
     * @note (Быстрая потокобезопасная проверка) */
     UFUNCTION(BlueprintCallable, BlueprintPure,
         Category = "PersonAnim|Actions",
-        meta = (CompactNodeTitle = "Check_Action", BlueprintThreadSafe))
-    bool CheckAction(const EActionVariations InAction) const;
+        meta = (CompactNodeTitle = "Check_Action", AutoCreateRefTerm = "InAction", BlueprintThreadSafe))
+    bool CheckAction(const EActionVariations& InAction) const;
     //-------------------------------------------
 
 
@@ -149,6 +149,6 @@ private:
 
     /** Вызывается при обновлении Режима Перемещения */
     UFUNCTION()
-    void UpdateMovementMode(EMovementMode MovementMode, uint8 CustomMovementMode);
+    void UpdateMovementMode(ACharacter* Character, EMovementMode PrevMovementMode, uint8 PrevCustomMode);
     //-------------------------------------------
 };

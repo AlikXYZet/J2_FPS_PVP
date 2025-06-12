@@ -6,8 +6,30 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 
+// Interfaces:
+#include "AbilitySystemInterface.h"
+#include "FPS/Tools/Interfaces/Movement/SpeedControllerInterface.h"
+
+// Structs:
+#include "FPS/Tools/Structs/Movement/SpeedControlData.h"
+
+// Interaction:
+#include "FPS/GAS/FPS_AbilitySystemComponent.h"
+
 // Generated:
 #include "PlayerCharacter.generated.h"
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Macros   --- */
+
+/** Макрос: Создание функции делегата для передачи значения через Событие BP */
+#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
+	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
+	{ \
+		EventChanging##PropertyName(Data.NewValue); \
+	}
 //--------------------------------------------------------------------------------------
 
 
@@ -20,12 +42,16 @@ class UCameraComponent;
 // Interaction:
 class UFPS_CharacterMovementComponent;
 class UWeaponControlComponent;
+
+// Interaction | GAS:
+class UFPS_AttributeSet;
+class UFPS_GameplayAbility;
 //--------------------------------------------------------------------------------------
 
 
 
 UCLASS()
-class FPS_API APlayerCharacter : public ACharacter
+class FPS_API APlayerCharacter : public ACharacter, public IAbilitySystemInterface, public ISpeedControllerInterface
 {
     GENERATED_BODY()
 
@@ -63,7 +89,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
-    UWeaponControlComponent* WeaponControl = nullptr;
+    UWeaponControlComponent* WeaponControlComp = nullptr;
+
+    // Компонент Системы Способностей (GAS)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
+
+    // Скрытый компонент Набора Атрибутов (для GAS)
+    UPROPERTY()
+    UFPS_AttributeSet* AttributeSet = nullptr;
     //-------------------------------------------
 
 
@@ -79,6 +115,17 @@ protected:
 
 
 public:
+
+    /* ---   Base   --- */
+
+    /** Вызывается при подключения Контроллера
+    @note   Вызывается только на сервере (или в автономном режиме)
+    @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой)
+    */
+    virtual void PossessedBy(AController* NewController) override;
+    //-------------------------------------------
+
+
 
     /* ---   Components   --- */
 
@@ -101,10 +148,70 @@ public:
 
 
 
+    /* ---   Net | OnRep   --- */
+
+    /** Функция обратного вызова: PlayerState */
+    virtual void OnRep_PlayerState() override;
+    //-------------------------------------------
+
+
+
     /* ---   Inputs   --- */
 
     // Called to bind functionality to input
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    //-------------------------------------------
+
+
+
+    /* ---   Inputs | Actions   --- */
+
+    // Группа Действий для "Прыжка"
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Actions",
+        meta = (GetOptions = "GetActionGroupsNames",
+            DisplayName = "Jump"))
+    FName ActionGroups_Jump = NAME_None;
+
+    // Группа Действий для "Спринта"
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Actions",
+        meta = (GetOptions = "GetActionGroupsNames",
+            DisplayName = "Sprint"))
+    FName ActionGroups_Sprint = NAME_None;
+    //-------------------------------------------
+
+
+
+    /* ---   Inputs | Axis   --- */
+
+    // Группа Осей для "Движения Вперёд" (вперёд-назад)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Axis",
+        meta = (GetOptions = "GetAxisGroupsNames",
+            DisplayName = "Move Forward"))
+    FName AxisGroups_MoveForward = NAME_None;
+
+    // Группа Осей для "Движения Вправо" (вправо-влево)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Axis",
+        meta = (GetOptions = "GetAxisGroupsNames",
+            DisplayName = "Move Right"))
+    FName AxisGroups_MoveRight = NAME_None;
+
+    // Группа Осей для "Обзора Поворотом" (вправо-влево)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Axis",
+        meta = (GetOptions = "GetAxisGroupsNames",
+            DisplayName = "Turn"))
+    FName AxisGroups_Turn = NAME_None;
+
+    // Группа Осей для "Обзора по Вертикали" (вверх-вниз)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Inputs|Axis",
+        meta = (GetOptions = "GetAxisGroupsNames",
+            DisplayName = "Look Up"))
+    FName AxisGroups_LookUp = NAME_None;
     //-------------------------------------------
 
 
@@ -133,8 +240,46 @@ public:
     /** Обновить значение максимальной скорости у Всех, кроме владельца */
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_SetMaxWalkSpeed(const float& Value);
+
+    /** Задать значение скорости */
+    UFUNCTION(BlueprintCallable,
+        Category = "Speed Control",
+        meta = (AutoCreateRefTerm = "Mode"))
+    void SetSpeedControl(const ESpeedVariations& Mode) override;
     //-------------------------------------------
 
+
+
+    /* ---   GAS   --- */
+
+    /** Событие BP: Изменение Здоровья */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "Changing Health"))
+    void EventChangingHealth(const float& Data);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Health);
+
+    /** Событие BP: Изменение максимального Здоровья */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "Changing Max Health"))
+    void EventChangingMaxHealth(const float& Data);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxHealth);
+
+    /** Событие BP: Изменение Брони */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "Changing Armor"))
+    void EventChangingArmor(const float& Data);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Armor);
+
+    /** Событие BP: Изменение максимальной Брони */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "Changing Max Armor"))
+    void EventChangingMaxArmor(const float& Data);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
+    //-------------------------------------------
 
 
 private:
@@ -170,5 +315,46 @@ private:
     @note   b0 - Команда: Включить спринт
     @note   b1 - Состояние: Включён спринт  */
     uint8 IsSprinting = 0;
+
+    //
+
+    /** Инициализация контроля Скорости */
+    void InitSpeedControl() override;
     //-------------------------------------------
+
+
+
+    /* ---   GAS   --- */
+
+    /** Возвращает Компонент Системы Способностей данного Игрока */
+    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+    {
+        return AbilitySystemComp;
+    };
+
+    /** Инициализация данных AbilitySystemComp */
+    void InitAbilitySystemComp();
+    //-------------------------------------------
+
+
+
+    /* ===   For EDITOR only   === */
+
+#if WITH_EDITOR
+
+    /* ---   Inputs   --- */
+
+    /* Получить имена зарегистрированных Групп Действий */
+    UFUNCTION()
+    TArray<FName> GetActionGroupsNames();
+
+    /* Получить имена зарегистрированных Групп Осей */
+    UFUNCTION()
+    TArray<FName> GetAxisGroupsNames();
+
+    /* Проверить группы входных данных */
+    void CheckInputsGroups();
+    //-------------------------------------------
+#endif
+    //===========================================
 };

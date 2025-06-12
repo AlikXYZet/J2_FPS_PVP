@@ -204,7 +204,7 @@ uint8 UInteractiveComponent::CheckFunction(UObject* Owner, UFunction* Function)
         lBitsResult ^= (SafeProcessEvent(Owner, Function)) << 3;
     }
 
-    return MoveTemp(lBitsResult);
+    return lBitsResult;
 }
 //--------------------------------------------------------------------------------------
 
@@ -293,7 +293,7 @@ TArray<FName> UInteractiveComponent::GetNamesOfHighlightedComponents()
                 lResult.Add(lComp->GetFName());
             }
 
-            return MoveTemp(lResult);
+            return lResult;
         }
     }
 
@@ -319,7 +319,7 @@ TArray<FName> UInteractiveComponent::GetNamesOfPredicateFunctions()
 
         if (lResult.Num())
         {
-            return MoveTemp(lResult);
+            return lResult;
         }
     }
 
@@ -337,7 +337,7 @@ TArray<FName> UInteractiveComponent::GetActionGroupsNames()
 
     UInputSettings::GetInputSettings()->GetActionNames(ActionNames);
 
-    return MoveTemp(ActionNames);
+    return ActionNames;
 }
 
 void UInteractiveComponent::ReinitActionGroup()

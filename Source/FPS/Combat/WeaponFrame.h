@@ -6,15 +6,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
-// Тест
-#include "Templates/SharedPointer.h"
-
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 #include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
-
-// Interaction:
-#include "FPS/Characters/PlayerCharacter.h"
 
 // Generated:
 #include "WeaponFrame.generated.h"
@@ -132,6 +126,18 @@ public:
 
     /* ---   Data   --- */
 
+    /** Обновить Оружие по Данным */
+    void UpdateWeaponOnSelectedData(const FWeaponData* lData);
+    //-------------------------------------------
+
+
+
+    /* ===   For EDITOR only   === */
+
+#if WITH_EDITOR
+
+    /* ---   Data   --- */
+
     /* Таблица данных местоположения фигур */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Frame|Data",
@@ -142,21 +148,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Frame|Data",
         meta = (GetOptions = "GetRowNamesFromWeaponsDataTable"))
-    FName SelectedWeapon = NAME_None;
-
-    //
-
-    /** Обновить Оружие по его Имени */
-    UFUNCTION(BlueprintCallable,
-        Category = "Weapon Frame|Data")
-    void UpdateWeaponByName(const FName& Name);
+    FName WeaponName = NAME_None;
     //-------------------------------------------
 
 
-
-    /* ===   For EDITOR only   === */
-
-#if WITH_EDITOR
 
     /* ---   Editor   --- */
 
@@ -177,34 +172,10 @@ public:
 
 private:
 
-    /* ---   Data   --- */
-
-    // Указатель на Данные выбранного Оружия из Таблицы
-    FWeaponData* SelectedWeaponData;
-
-    //
-
-    /** Обновить Оружие по Данным */
-    void UpdateWeaponOnSelectedData();
-    //-------------------------------------------
-
-
-
     /* ---   Control   --- */
 
     // Игрок-Владелец данного Оружия
-    APlayerCharacter* ParentPlayerCharacter = nullptr;
-
-    //
-
-    /** Запустить Анимацию Персонажа с проверкой */
-    FORCEINLINE void PlayCharacterAnim(UAnimMontage* AnimMontage)
-    {
-        if (AnimMontage)
-            ParentPlayerCharacter->PlayAnimMontage(AnimMontage);
-        else
-            ParentPlayerCharacter->StopAnimMontage();
-    };
+    //APlayerCharacter* ParentPlayerCharacter = nullptr;
     //-------------------------------------------
 
 
@@ -236,6 +207,11 @@ private:
 #if WITH_EDITOR
 
     /* ---   Data   --- */
+
+    // Указатель на Данные выбранного Оружия из Таблицы
+    FWeaponData* SelectedWeaponData;
+
+    //
 
     /** Получение Названий строк из таблицы WeaponsDataTable */
     UFUNCTION()

@@ -13,6 +13,7 @@
 #include "FPS/ActorComponents/Control/SmoothRotationComponent.h"
 
 // Interaction:
+#include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Core/Online/FPS_PlayerController.h"
 #include "Projectile.h"
 //--------------------------------------------------------------------------------------
@@ -77,8 +78,10 @@ AWeaponFrame::AWeaponFrame()
     StorageDropGuidance->ArrowLength = 40.f;
     StorageDropGuidance->bIsScreenSizeScaled = true;
     StorageDropGuidance->SetRelativeRotation(FRotator(-75.f, 00.f, 0.f));
+    //-------------------------------------------
 
-    //
+
+    /* ---   Non-scene Components   --- */
 
     // Компонент плавного Перемещения
     SmoothMovementComponent = CreateDefaultSubobject<USmoothMovementComponent>(TEXT("Smooth Movement Component"));
@@ -116,43 +119,29 @@ void AWeaponFrame::Tick(float DeltaSeconds)
 
 /* ---   Data   --- */
 
-void AWeaponFrame::UpdateWeaponByName(const FName& iName)
+void AWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* lData)
 {
-    if (&iName
-        && iName != NAME_None
-        && WeaponsDataTable)
+    if (lData)
     {
-        FWeaponData* lRow = WeaponsDataTable->FindRow<FWeaponData>(iName, "UpdateWeaponByName");
-        
-        if (lRow)
+        // Меш:
+        if (lData->SkeletalMesh)
         {
-            SelectedWeaponData = lRow;
-
-            UpdateWeaponOnSelectedData();
+            WeaponSkeletalMesh->SetSkeletalMesh(lData->SkeletalMesh);
+            WeaponSkeletalMesh->SetRelativeTransform(lData->MeshTransform);
+            WeaponStaticMesh->SetStaticMesh(nullptr);
         }
-    }
-}
+        else if (lData->StaticMesh)
+        {
+            WeaponStaticMesh->SetStaticMesh(lData->StaticMesh);
+            WeaponStaticMesh->SetRelativeTransform(lData->MeshTransform);
+            WeaponSkeletalMesh->SetSkeletalMesh(nullptr);
+        }
 
-void AWeaponFrame::UpdateWeaponOnSelectedData()
-{
-    // Меш:
-    if (SelectedWeaponData->SkeletalMesh)
-    {
-        WeaponSkeletalMesh->SetSkeletalMesh(SelectedWeaponData->SkeletalMesh);
-        WeaponSkeletalMesh->SetRelativeTransform(SelectedWeaponData->MeshTransform);
-        WeaponStaticMesh->SetStaticMesh(nullptr);
+        // Направляющие:
+        ShootGuidance->SetRelativeTransform(lData->ShootGuidanceTransform);
+        CaseDropGuidance->SetRelativeTransform(lData->CaseDropGuidanceTransform);
+        StorageDropGuidance->SetRelativeTransform(lData->StorageDropGuidanceTransform);
     }
-    else if (SelectedWeaponData->StaticMesh)
-    {
-        WeaponStaticMesh->SetStaticMesh(SelectedWeaponData->StaticMesh);
-        WeaponStaticMesh->SetRelativeTransform(SelectedWeaponData->MeshTransform);
-        WeaponSkeletalMesh->SetSkeletalMesh(nullptr);
-    }
-
-    // Направляющие:
-    ShootGuidance->SetRelativeTransform(SelectedWeaponData->ShootGuidanceTransform);
-    CaseDropGuidance->SetRelativeTransform(SelectedWeaponData->CaseDropGuidanceTransform);
-    StorageDropGuidance->SetRelativeTransform(SelectedWeaponData->StorageDropGuidanceTransform);
 }
 //--------------------------------------------------------------------------------------
 
@@ -227,18 +216,18 @@ TArray<FName> AWeaponFrame::GetRowNamesFromWeaponsDataTable() const
 
 void AWeaponFrame::LoadDataFromWeaponsDataTable()
 {
-    if (SelectedWeapon != NAME_None)
+    if (WeaponName != NAME_None)
     {
         // Получение
-        SelectedWeaponData = WeaponsDataTable->FindRow<FWeaponData>(SelectedWeapon, "LoadDataFromWeaponsDataTable()");
+        SelectedWeaponData = WeaponsDataTable->FindRow<FWeaponData>(WeaponName, "LoadDataFromWeaponsDataTable()");
 
-        UpdateWeaponOnSelectedData();
+        UpdateWeaponOnSelectedData(SelectedWeaponData);
     }
 }
 
 void AWeaponFrame::SaveCurrentDataInWeaponsDataTable()
 {
-    if (SelectedWeapon != NAME_None)
+    if (WeaponName != NAME_None)
     {
         // Меш:
         if (WeaponSkeletalMesh->SkeletalMesh)
@@ -258,7 +247,7 @@ void AWeaponFrame::SaveCurrentDataInWeaponsDataTable()
         SelectedWeaponData->StorageDropGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
 
         // Сохранение
-        WeaponsDataTable->AddRow(SelectedWeapon, *SelectedWeaponData);
+        WeaponsDataTable->AddRow(WeaponName, *SelectedWeaponData);
     }
 }
 //--------------------------------------------------------------------------------------

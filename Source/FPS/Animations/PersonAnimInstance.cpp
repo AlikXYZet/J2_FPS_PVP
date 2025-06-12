@@ -72,7 +72,7 @@ void UPersonAnimInstance::BaseInit()
 
     if (PlayerOwner)
     {
-        WeaponControlComponent = PlayerOwner->WeaponControl;
+        WeaponControlComponent = PlayerOwner->WeaponControlComp;
 
         if (!WeaponControlComponent)
         {
@@ -99,7 +99,7 @@ void UPersonAnimInstance::MovementInit()
 {
     if (PlayerOwner)
     {
-        PlayerOwner->GetFPSCharacterMovement()->OnNewMovementMode.AddDynamic(this, &UPersonAnimInstance::UpdateMovementMode);
+        PlayerOwner->MovementModeChangedDelegate.AddDynamic(this, &UPersonAnimInstance::UpdateMovementMode);
     }
     else
     {
@@ -108,11 +108,11 @@ void UPersonAnimInstance::MovementInit()
     }
 }
 
-void UPersonAnimInstance::UpdateMovementMode(EMovementMode iMovementMode, uint8 iCustomMovementMode)
+void UPersonAnimInstance::UpdateMovementMode(ACharacter* Character, EMovementMode PrevMovementMode, uint8 PrevCustomMode)
 {
-    CurrentMovementMode = iMovementMode;
+    CurrentMovementMode = Character->GetCharacterMovement()->MovementMode;
 
-    EventUpdateMovementMode(iMovementMode, iCustomMovementMode);
+    EventUpdateMovementMode(CurrentMovementMode, Character->GetCharacterMovement()->CustomMovementMode);
 }
 //--------------------------------------------------------------------------------------
 
@@ -120,9 +120,9 @@ void UPersonAnimInstance::UpdateMovementMode(EMovementMode iMovementMode, uint8 
 
 /* ---   Player Actions   --- */
 
-bool UPersonAnimInstance::CheckAction(const EActionVariations InAction) const
+bool UPersonAnimInstance::CheckAction(const EActionVariations& InAction) const
 {
     return WeaponControlComponent
-        && (WeaponControlComponent->CurrentActions & (uint8)InAction);
+        && WeaponControlComponent->CheckAction(InAction);
 }
 //--------------------------------------------------------------------------------------
