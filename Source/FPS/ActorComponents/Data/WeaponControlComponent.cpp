@@ -4,6 +4,7 @@
 #include "WeaponControlComponent.h"
 
 // UE:
+#include "Components/ArrowComponent.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/InputSettings.h"
 
@@ -150,7 +151,12 @@ void UWeaponControlComponent::SetupPlayerInputs()
 
 /* ---   Data   --- */
 
-FWeaponSlotData& UWeaponControlComponent::GetCurrentSlotData() const
+const FWeaponData& UWeaponControlComponent::GetCurrentWeaponData() const
+{
+    return *CurrentWeaponData;
+}
+
+const FWeaponSlotData& UWeaponControlComponent::GetCurrentSlotData() const
 {
     return *CurrentSlot;
 }
@@ -165,6 +171,7 @@ void UWeaponControlComponent::DataInit()
 
         if (CurrentWeaponData)
         {
+            OnChangingWeapon.Broadcast();
             CurrentWeaponFrame = Cast<AWeaponFrame>(GetChildActor());
 
             if (CurrentWeaponFrame)
@@ -249,22 +256,34 @@ void UWeaponControlComponent::CheckNumOfSlots()
 
 
 
-/* ---   Actions   --- */
+/* ---   Actions | Data   --- */
 
 void UWeaponControlComponent::UpdateCurrentActions()
 {
     uint8 OldActions = CurrentActions;
 
-    CurrentActions = SettingActions & (uint8)EActionVariations::Block
-        ? (uint8)EActionVariations::Block // 0b 1000 0000
-        : SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Shooting)
-        ? SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Shooting) // 0b 0000 0||0
-        : SettingActions; // 0b 0000 000|
+    CurrentActions =
+
+        // 0b 1000 0000
+        SettingActions & (uint8)EActionVariations::Block
+        ? (uint8)EActionVariations::Block
+
+        // 0b 0000 100|
+        : SettingActions & (uint8)EActionVariations::Changing
+        ? SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Changing)
+
+        // 0b 0000 010|
+        : SettingActions & (uint8)EActionVariations::Reloading
+        ? SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Reloading)
+
+        // 0b 0000 00~~
+        : SettingActions;
+
     // PS: CurrentActions ограничен следующими значениями по порядку приоритета от наибольшего к меньшему:
     // 0b 1000 0000 - Блокировка Действий
-    // 0b 0000 0||0 - Действия "Прицеливание" и/или "Стрельба"
-    // 0b 0000 0001 - Спринт
-    // 0b 0000 0000 - Бездействие
+    // 0b 0000 100| - Действие "Смена" с отслеживанием "Прицеливания"
+    // 0b 0000 010| - Действие "Перезарядка" с отслеживанием "Прицеливания"
+    // 0b 0000 00~~ - Любые свободные действия ("Стрельба" и/или "Прицеливание")
 
     if (OldActions != CurrentActions)
     {
@@ -273,15 +292,20 @@ void UWeaponControlComponent::UpdateCurrentActions()
         // Завершение Действия по Отключенному Биту
         switch (EActionVariations(OldActions & ~CurrentActions))
         {
-        case EActionVariations::Sprinting:
-            StopSprinting();
-            break;
-
         case EActionVariations::Aiming:
             StopAiming();
+            break;
 
         case EActionVariations::Shooting:
             StopShooting();
+            break;
+
+        case EActionVariations::Reloading:
+            StopReloading();
+            break;
+
+        case EActionVariations::Changing:
+            StopChanging();
             break;
 
         case EActionVariations::Block:
@@ -295,24 +319,40 @@ void UWeaponControlComponent::UpdateCurrentActions()
         // Начать Действие по Включенному Биту
         switch (EActionVariations(CurrentActions & ~OldActions))
         {
-        case EActionVariations::Sprinting:
-            StartSprinting();
-            break;
-
         case EActionVariations::Aiming:
             StartAiming();
+            break;
 
         case EActionVariations::Shooting:
             StartShooting();
             break;
 
+        case EActionVariations::Reloading:
+            StartReloading();
+            break;
+
+        case EActionVariations::Changing:
+            StartChangeWeaponSlot();
+            break;
+
         case EActionVariations::Block:
-            // SetSpeedControl(ESpeedVariations::Jog);
-            // PS: Все блокирующие действия ограничивают скорость Индивидуально
             break;
 
         default:
             break;
+        }
+
+        if (CheckAction(EActionVariations::Aiming))
+        {
+            SetSpeedControl(ESpeedVariations::Walk);
+        }
+        else if (CurrentActions > uint8(EActionVariations::Aiming))
+        {
+            SetSpeedControl(ESpeedVariations::Jog);
+        }
+        else
+        {
+            SetSpeedControl(ESpeedVariations::Sprint);
         }
 
         if (PlayerOwner)
@@ -346,11 +386,6 @@ bool UWeaponControlComponent::CheckActions(const EActionVariations& Action, ...)
 
 /* ---   Actions | Set   --- */
 
-void UWeaponControlComponent::SetSprinting()
-{
-    SetActionBit(EActionVariations::Sprinting);
-}
-
 void UWeaponControlComponent::SetAiming()
 {
     SetActionBit(EActionVariations::Aiming);
@@ -363,9 +398,31 @@ void UWeaponControlComponent::SetShooting()
 
 void UWeaponControlComponent::SetReloading()
 {
-    if (SetBlocking(EActionVariations::Block))
+    if (CurrentSlot && CurrentWeaponData)
     {
-        StartReloading();
+        bool bChecker = false;
+
+        if (CurrentSlot->bIsWeaponLoaded)
+        {
+            if (CurrentSlot->NumAllCartridge > 0
+                && CurrentSlot->NumPreparedCartridges < CurrentWeaponData->MaxPreparedCartridges)
+            {
+                bChecker = true;
+            }
+        }
+        else
+        {
+            if (CurrentSlot->NumAllCartridge > 0
+                || CurrentSlot->NumPreparedCartridges > 0)
+            {
+                bChecker = true;
+            }
+        }
+
+        if (bChecker)
+        {
+            SetBlockingActionBit(EActionVariations::Reloading);
+        }
     }
 }
 
@@ -373,35 +430,15 @@ void UWeaponControlComponent::SetChanging(FWeaponSlotData* iNewSlot)
 {
     if (iNewSlot && iNewSlot != CurrentSlot)
     {
-        if (SetBlocking(EActionVariations::Block))
-        {
-            RemoveOldWeapon();
-
-            NewSlotForChangingWeapons = iNewSlot;
-        }
+        SetBlockingActionBit(EActionVariations::Changing);
+        NewSlotForChangingWeapons = iNewSlot;
     }
-}
-
-bool UWeaponControlComponent::SetBlocking(const EActionVariations& InAction)
-{
-    if (CurrentActions < (uint8)EActionVariations::Block)
-    {
-        SetActionBit(InAction);
-        return true;
-    }
-
-    return false;
 }
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Actions | Reset   --- */
-
-void UWeaponControlComponent::ResetSprinting()
-{
-    ResetActionBit(EActionVariations::Sprinting);
-}
 
 void UWeaponControlComponent::ResetAiming()
 {
@@ -413,6 +450,16 @@ void UWeaponControlComponent::ResetShooting()
     ResetActionBit(EActionVariations::Shooting);
 }
 
+void UWeaponControlComponent::ResetReloading()
+{
+    ResetActionBit(EActionVariations::Reloading);
+}
+
+void UWeaponControlComponent::ResetChanging()
+{
+    ResetActionBit(EActionVariations::Changing);
+}
+
 void UWeaponControlComponent::ResetBlocking()
 {
     ResetActionBit(EActionVariations::Block);
@@ -421,81 +468,42 @@ void UWeaponControlComponent::ResetBlocking()
 
 
 
-/* ---   Actions | Started   --- */
-
-void UWeaponControlComponent::StartSprinting()
-{
-    SetSpeedControl(ESpeedVariations::Sprint);
-}
-
-void UWeaponControlComponent::StartAiming()
-{
-    SetSpeedControl(ESpeedVariations::Walk);
-}
-
-void UWeaponControlComponent::StartShooting()
-{
-
-}
-
-void UWeaponControlComponent::StartReloading()
-{
-    SetSpeedControl(ESpeedVariations::Jog);
-}
-
-void UWeaponControlComponent::RemoveOldWeapon()
-{
-    OnStartWeaponChanging.Broadcast();
-
-    GetWorld()->GetTimerManager().SetTimer(
-        Timer_ActionControl,
-        this,
-        &UWeaponControlComponent::RemoveOldWeapon,
-        CurrentWeaponData->RemoveWeaponTime,
-        false);
-}
-
-void UWeaponControlComponent::ChangeWeaponSlot()
-{
-    CurrentSlot = NewSlotForChangingWeapons;
-
-    OnRemoveOldWeapon.Broadcast();
-
-    CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-
-    GetWorld()->GetTimerManager().SetTimer(
-        Timer_ActionControl,
-        this,
-        &UWeaponControlComponent::ChangeWeaponSlot,
-        CurrentWeaponData->TakeWeaponTime,
-        false);
-}
-
-void UWeaponControlComponent::TakeNewWeapon()
-{
-    OnTakeNewWeapon.Broadcast();
-
-    ResetBlocking();
-}
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Actions | Stopped   --- */
-
-void UWeaponControlComponent::StopSprinting()
-{
-    SetSpeedControl(ESpeedVariations::Walk);
-}
 
 void UWeaponControlComponent::StopAiming()
 {
-    SetSpeedControl(ESpeedVariations::Sprint);
 }
 
 void UWeaponControlComponent::StopShooting()
 {
+    GetWorld()->GetTimerManager().ClearTimer(Timer_ActionControl);
+}
 
+void UWeaponControlComponent::StopReloading()
+{
+    if (CurrentSlot->NumPreparedCartridges < CurrentWeaponData->MaxPreparedCartridges
+        && CurrentSlot->NumAllCartridge > 0)
+    {
+        int32 Difference = CurrentWeaponData->MaxPreparedCartridges - CurrentSlot->NumPreparedCartridges;
+        Difference = FMath::Min(Difference, CurrentSlot->NumAllCartridge);
+
+        CurrentSlot->NumPreparedCartridges += Difference;
+        CurrentSlot->NumAllCartridge -= Difference;
+    }
+
+    if (CurrentSlot->bIsWeaponLoaded == false
+        && CurrentSlot->NumPreparedCartridges > 0)
+    {
+        CurrentSlot->bIsWeaponLoaded = true;
+        --(CurrentSlot->NumPreparedCartridges);
+    }
+
+    OnReloadingWeapon.Broadcast();
+    //DropActor(CurrentWeaponData->StorageDropType, CurrentWeaponFrame->StorageDropGuidance);
+}
+
+void UWeaponControlComponent::StopChanging()
+{
 }
 
 void UWeaponControlComponent::StopBlockingActions()
@@ -504,6 +512,111 @@ void UWeaponControlComponent::StopBlockingActions()
     {
         CurrentActions ^= (uint8)EActionVariations::Block;
     }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Actions | Started   --- */
+
+void UWeaponControlComponent::StartAiming()
+{
+}
+
+void UWeaponControlComponent::StartShooting()
+{
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_ActionControl,
+        this,
+        &UWeaponControlComponent::ShootingWeapon,
+        CurrentWeaponData->ShootingWeapon_Time,
+        true,
+        0.f); // Реагировать сразу
+}
+
+void UWeaponControlComponent::StartReloading()
+{
+    OnStartReloadingWeapon.Broadcast();
+
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_ActionControl,
+        this,
+        &UWeaponControlComponent::ResetReloading,
+        CurrentWeaponData->ReloadingWeapon_Time,
+        false);
+}
+
+void UWeaponControlComponent::StartChangeWeaponSlot()
+{
+    OnStartChangingWeapon.Broadcast();
+
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_ActionControl,
+        this,
+        &UWeaponControlComponent::ChangeWeaponSlot,
+        CurrentWeaponData->RemoveWeapon_Time,
+        false);
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Actions | Reaction   --- */
+
+void UWeaponControlComponent::ShootingWeapon()
+{
+    if (CurrentWeaponData->ProjectileType)
+    {
+        // Флаг проверки условий стрельбы
+        bool bChecker = false;
+
+        // Проверка
+        if (CurrentSlot->NumPreparedCartridges)
+        {
+            // Уменьшение количества подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
+            --(CurrentSlot->NumPreparedCartridges);
+            bChecker = true;
+        }
+        else if (CurrentSlot->bIsWeaponLoaded)
+        {
+            // "Использование" заряженного Патрона
+            CurrentSlot->bIsWeaponLoaded = false;
+            bChecker = true;
+        }
+
+        // Результат
+        if (bChecker)
+        {
+            OnShootingWeapon.Broadcast();
+            //DropActor(CurrentWeaponData->ProjectileType, CurrentWeaponFrame->ShootGuidance);
+            //DropActor(CurrentWeaponData->CaseDropType, CurrentWeaponFrame->CaseDropGuidance);
+        }
+        else
+        {
+            SetReloading();
+        }
+    }
+}
+
+void UWeaponControlComponent::ChangeWeaponSlot()
+{
+    CurrentSlot = NewSlotForChangingWeapons;
+    CurrentWeaponData = WeaponsDataTable->FindRow<FWeaponData>(CurrentSlot->WeaponType, "ChangeWeaponSlot");
+    CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+
+    OnChangingWeapon.Broadcast();
+
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_ActionControl,
+        this,
+        &UWeaponControlComponent::EndChangeWeaponSlot,
+        CurrentWeaponData->TakeWeapon_Time,
+        false);
+}
+
+void UWeaponControlComponent::EndChangeWeaponSlot()
+{
+    ResetChanging();
 }
 //--------------------------------------------------------------------------------------
 

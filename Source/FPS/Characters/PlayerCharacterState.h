@@ -2,8 +2,10 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
+
+// Base:
 #include "GameFramework/PlayerState.h"
 
 // Generated:

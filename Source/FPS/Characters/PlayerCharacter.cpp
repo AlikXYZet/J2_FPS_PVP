@@ -5,6 +5,7 @@
 
 // UE:
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Engine/ActorChannel.h"
 #include "GameFramework/InputSettings.h"
 #include "Kismet/GameplayStatics.h"
@@ -26,7 +27,7 @@
 
 /* ---   Macros   --- */
 
-/** Макрос: Создание функции делегата для передачи значения через Событие BP */
+/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
 #define GAMEPLAYATTRIBUTE_VALUE_Delegating(PropertyName) \
     AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
         .AddUObject(this, &APlayerCharacter::Handle##PropertyName##Changed);
@@ -61,8 +62,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
     // Мешь визуализации от Первого лица
     FPMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FP Mesh"));
-    FPMesh->SetupAttachment(FPCamera);
-    FPMesh->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+    FPMesh->SetupAttachment(GetCapsuleComponent());
+    FPMesh->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
+    FPMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
     FPMesh->CastShadow = false;
     //-------------------------------------------
 
@@ -117,14 +119,6 @@ void APlayerCharacter::Cleaning()
 {
     if (GetController() == UGameplayStatics::GetPlayerController(GetWorld(), 0))
     {
-        if (AActor* lWeapon = WeaponControlComp->GetChildActor())
-        {
-            lWeapon->AttachToComponent(
-                FPMesh,
-                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-                "WeaponSocket_HandR");
-        }
-
         GetMesh()->SetVisibility(false);
         GetMesh()->bCastHiddenShadow = true;
         GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));

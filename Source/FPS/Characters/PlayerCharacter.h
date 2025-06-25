@@ -2,8 +2,10 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
+
+// Base:
 #include "GameFramework/Character.h"
 
 // Interfaces:
@@ -24,11 +26,11 @@
 
 /* ---   Macros   --- */
 
-/** Макрос: Создание функции делегата для передачи значения через Событие BP */
+/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
 #define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
 	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
 	{ \
-		EventChanging##PropertyName(Data.NewValue); \
+		Event_Changing##PropertyName(Data.NewValue); \
 	}
 //--------------------------------------------------------------------------------------
 
@@ -256,28 +258,28 @@ public:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
-    void EventChangingHealth(const float& Data);
+    void Event_ChangingHealth(const float& Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Health);
 
     /** Событие BP: Изменение максимального Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Health"))
-    void EventChangingMaxHealth(const float& Data);
+    void Event_ChangingMaxHealth(const float& Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxHealth);
 
     /** Событие BP: Изменение Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Armor"))
-    void EventChangingArmor(const float& Data);
+    void Event_ChangingArmor(const float& Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Armor);
 
     /** Событие BP: Изменение максимальной Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Armor"))
-    void EventChangingMaxArmor(const float& Data);
+    void Event_ChangingMaxArmor(const float& Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
     //-------------------------------------------
 
@@ -310,6 +312,9 @@ private:
 
 
     /* ---   Movement Speed   --- */
+
+    // Переменная контроля максимальной Скорости Персонажа
+    ESpeedVariations SpeedControl = ESpeedVariations::Sprint;
 
     /* Биты команд и состояний Спринта
     @note   b0 - Команда: Включить спринт

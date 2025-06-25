@@ -2,7 +2,7 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
 
 // Generated:
@@ -30,12 +30,12 @@ struct FWeaponSlotData
     // Количество всех Патронов без учёта подготовленных
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Slot Data")
-    int32 NumAllCartridge = 0;
+    int32 NumAllCartridge = 60;
 
     // Количество подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Slot Data")
-    int32 NumPreparedCartridges = 0;
+    int32 NumPreparedCartridges = 30;
 
     // Заряжено ли оружие?
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

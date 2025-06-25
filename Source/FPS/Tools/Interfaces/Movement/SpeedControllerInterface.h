@@ -2,8 +2,10 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
+
+// Base:
 #include "UObject/Interface.h"
 
 // Structs:
@@ -46,16 +48,6 @@ public:
             GetFPSCharacterMovement()->UpdateMaxSpeed();
         }
     };*/
-    //-------------------------------------------
-
-
-
-protected:
-
-    /* ---   Base   --- */
-
-    // Переменная контроля максимальной Скорости Персонажа
-    ESpeedVariations SpeedControl = ESpeedVariations::Sprint;
     //-------------------------------------------
 
 

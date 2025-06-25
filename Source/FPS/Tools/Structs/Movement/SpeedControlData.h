@@ -2,7 +2,7 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
 
 // Generated:

@@ -2,11 +2,15 @@
 
 #pragma once
 
-// Base:
+// Core:
 #include "CoreMinimal.h"
 
 // UE:
 #include "Engine/DataTable.h"
+
+// Structs:
+#include "FPS/Tools/Structs/Animations/PersonAnimData.h"
+#include "FPS/Tools/Structs/Animations/WeaponAnimData.h"
 
 // Generated:
 #include "WeaponData.generated.h"
@@ -32,16 +36,17 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Specifications   --- */
 
+    /* Максимальное Количество хранимых Патронов в запасе */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Specifications")
+    int32 MaxStoredCartridges = 0;
+
     /* Максимальное Количество подготовленных Патронов в чём-либо (в магазине, обойме и т.п.) */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Specifications")
     int32 MaxPreparedCartridges = 0;
-
-    // Количество заряжаемых Патронов
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Specifications")
-    uint8 LoadedCartridgesNum = 1;
     //-------------------------------------------
+
 
 
     /* ---   Visualization   --- */
@@ -75,6 +80,7 @@ struct FWeaponData : public FTableRowBase
     //-------------------------------------------
 
 
+
     /* ---   Dropping   --- */
 
     // Тип используемого Снаряда
@@ -87,13 +93,13 @@ struct FWeaponData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
         meta = (DisplayAfter = "CaseDropGuidanceTransform"))
-    TSubclassOf<UObject> CaseDropType;
+    TSubclassOf<AActor> CaseDropType;
 
     // Тип выпадающего Накопителя
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
         meta = (DisplayAfter = "StorageDropGuidanceTransform"))
-    TSubclassOf<UObject> StorageDropType;
+    TSubclassOf<AActor> StorageDropType;
 
     // Трансформация Направляющей Выстрела
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -112,65 +118,39 @@ struct FWeaponData : public FTableRowBase
     //-------------------------------------------
 
 
-    /* ---   Animations   --- */
 
-    /** От Бедра */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Simple")
-    UAnimMontage* FromHip = nullptr;
+    /* ---   Person Animations   --- */
 
-    // Прицеливание
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Simple")
-    UAnimMontage* Aiming = nullptr;
+        Category = "Person Animations",
+        meta = (ShowOnlyInnerProperties))
+    FPersonAnimData PersonAnimations;
 
-    // Перезарядка от Бедра
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Reloading")
-    UAnimMontage* Reload = nullptr;
+        Category = "Person Animations: Shooting")
+    float ShootingWeapon_Time = 0.2f;
 
-    // Перезарядка при Прицеливании
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Reloading")
-    UAnimMontage* ReloadWhenAiming = nullptr;
+        Category = "Person Animations: Reloading")
+    float ReloadingWeapon_Time = 2.f;
 
-    // Убрать Оружие
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Changing")
-    UAnimMontage* RemoveWeapon = nullptr;
+        Category = "Person Animations: Changing")
+    float RemoveWeapon_Time = 2.f;
 
-    // Убрать Оружие
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Changing")
-    UAnimMontage* TakeWeapon = nullptr;
+        Category = "Person Animations: Changing")
+    float TakeWeapon_Time = 2.f;
     //-------------------------------------------
 
 
-    /* ---   Animations | Timer   --- */
 
-    // Время таймера в секундах
+    /* ---   Weapon Animations   --- */
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Reloading",
-        meta = (DisplayAfter = "ReloadWhenAiming", Units = "s"))
-    float ReloadTime = 2.f;
-
-    // Время таймера в секундах
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Changing",
-        meta = (DisplayAfter = "RemoveWeapon", Units = "s"))
-    float RemoveWeaponTime = 1.f;
-
-    // Время таймера в секундах
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Animations: Changing",
-        meta = (DisplayAfter = "TakeWeapon", Units = "s"))
-    float TakeWeaponTime = 1.f;
-    //-------------------------------------------
-
-
-    /* ---   Constructors   --- */
-
-    FWeaponData() {};
+        Category = "Weapon Animations",
+        meta = (ShowOnlyInnerProperties))
+    FWeaponAnimData WeaponAnimations;
     //-------------------------------------------
 };
 //--------------------------------------------------------------------------------------
