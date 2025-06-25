@@ -149,7 +149,7 @@ void UPersonAnimInstance::UpdateBasicData()
 {
     if (WeaponControlComponent)
     {
-        PersonAnimations = WeaponControlComponent->GetCurrentWeaponData().PersonAnimations;
+        PersonAnimations = WeaponControlComponent->GetCurrentWeaponData()->PersonAnimations;
     }
 }
 //--------------------------------------------------------------------------------------

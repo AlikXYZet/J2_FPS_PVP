@@ -14,6 +14,7 @@
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
+#include "FPS/Combat/FirstPersonWeaponFrame.h"
 #include "FPS/Combat/Projectile.h"
 #include "FPS/Combat/WeaponFrame.h"
 //--------------------------------------------------------------------------------------
@@ -28,6 +29,9 @@ UWeaponControlComponent::UWeaponControlComponent()
     // You can turn these features off to improve performance if you don't need them.
     PrimaryComponentTick.bCanEverTick = false; // Предварительно
 
+    // If true, we call the virtual InitializeComponent()
+    bWantsInitializeComponent = true;
+
     // Компонент реплицируем по умолчанию
     SetIsReplicatedByDefault(true);
     //-------------------------------------------
@@ -38,34 +42,45 @@ UWeaponControlComponent::UWeaponControlComponent()
 
 /* ---   Base   --- */
 
-void UWeaponControlComponent::BeginPlay()
-{
-    Super::BeginPlay();
-
-    BaseInit();
-    DataInit();
-    InitSpeedControl();
-}
-
 void UWeaponControlComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
+    BaseInit();
     CheckNumOfSlots();
+}
+
+void UWeaponControlComponent::InitializeComponent()
+{
+    Super::InitializeComponent();
+
+    DataInit();
+}
+
+void UWeaponControlComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    SpeedControlInit();
 }
 
 void UWeaponControlComponent::BaseInit()
 {
     PlayerOwner = Cast<APlayerCharacter>(GetOwner());
 
-    if (PlayerOwner)
+    if (!PlayerOwner)
     {
-        // Компонент движения Персонажа
-        PlayerOwner->GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
+            *GetNameSafe(this), *FString(__func__));
+    }
+
+    if (WeaponFrame)
+    {
+        SetChildActorClass(WeaponFrame);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrame is NOT"),
             *GetNameSafe(this), *FString(__func__));
     }
 }
@@ -80,6 +95,40 @@ void UWeaponControlComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME_CONDITION(UWeaponControlComponent, CurrentActions, COND_SkipOwner);
+}
+
+void UWeaponControlComponent::InitializeFirstPersonWeaponFrame()
+{
+    if (CurrentWeaponFrame)
+    {
+        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
+        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
+
+        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
+        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
+    }
+
+    if (WeaponSocketInFPMesh != NAME_None)
+    {
+        // Создание Каркаса Оружия для вида от Первого Лица
+        CurrentFPWeaponFrame = GetWorld()->SpawnActor<AFirstPersonWeaponFrame>(
+            FPWeaponFrame.Get());
+
+        if (CurrentFPWeaponFrame)
+        {
+            CurrentFPWeaponFrame->AttachToComponent(
+                PlayerOwner->FPMesh,
+                FAttachmentTransformRules::KeepRelativeTransform,
+                WeaponSocketInFPMesh);
+
+            CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: 'Current FP Weapon Frame' is NOT (Check CurrentFPWeaponFrame)"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -151,14 +200,14 @@ void UWeaponControlComponent::SetupPlayerInputs()
 
 /* ---   Data   --- */
 
-const FWeaponData& UWeaponControlComponent::GetCurrentWeaponData() const
+const FWeaponData& UWeaponControlComponent::BP_GetCurrentWeaponData() const
 {
-    return *CurrentWeaponData;
+    return *GetCurrentWeaponData();
 }
 
-const FWeaponSlotData& UWeaponControlComponent::GetCurrentSlotData() const
+const FWeaponSlotData& UWeaponControlComponent::BP_GetCurrentSlotData() const
 {
-    return *CurrentSlot;
+    return *GetCurrentSlotData();
 }
 
 void UWeaponControlComponent::DataInit()
@@ -176,6 +225,11 @@ void UWeaponControlComponent::DataInit()
 
             if (CurrentWeaponFrame)
             {
+                CurrentWeaponFrame->AttachToComponent(
+                    PlayerOwner->GetMesh(),
+                    FAttachmentTransformRules::KeepRelativeTransform,
+                    WeaponSocketInMesh);
+
                 CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
             }
             else
@@ -632,9 +686,9 @@ void UWeaponControlComponent::SetSpeedControl(const ESpeedVariations& Mode)
     }
 }
 
-void UWeaponControlComponent::InitSpeedControl()
+void UWeaponControlComponent::SpeedControlInit()
 {
-    if (PlayerOwner)
+    if (PlayerOwner && PlayerOwner->IsLocallyControlled())
     {
         PlayerOwner->GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
     }
@@ -646,6 +700,35 @@ void UWeaponControlComponent::InitSpeedControl()
 /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+/* ---   Net   --- */
+
+TArray<FName> UWeaponControlComponent::GetBoneSocketsInMesh() const
+{
+    APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
+
+    if (lPlayerOwner && lPlayerOwner->GetMesh())
+    {
+        return lPlayerOwner->GetMesh()->GetAllSocketNames();
+    }
+
+    return TArray<FName>();
+}
+
+TArray<FName> UWeaponControlComponent::GetBoneSocketsInFPMesh() const
+{
+    APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
+
+    if (lPlayerOwner && lPlayerOwner->FPMesh)
+    {
+        return lPlayerOwner->FPMesh->GetAllSocketNames();
+    }
+
+    return TArray<FName>();
+}
+//--------------------------------------------------------------------------------------
+
+
 
 /* ---   Inputs   --- */
 

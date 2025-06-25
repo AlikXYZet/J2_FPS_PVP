@@ -63,7 +63,7 @@ public:
     UPROPERTY(EditAnywhere,
         Category = "FPS Movement Component|Speed Control",
         meta = (ArraySizeEnum = "ESpeedVariations"))
-    float BaseMovementSpeeds[ESpeedVariations::COUNT] = { 800, 600, 100, 0 };
+    float BaseMovementSpeeds[ESpeedVariations::COUNT] = { 800, 600, 200, 0 };
 
     //
 
@@ -82,17 +82,15 @@ public:
     /* ---   Speed Control | MaxWalkSpeed   --- */
 
     /** Изменить значение максимальной скорости */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Movement Component|Speed Control",
+        meta = (AutoCreateRefTerm = "Mode"))
     void SetSpeedType(const ESpeedVariations& Type);
 
-    /** Обновить значение максимальной скорости через Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_SetSpeedType(const ESpeedVariations& Type);
-
-    /** Обновить значение максимальной скорости у Всех, кроме владельца */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_SetSpeedType(const ESpeedVariations& Type);
-
     /** Изменить значение максимальной скорости */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Movement Component|Speed Control",
+        meta = (AutoCreateRefTerm = "Mode"))
     void SetMaxWalkSpeed(const float& Value);
 
     /** Обновить значение максимальной скорости через Сервер */
@@ -113,5 +111,12 @@ private:
     /* Массив "Контроллеров" Скорости
     @note   За эталон берётся максимальное значение ограничения */
     TArray<ESpeedVariations*> SpeedControllers;
+    //-------------------------------------------
+
+
+
+    /* ---   Speed Control | MaxWalkSpeed   --- */
+
+
     //-------------------------------------------
 };

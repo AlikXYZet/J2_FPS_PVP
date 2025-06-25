@@ -50,6 +50,7 @@ class UDataTable;
 
 // Interaction:
 class APlayerCharacter;
+class AFirstPersonWeaponFrame;
 class AProjectile;
 class AWeaponFrame;
 //--------------------------------------------------------------------------------------
@@ -118,30 +119,56 @@ public:
 
 
 
-protected:
-
-    /* ---   Base   --- */
-
-    // Called when the game starts
-    virtual void BeginPlay() override;
-    //-------------------------------------------
-
-
-
 public:
 
     /* ---   Base   --- */
 
-    /** Вызывается при создании компонента */
+    /** Вызывается при создании компонента в Редакторе или Игровом Процессе */
     virtual void OnComponentCreated() override;
+
+    /** Инициализирует компонент до вызова в Игровом Процессе BeginPlay() Компонента и Актора-Владельца */
+    virtual void InitializeComponent() override;
+
+    /** Begins Play для Компонента */
+    virtual void BeginPlay() override;
     //-------------------------------------------
 
 
 
     /* ---   Net   --- */
 
+    // Создаваемый Каркас Оружия для вида от Первого Лица
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Weapon Control|Net",
+        meta = (DisplayName = "FP Weapon Frame"))
+    TSubclassOf<AWeaponFrame> WeaponFrame;
+
+    /* Сокет Оружия в FPMesh */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Weapon Control|Net",
+        meta = (GetOptions = "GetBoneSocketsInMesh"))
+    FName WeaponSocketInMesh = NAME_None;
+
+    // Создаваемый Каркас Оружия для вида от Первого Лица
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Weapon Control|Net",
+        meta = (DisplayName = "FP Weapon Frame"))
+    TSubclassOf<AFirstPersonWeaponFrame> FPWeaponFrame;
+
+    /* Сокет Оружия в FPMesh */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Weapon Control|Net",
+        meta = (GetOptions = "GetBoneSocketsInFPMesh",
+            DisplayName = "Weapon Socket In FPMesh"))
+    FName WeaponSocketInFPMesh = NAME_None;
+
+    //
+
     /** Используется для регистрации реплицируемых Переменных */
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    /** Использовать ли Каркас Оружия от Первого Лица */
+    void InitializeFirstPersonWeaponFrame();
     //-------------------------------------------
 
 
@@ -233,13 +260,19 @@ public:
 
     /** Получить данные текущего Оружия */
     UFUNCTION(BlueprintCallable,
-        Category = "Weapon Control|Data")
-    const FWeaponData& GetCurrentWeaponData() const;
+        Category = "Weapon Control|Data",
+        meta = (DisplayName = "Get Current Weapon Data"))
+    const FWeaponData& BP_GetCurrentWeaponData() const;
+
+    FORCEINLINE const FWeaponData* GetCurrentWeaponData() const { return CurrentWeaponData; };
 
     /** Получить данные текущего Слота */
     UFUNCTION(BlueprintCallable,
-        Category = "Weapon Control|Data")
-    const FWeaponSlotData& GetCurrentSlotData() const;
+        Category = "Weapon Control|Data",
+        meta = (DisplayName = "Get Current Slot Data"))
+    const FWeaponSlotData& BP_GetCurrentSlotData() const;
+
+    FORCEINLINE const FWeaponSlotData* GetCurrentSlotData() const { return CurrentSlot; };
     //-------------------------------------------
 
 
@@ -342,6 +375,12 @@ private:
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Control|Check")
     AWeaponFrame* CurrentWeaponFrame = nullptr;
+
+    // Указатель на текущий Каркас Оружия от Первого Лица
+    UPROPERTY(VisibleInstanceOnly,
+        Category = "Weapon Control|Check",
+        meta = (DisplayName = "Current FP Weapon Frame"))
+    AWeaponFrame* CurrentFPWeaponFrame = nullptr;
 
     //
 
@@ -508,7 +547,7 @@ private:
     //
 
     /** Инициализация контроля Скорости */
-    void InitSpeedControl() override;
+    void SpeedControlInit() override;
     //-------------------------------------------
 
 
@@ -516,6 +555,19 @@ private:
     /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+    /* ---   Net   --- */
+
+    /** Получение наименований Сокетов текущего Меша в Mesh */
+    UFUNCTION()
+    TArray<FName> GetBoneSocketsInMesh() const;
+
+    /** Получение наименований Сокетов текущего Меша в FPMesh */
+    UFUNCTION()
+    TArray<FName> GetBoneSocketsInFPMesh() const;
+    //-------------------------------------------
+
+
 
     /* ---   Inputs   --- */
 

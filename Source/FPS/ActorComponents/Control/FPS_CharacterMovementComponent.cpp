@@ -95,24 +95,8 @@ void UFPS_CharacterMovementComponent::SetSpeedType(const ESpeedVariations& Type)
     if (Type < ESpeedVariations::COUNT)
     {
         // Быстрое применение значения у Клиента-Владельца
-        MaxWalkSpeed = BaseMovementSpeeds[(uint8)Type];
-
-        Server_SetSpeedType(Type);
+        SetMaxWalkSpeed(BaseMovementSpeeds[(uint8)Type]);
     }
-}
-
-void UFPS_CharacterMovementComponent::Server_SetSpeedType_Implementation(const ESpeedVariations& Type)
-{
-    Multicast_SetSpeedType(Type);
-}
-
-void UFPS_CharacterMovementComponent::Multicast_SetSpeedType_Implementation(const ESpeedVariations& Type)
-{
-    // Фильтрация, если вызвал Владелец
-    if (!GetCharacterOwner() || GetCharacterOwner()->IsLocallyControlled())
-        return;
-
-    MaxWalkSpeed = BaseMovementSpeeds[(uint8)Type];
 }
 
 void UFPS_CharacterMovementComponent::SetMaxWalkSpeed(const float& Value)

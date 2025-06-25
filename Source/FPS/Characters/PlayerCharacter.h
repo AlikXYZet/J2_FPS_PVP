@@ -125,6 +125,9 @@ public:
     @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой)
     */
     virtual void PossessedBy(AController* NewController) override;
+
+    /** Инициализация после инициализации всех Компонентов */
+    virtual void PostInitializeComponents() override;
     //-------------------------------------------
 
 
@@ -135,6 +138,18 @@ public:
     UFUNCTION(BlueprintPure,
         Category = "Player Character")
     virtual UFPS_CharacterMovementComponent* GetFPSCharacterMovement() const;
+    //-------------------------------------------
+
+
+
+    /* ---   Visualization   --- */
+
+    /* Скрываемая Кость в FPMesh */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "Player Character|Visualization",
+        meta = (GetOptions = "GetBoneNamesInFPMesh",
+            DisplayName = "Hidden Bone In FPMesh"))
+    FName HiddenBoneInFPMesh = NAME_None;
     //-------------------------------------------
 
 
@@ -232,20 +247,9 @@ public:
 
     //
 
-    /** Изменить значение максимальной скорости */
-    void SetMaxWalkSpeed(const float& Value);
-
-    /** Обновить значение максимальной скорости через Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_SetMaxWalkSpeed(const float& Value);
-
-    /** Обновить значение максимальной скорости у Всех, кроме владельца */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_SetMaxWalkSpeed(const float& Value);
-
     /** Задать значение скорости */
     UFUNCTION(BlueprintCallable,
-        Category = "Speed Control",
+        Category = "Player Character|Movement Speed",
         meta = (AutoCreateRefTerm = "Mode"))
     void SetSpeedControl(const ESpeedVariations& Mode) override;
     //-------------------------------------------
@@ -324,7 +328,7 @@ private:
     //
 
     /** Инициализация контроля Скорости */
-    void InitSpeedControl() override;
+    void SpeedControlInit() override;
     //-------------------------------------------
 
 
@@ -346,6 +350,16 @@ private:
     /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+    /* ---   Base   --- */
+
+    /** Получение наименований Костей текущего Меша в FPMesh */
+    UFUNCTION()
+    TArray<FName> GetBoneNamesInFPMesh() const;
+
+    //-------------------------------------------
+
+
 
     /* ---   Inputs   --- */
 

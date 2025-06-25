@@ -16,11 +16,9 @@
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponControlComponent.h"
-#include "FPS/Combat/WeaponFrame.h"
 
 // Interaction | GAS:
 #include "FPS/GAS/FPS_AttributeSet.h"
-#include "FPS/GAS/FPS_GameplayAbility.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -104,7 +102,7 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    InitSpeedControl();
+    SpeedControlInit();
     Cleaning();
 }
 
@@ -115,13 +113,22 @@ void APlayerCharacter::PossessedBy(AController* NewController)
     InitAbilitySystemComp();
 }
 
+void APlayerCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+}
+
 void APlayerCharacter::Cleaning()
 {
-    if (GetController() == UGameplayStatics::GetPlayerController(GetWorld(), 0))
+    if (IsLocallyControlled())
     {
         GetMesh()->SetVisibility(false);
-        GetMesh()->bCastHiddenShadow = true;
+        GetMesh()->SetCastHiddenShadow(true);
         GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
+
+        WeaponControlComp->InitializeFirstPersonWeaponFrame();
+
+        FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
     }
     else
     {
@@ -288,29 +295,6 @@ void APlayerCharacter::StopSprint()
 
 /* ---   Movement Speed   --- */
 
-void APlayerCharacter::SetMaxWalkSpeed(const float& Value)
-{
-    // Быстрое применение значения у Клиента-Владельца
-    GetCharacterMovement()->MaxWalkSpeed = Value;
-
-    Server_SetMaxWalkSpeed(Value);
-}
-
-void APlayerCharacter::Server_SetMaxWalkSpeed_Implementation(const float& Value)
-{
-    Multicast_SetMaxWalkSpeed(Value);
-}
-
-void APlayerCharacter::Multicast_SetMaxWalkSpeed_Implementation(const float& Value)
-{
-    // Фильтрация, если вызвал Владелец
-    if (IsLocallyControlled())
-        return;
-
-    if (GetCharacterMovement())
-        GetCharacterMovement()->MaxWalkSpeed = Value;
-}
-
 void APlayerCharacter::SetSpeedControl(const ESpeedVariations& Mode)
 {
     if (SpeedControl != Mode)
@@ -320,10 +304,13 @@ void APlayerCharacter::SetSpeedControl(const ESpeedVariations& Mode)
     }
 }
 
-void APlayerCharacter::InitSpeedControl()
+void APlayerCharacter::SpeedControlInit()
 {
-    GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
-    SetSpeedControl(ESpeedVariations::Jog);
+    if (IsLocallyControlled())
+    {
+        GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
+        SetSpeedControl(ESpeedVariations::Jog);
+    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -347,6 +334,23 @@ void APlayerCharacter::InitAbilitySystemComp()
 /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+/* ---   Base   --- */
+
+TArray<FName> APlayerCharacter::GetBoneNamesInFPMesh() const
+{
+    if (FPMesh)
+    {
+        TArray<FName> lResult;
+        GetMesh()->GetBoneNames(lResult);
+        return lResult;
+    }
+
+    return TArray<FName>();
+}
+//--------------------------------------------------------------------------------------
+
+
 
 /* ---   Inputs   --- */
 
