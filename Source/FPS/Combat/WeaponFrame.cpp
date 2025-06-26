@@ -4,7 +4,7 @@
 #include "WeaponFrame.h"
 
 // Interaction:
-#include <FPS/ActorComponents/Data/WeaponControlComponent.h>
+#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -15,7 +15,7 @@ AWeaponFrame::AWeaponFrame()
 {
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true; // Принудительно
+    PrimaryActorTick.bCanEverTick = false; // Предварительно
 
     SetActorTickInterval(0.1f); // 10 Hz
     //-------------------------------------------
@@ -51,37 +51,27 @@ void AWeaponFrame::BeginPlay()
 {
     Super::BeginPlay();
 }
-
-void AWeaponFrame::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-    Super::EndPlay(EndPlayReason);
-}
-
-void AWeaponFrame::Tick(float DeltaSeconds)
-{
-    Super::Tick(DeltaSeconds);
-}
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Data   --- */
 
-void AWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* lData)
+void AWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iData)
 {
-    if (lData)
+    if (iData)
     {
         // Меш:
-        if (lData->SkeletalMesh)
+        if (iData->SkeletalMesh)
         {
-            WeaponSkeletalMesh->SetSkeletalMesh(lData->SkeletalMesh);
-            WeaponSkeletalMesh->SetRelativeTransform(lData->MeshTransform);
+            WeaponSkeletalMesh->SetSkeletalMesh(iData->SkeletalMesh);
+            WeaponSkeletalMesh->SetRelativeTransform(iData->MeshTransform);
             WeaponStaticMesh->SetStaticMesh(nullptr);
         }
-        else if (lData->StaticMesh)
+        else if (iData->StaticMesh)
         {
-            WeaponStaticMesh->SetStaticMesh(lData->StaticMesh);
-            WeaponStaticMesh->SetRelativeTransform(lData->MeshTransform);
+            WeaponStaticMesh->SetStaticMesh(iData->StaticMesh);
+            WeaponStaticMesh->SetRelativeTransform(iData->MeshTransform);
             WeaponSkeletalMesh->SetSkeletalMesh(nullptr);
         }
     }

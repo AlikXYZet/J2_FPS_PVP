@@ -40,6 +40,29 @@ UWeaponControlComponent::UWeaponControlComponent()
 
 
 
+/* ---   Delegates   --- */
+
+#define DELEGATE_METHOD_Broadcast_cpp(PropertyName) \
+void UWeaponControlComponent::Server_##PropertyName##_Implementation() \
+{ \
+    Multicast_##PropertyName(); \
+} \
+void UWeaponControlComponent::Multicast_##PropertyName##_Implementation() \
+{ \
+    /* Фильтрация, если вызвал Владелец */ \
+    if (PlayerOwner && PlayerOwner->IsLocallyControlled()) \
+        return; \
+    ##PropertyName.Broadcast(); \
+}
+
+DELEGATE_METHOD_Broadcast_cpp(OnShootingWeapon);
+DELEGATE_METHOD_Broadcast_cpp(OnReloadingWeapon);
+DELEGATE_METHOD_Broadcast_cpp(OnStartChangingWeapon);
+DELEGATE_METHOD_Broadcast_cpp(OnChangingWeapon);
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Base   --- */
 
 void UWeaponControlComponent::OnComponentCreated()
@@ -48,6 +71,16 @@ void UWeaponControlComponent::OnComponentCreated()
 
     BaseInit();
     CheckNumOfSlots();
+}
+
+void UWeaponControlComponent::DestroyComponent(bool bPromoteChildren)
+{
+    Super::DestroyComponent(bPromoteChildren);
+
+    if (CurrentFPWeaponFrame)
+    {
+        CurrentFPWeaponFrame->Destroy();
+    }
 }
 
 void UWeaponControlComponent::InitializeComponent()
@@ -62,6 +95,7 @@ void UWeaponControlComponent::BeginPlay()
     Super::BeginPlay();
 
     SpeedControlInit();
+    //Broadcast_OnChangingWeapon();
 }
 
 void UWeaponControlComponent::BaseInit()
@@ -74,13 +108,13 @@ void UWeaponControlComponent::BaseInit()
             *GetNameSafe(this), *FString(__func__));
     }
 
-    if (WeaponFrame)
+    if (WeaponFrameType)
     {
-        SetChildActorClass(WeaponFrame);
+        SetChildActorClass(WeaponFrameType);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrame is NOT"),
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrameType is NOT"),
             *GetNameSafe(this), *FString(__func__));
     }
 }
@@ -112,7 +146,7 @@ void UWeaponControlComponent::InitializeFirstPersonWeaponFrame()
     {
         // Создание Каркаса Оружия для вида от Первого Лица
         CurrentFPWeaponFrame = GetWorld()->SpawnActor<AFirstPersonWeaponFrame>(
-            FPWeaponFrame.Get());
+            FPWeaponFrameType.Get());
 
         if (CurrentFPWeaponFrame)
         {
@@ -220,7 +254,6 @@ void UWeaponControlComponent::DataInit()
 
         if (CurrentWeaponData)
         {
-            OnChangingWeapon.Broadcast();
             CurrentWeaponFrame = Cast<AWeaponFrame>(GetChildActor());
 
             if (CurrentWeaponFrame)
@@ -552,8 +585,9 @@ void UWeaponControlComponent::StopReloading()
         --(CurrentSlot->NumPreparedCartridges);
     }
 
-    OnReloadingWeapon.Broadcast();
-    //DropActor(CurrentWeaponData->StorageDropType, CurrentWeaponFrame->StorageDropGuidance);
+    DropActor(CurrentWeaponData->StorageDropType, CurrentFPWeaponFrame->StorageDropGuidance);
+
+    Broadcast_OnReloadingWeapon();
 }
 
 void UWeaponControlComponent::StopChanging()
@@ -590,8 +624,6 @@ void UWeaponControlComponent::StartShooting()
 
 void UWeaponControlComponent::StartReloading()
 {
-    OnStartReloadingWeapon.Broadcast();
-
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
@@ -602,7 +634,7 @@ void UWeaponControlComponent::StartReloading()
 
 void UWeaponControlComponent::StartChangeWeaponSlot()
 {
-    OnStartChangingWeapon.Broadcast();
+    Broadcast_OnStartChangingWeapon();
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
@@ -641,9 +673,13 @@ void UWeaponControlComponent::ShootingWeapon()
         // Результат
         if (bChecker)
         {
-            OnShootingWeapon.Broadcast();
-            //DropActor(CurrentWeaponData->ProjectileType, CurrentWeaponFrame->ShootGuidance);
-            //DropActor(CurrentWeaponData->CaseDropType, CurrentWeaponFrame->CaseDropGuidance);
+            Broadcast_OnShootingWeapon();
+
+            if (CurrentFPWeaponFrame)
+            {
+                DropActor(CurrentWeaponData->ProjectileType, CurrentFPWeaponFrame->ShootGuidance);
+                DropActor(CurrentWeaponData->CaseDropType, CurrentFPWeaponFrame->CaseDropGuidance);
+            }
         }
         else
         {
@@ -656,9 +692,15 @@ void UWeaponControlComponent::ChangeWeaponSlot()
 {
     CurrentSlot = NewSlotForChangingWeapons;
     CurrentWeaponData = WeaponsDataTable->FindRow<FWeaponData>(CurrentSlot->WeaponType, "ChangeWeaponSlot");
+
     CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
 
-    OnChangingWeapon.Broadcast();
+    if (CurrentFPWeaponFrame)
+    {
+        CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+    }
+
+    Broadcast_OnChangingWeapon();
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
@@ -671,6 +713,34 @@ void UWeaponControlComponent::ChangeWeaponSlot()
 void UWeaponControlComponent::EndChangeWeaponSlot()
 {
     ResetChanging();
+}
+
+void UWeaponControlComponent::DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance)
+{
+    if (ActorType && Guidance)
+    {
+        Server_DropActor(ActorType.Get(), Guidance->GetComponentTransform());
+    }
+}
+
+void UWeaponControlComponent::Server_DropActor_Implementation(UClass* iActorType, const FTransform& iTransform)
+{
+    Multicast_DropActor(iActorType, iTransform);
+}
+
+void UWeaponControlComponent::Multicast_DropActor_Implementation(UClass* iActorType, const FTransform& iTransform)
+{
+    if (iActorType)
+    {
+        // Параметр создания: Всегда появляется
+        FActorSpawnParameters lSpawnParameters;
+        lSpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        GetWorld()->SpawnActor<AActor>(
+            iActorType,
+            iTransform,
+            lSpawnParameters);
+    }
 }
 //--------------------------------------------------------------------------------------
 

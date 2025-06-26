@@ -125,9 +125,6 @@ public:
     @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой)
     */
     virtual void PossessedBy(AController* NewController) override;
-
-    /** Инициализация после инициализации всех Компонентов */
-    virtual void PostInitializeComponents() override;
     //-------------------------------------------
 
 

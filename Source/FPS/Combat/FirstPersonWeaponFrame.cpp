@@ -13,6 +13,7 @@
 #include "FPS/ActorComponents/Control/SmoothRotationComponent.h"
 
 // Interaction:
+#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Core/Online/FPS_PlayerController.h"
 #include "Projectile.h"
@@ -27,8 +28,6 @@ AFirstPersonWeaponFrame::AFirstPersonWeaponFrame()
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true; // Принудительно
-
-    SetActorTickInterval(0.1f); // 10 Hz
     //-------------------------------------------
 
 
@@ -89,11 +88,6 @@ void AFirstPersonWeaponFrame::BeginPlay()
     Super::BeginPlay();
 }
 
-void AFirstPersonWeaponFrame::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-    Super::EndPlay(EndPlayReason);
-}
-
 void AFirstPersonWeaponFrame::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -106,36 +100,16 @@ void AFirstPersonWeaponFrame::Tick(float DeltaSeconds)
 
 /* ---   Data   --- */
 
-void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* lData)
+void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iData)
 {
-    Super::UpdateWeaponOnSelectedData(lData);
+    Super::UpdateWeaponOnSelectedData(iData);
 
-    if (lData)
+    if (iData)
     {
         // Направляющие:
-        ShootGuidance->SetRelativeTransform(lData->ShootGuidanceTransform);
-        CaseDropGuidance->SetRelativeTransform(lData->CaseDropGuidanceTransform);
-        StorageDropGuidance->SetRelativeTransform(lData->StorageDropGuidanceTransform);
-    }
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Actions | Reaction   --- */
-
-void AFirstPersonWeaponFrame::DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance)
-{
-    if (ActorType && Guidance)
-    {
-        // Параметр создания: Всегда появляется
-        FActorSpawnParameters lSpawnParameters;
-        lSpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-        AProjectile* lProjectile = GetWorld()->SpawnActor<AProjectile>(
-            ActorType.Get(),
-            Guidance->GetComponentTransform(),
-            lSpawnParameters);
+        ShootGuidance->SetRelativeTransform(iData->ShootGuidanceTransform);
+        CaseDropGuidance->SetRelativeTransform(iData->CaseDropGuidanceTransform);
+        StorageDropGuidance->SetRelativeTransform(iData->StorageDropGuidanceTransform);
     }
 }
 //--------------------------------------------------------------------------------------

@@ -113,11 +113,6 @@ void APlayerCharacter::PossessedBy(AController* NewController)
     InitAbilitySystemComp();
 }
 
-void APlayerCharacter::PostInitializeComponents()
-{
-    Super::PostInitializeComponents();
-}
-
 void APlayerCharacter::Cleaning()
 {
     if (IsLocallyControlled())

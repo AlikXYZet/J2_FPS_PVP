@@ -27,9 +27,6 @@
 // Делегат: При Стрельбе Оружия
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootingWeapon);
 
-// Делегат: При Старте перезарядки Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartReloadingWeapon);
-
 // Делегат: При Перезарядке Оружия
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadingWeapon);
 
@@ -38,6 +35,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartChangingWeapon);
 
 // Делегат: При Смене Оружия
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingWeapon);
+
+/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
+#define DELEGATE_METHOD_Broadcast_h(PropertyName) \
+    void Broadcast_##PropertyName() \
+    { \
+        ##PropertyName.Broadcast(); \
+        Server_##PropertyName(); \
+    }
 // ----------------------------------------------------------------------------------------------------
 
 
@@ -91,22 +96,22 @@ public:
     // Делегат: При Стрельбе Оружия
     UPROPERTY(BlueprintAssignable)
     FOnShootingWeapon OnShootingWeapon;
-
-    // Делегат: При Старте перезарядки Оружия
-    UPROPERTY(BlueprintAssignable)
-    FOnStartReloadingWeapon OnStartReloadingWeapon;
+    DELEGATE_METHOD_Broadcast_h(OnShootingWeapon);
 
     // Делегат: При Перезарядке Оружия
     UPROPERTY(BlueprintAssignable)
     FOnReloadingWeapon OnReloadingWeapon;
+    DELEGATE_METHOD_Broadcast_h(OnReloadingWeapon);
 
     // Делегат: При Старте смены Оружия
     UPROPERTY(BlueprintAssignable)
     FOnStartChangingWeapon OnStartChangingWeapon;
+    DELEGATE_METHOD_Broadcast_h(OnStartChangingWeapon);
 
     // Делегат: При Смене Оружия
     UPROPERTY(BlueprintAssignable)
     FOnChangingWeapon OnChangingWeapon;
+    DELEGATE_METHOD_Broadcast_h(OnChangingWeapon);
     //-------------------------------------------
 
 
@@ -123,8 +128,11 @@ public:
 
     /* ---   Base   --- */
 
-    /** Вызывается при создании компонента в Редакторе или Игровом Процессе */
+    /** Вызывается при Создании компонента в Редакторе или Игровом Процессе */
     virtual void OnComponentCreated() override;
+
+    /** Вызывается при Уничтожении компонента в Редакторе или Игровом Процессе */
+    virtual void DestroyComponent(bool bPromoteChildren = false) override;
 
     /** Инициализирует компонент до вызова в Игровом Процессе BeginPlay() Компонента и Актора-Владельца */
     virtual void InitializeComponent() override;
@@ -140,8 +148,8 @@ public:
     // Создаваемый Каркас Оружия для вида от Первого Лица
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
         Category = "Weapon Control|Net",
-        meta = (DisplayName = "FP Weapon Frame"))
-    TSubclassOf<AWeaponFrame> WeaponFrame;
+        meta = (DisplayName = "Weapon Frame Type"))
+    TSubclassOf<AWeaponFrame> WeaponFrameType;
 
     /* Сокет Оружия в FPMesh */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
@@ -152,8 +160,8 @@ public:
     // Создаваемый Каркас Оружия для вида от Первого Лица
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
         Category = "Weapon Control|Net",
-        meta = (DisplayName = "FP Weapon Frame"))
-    TSubclassOf<AFirstPersonWeaponFrame> FPWeaponFrame;
+        meta = (DisplayName = "FP Weapon Frame Type"))
+    TSubclassOf<AFirstPersonWeaponFrame> FPWeaponFrameType;
 
     /* Сокет Оружия в FPMesh */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
@@ -364,6 +372,43 @@ public:
 
 private:
 
+    /* ---   Delegates | Net   --- */
+
+    /** OnShootingWeapon: Ретрансляцией на Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_OnShootingWeapon();
+
+    /** OnShootingWeapon: Ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnShootingWeapon();
+
+    /** OnReloadingWeapon: Ретрансляцией на Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_OnReloadingWeapon();
+
+    /** OnReloadingWeapon: Ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnReloadingWeapon();
+
+    /** OnStartChangingWeapon: Ретрансляцией на Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_OnStartChangingWeapon();
+
+    /** OnStartChangingWeapon: Ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnStartChangingWeapon();
+
+    /** OnChangingWeapon: Ретрансляцией на Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_OnChangingWeapon();
+
+    /** OnChangingWeapon: Ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnChangingWeapon();
+    //-------------------------------------------
+
+
+
     /* ---   Base   --- */
 
     /* Игрок-Владелец данного UWeaponControlComponent */
@@ -380,7 +425,7 @@ private:
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Control|Check",
         meta = (DisplayName = "Current FP Weapon Frame"))
-    AWeaponFrame* CurrentFPWeaponFrame = nullptr;
+    AFirstPersonWeaponFrame* CurrentFPWeaponFrame = nullptr;
 
     //
 
@@ -535,6 +580,17 @@ private:
 
     /** Запуск Действия: Взять новое Оружие */
     void EndChangeWeaponSlot();
+
+    /* Создание и выброс Астора согласно его Типу и Направляющей */
+    void DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance);
+
+    /** DropActor: Ретрансляцией на Сервер */
+    UFUNCTION(Server, Reliable)
+    void Server_DropActor(UClass* ActorType, const FTransform& Transform);
+
+    /** DropActor: Ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_DropActor(UClass* ActorType, const FTransform& Transform);
     //-------------------------------------------
 
 

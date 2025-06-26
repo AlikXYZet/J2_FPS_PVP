@@ -97,9 +97,6 @@ protected:
 
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
-
-    /** Overridable function called whenever this actor is being removed from a level */
-    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     //-------------------------------------------
 
 
@@ -117,14 +114,7 @@ public:
     /* ---   Data   --- */
 
     /** Обновить Оружие по Данным */
-    virtual void UpdateWeaponOnSelectedData(const FWeaponData* lData) override;
-    //-------------------------------------------
-
-
-
-    /* ---   Actions | Reaction   --- */
-
-    void DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance);
+    virtual void UpdateWeaponOnSelectedData(const FWeaponData* Data) override;
     //-------------------------------------------
 
 
