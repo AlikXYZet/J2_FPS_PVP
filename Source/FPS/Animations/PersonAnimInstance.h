@@ -27,7 +27,7 @@ class UDataTable;
 
 // Interaction:
 class APlayerCharacter;
-class UWeaponControlComponent;
+class UWeaponNetworkController;
 //--------------------------------------------------------------------------------------
 
 
@@ -165,7 +165,7 @@ public:
     /* Компонент контроля Оружия Игрока-Владельца данного AnimInstance */
     UPROPERTY(BlueprintReadOnly,
         Category = "PersonAnim|Actions")
-    UWeaponControlComponent* WeaponControlComponent = nullptr;
+    UWeaponNetworkController* WeaponControlNetComp = nullptr;
 
     //
 

@@ -1,7 +1,7 @@
 //
 
 // Base:
-#include "WeaponControlComponent.h"
+#include "WeaponLocalController.h"
 
 // UE:
 #include "Components/ArrowComponent.h"
@@ -23,7 +23,7 @@
 
 /* ---   Constructors   --- */
 
-UWeaponControlComponent::UWeaponControlComponent()
+UWeaponLocalController::UWeaponLocalController()
 {
     // Set this component to be initialized when the game starts, and to be ticked every frame.
     // You can turn these features off to improve performance if you don't need them.
@@ -40,128 +40,61 @@ UWeaponControlComponent::UWeaponControlComponent()
 
 
 
-/* ---   Delegates   --- */
-
-#define DELEGATE_METHOD_Broadcast_cpp(PropertyName) \
-void UWeaponControlComponent::Server_##PropertyName##_Implementation() \
-{ \
-    Multicast_##PropertyName(); \
-} \
-void UWeaponControlComponent::Multicast_##PropertyName##_Implementation() \
-{ \
-    /* Фильтрация, если вызвал Владелец */ \
-    if (PlayerOwner && PlayerOwner->IsLocallyControlled()) \
-        return; \
-    ##PropertyName.Broadcast(); \
-}
-
-DELEGATE_METHOD_Broadcast_cpp(OnShootingWeapon);
-DELEGATE_METHOD_Broadcast_cpp(OnReloadingWeapon);
-DELEGATE_METHOD_Broadcast_cpp(OnStartChangingWeapon);
-DELEGATE_METHOD_Broadcast_cpp(OnChangingWeapon);
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Base   --- */
 
-void UWeaponControlComponent::OnComponentCreated()
+void UWeaponLocalController::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
     BaseInit();
+
+#if WITH_EDITOR
     CheckNumOfSlots();
+#endif
 }
 
-void UWeaponControlComponent::DestroyComponent(bool bPromoteChildren)
-{
-    Super::DestroyComponent(bPromoteChildren);
-
-    if (CurrentFPWeaponFrame)
-    {
-        CurrentFPWeaponFrame->Destroy();
-    }
-}
-
-void UWeaponControlComponent::InitializeComponent()
+void UWeaponLocalController::InitializeComponent()
 {
     Super::InitializeComponent();
 
     DataInit();
 }
 
-void UWeaponControlComponent::BeginPlay()
+void UWeaponLocalController::BeginPlay()
 {
     Super::BeginPlay();
 
     SpeedControlInit();
-    //Broadcast_OnChangingWeapon();
 }
 
-void UWeaponControlComponent::BaseInit()
+void UWeaponLocalController::BaseInit()
 {
     PlayerOwner = Cast<APlayerCharacter>(GetOwner());
 
-    if (!PlayerOwner)
+    if (PlayerOwner)
+    {
+        WeaponControlNetComp = PlayerOwner->WeaponControlNetComp;
+
+        if (!WeaponControlNetComp)
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlNetComp is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+    else
     {
         UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
             *GetNameSafe(this), *FString(__func__));
     }
 
-    if (WeaponFrameType)
+    if (FPWeaponFrameType)
     {
-        SetChildActorClass(WeaponFrameType);
+        SetChildActorClass(FPWeaponFrameType);
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrameType is NOT"),
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: FPWeaponFrameType is NOT"),
             *GetNameSafe(this), *FString(__func__));
-    }
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Net   --- */
-
-void UWeaponControlComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME_CONDITION(UWeaponControlComponent, CurrentActions, COND_SkipOwner);
-}
-
-void UWeaponControlComponent::InitializeFirstPersonWeaponFrame()
-{
-    if (CurrentWeaponFrame)
-    {
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
-
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
-    }
-
-    if (WeaponSocketInFPMesh != NAME_None)
-    {
-        // Создание Каркаса Оружия для вида от Первого Лица
-        CurrentFPWeaponFrame = GetWorld()->SpawnActor<AFirstPersonWeaponFrame>(
-            FPWeaponFrameType.Get());
-
-        if (CurrentFPWeaponFrame)
-        {
-            CurrentFPWeaponFrame->AttachToComponent(
-                PlayerOwner->FPMesh,
-                FAttachmentTransformRules::KeepRelativeTransform,
-                WeaponSocketInFPMesh);
-
-            CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: 'Current FP Weapon Frame' is NOT (Check CurrentFPWeaponFrame)"),
-                *GetNameSafe(this), *FString(__func__));
-        }
     }
 }
 //--------------------------------------------------------------------------------------
@@ -170,7 +103,7 @@ void UWeaponControlComponent::InitializeFirstPersonWeaponFrame()
 
 /* ---   Inputs   --- */
 
-void UWeaponControlComponent::SetupPlayerInputs()
+void UWeaponLocalController::SetupPlayerInputs()
 {
     UInputComponent* lInputComponent = Cast<APawn>(GetOwner())->InputComponent;
 
@@ -179,16 +112,16 @@ void UWeaponControlComponent::SetupPlayerInputs()
         /* ---   Switching   --- */
 
         if (ActionGroups_NextSlot != NAME_None)
-            lInputComponent->BindAction(ActionGroups_NextSlot, IE_Pressed, this, &UWeaponControlComponent::ToNextSlot);
+            lInputComponent->BindAction(ActionGroups_NextSlot, IE_Pressed, this, &UWeaponLocalController::ToNextSlot);
 
         if (ActionGroups_PrevSlot != NAME_None)
-            lInputComponent->BindAction(ActionGroups_PrevSlot, IE_Pressed, this, &UWeaponControlComponent::ToPrevSlot);
+            lInputComponent->BindAction(ActionGroups_PrevSlot, IE_Pressed, this, &UWeaponLocalController::ToPrevSlot);
 
         if (ActionGroups_SlotNum1 != NAME_None)
-            lInputComponent->BindAction(ActionGroups_SlotNum1, IE_Pressed, this, &UWeaponControlComponent::ToSlot1);
+            lInputComponent->BindAction(ActionGroups_SlotNum1, IE_Pressed, this, &UWeaponLocalController::ToSlot1);
 
         if (ActionGroups_SlotNum2 != NAME_None)
-            lInputComponent->BindAction(ActionGroups_SlotNum2, IE_Pressed, this, &UWeaponControlComponent::ToSlot2);
+            lInputComponent->BindAction(ActionGroups_SlotNum2, IE_Pressed, this, &UWeaponLocalController::ToSlot2);
         //-------------------------------------------
 
 
@@ -196,18 +129,18 @@ void UWeaponControlComponent::SetupPlayerInputs()
 
         if (ActionGroups_Aiming != NAME_None)
         {
-            lInputComponent->BindAction(ActionGroups_Aiming, IE_Pressed, this, &UWeaponControlComponent::SetAiming);
-            lInputComponent->BindAction(ActionGroups_Aiming, IE_Released, this, &UWeaponControlComponent::ResetAiming);
+            lInputComponent->BindAction(ActionGroups_Aiming, IE_Pressed, this, &UWeaponLocalController::SetAiming);
+            lInputComponent->BindAction(ActionGroups_Aiming, IE_Released, this, &UWeaponLocalController::ResetAiming);
         }
 
         if (ActionGroups_Fire != NAME_None)
         {
-            lInputComponent->BindAction(ActionGroups_Fire, IE_Pressed, this, &UWeaponControlComponent::SetShooting);
-            lInputComponent->BindAction(ActionGroups_Fire, IE_Released, this, &UWeaponControlComponent::ResetShooting);
+            lInputComponent->BindAction(ActionGroups_Fire, IE_Pressed, this, &UWeaponLocalController::SetShooting);
+            lInputComponent->BindAction(ActionGroups_Fire, IE_Released, this, &UWeaponLocalController::ResetShooting);
         }
 
         if (ActionGroups_Reload != NAME_None)
-            lInputComponent->BindAction(ActionGroups_Reload, IE_Pressed, this, &UWeaponControlComponent::SetReloading);
+            lInputComponent->BindAction(ActionGroups_Reload, IE_Pressed, this, &UWeaponLocalController::SetReloading);
         //-------------------------------------------
     }
     else
@@ -234,46 +167,59 @@ void UWeaponControlComponent::SetupPlayerInputs()
 
 /* ---   Data   --- */
 
-const FWeaponData& UWeaponControlComponent::BP_GetCurrentWeaponData() const
+const FWeaponData& UWeaponLocalController::BP_GetCurrentWeaponData() const
 {
     return *GetCurrentWeaponData();
 }
 
-const FWeaponSlotData& UWeaponControlComponent::BP_GetCurrentSlotData() const
+const FWeaponSlotData& UWeaponLocalController::BP_GetCurrentSlotData() const
 {
     return *GetCurrentSlotData();
 }
 
-void UWeaponControlComponent::DataInit()
+void UWeaponLocalController::DataInit()
 {
     if (WeaponsDataTable
         && WeaponSlots.IsValidIndex(0))
     {
         CurrentSlot = &WeaponSlots[0];
-        CurrentWeaponData = WeaponsDataTable->FindRow<FWeaponData>(CurrentSlot->WeaponType, "DataInit");
 
-        if (CurrentWeaponData)
+        if (WeaponControlNetComp)
         {
-            CurrentWeaponFrame = Cast<AWeaponFrame>(GetChildActor());
+            WeaponControlNetComp->WeaponDataSlots.Empty(WeaponsDataTable->GetRowNames().Num());
 
-            if (CurrentWeaponFrame)
+            for (FWeaponSlotData& Data : WeaponSlots)
             {
-                CurrentWeaponFrame->AttachToComponent(
+                WeaponControlNetComp->WeaponDataSlots.Add(
+                    WeaponsDataTable->FindRow<FWeaponData>(Data.WeaponType, "DataInit"));
+            }
+
+            WeaponControlNetComp->CurrentWeaponData = WeaponControlNetComp->WeaponDataSlots[0];
+            WeaponControlNetComp->DataInit();
+        }
+
+        if (GetCurrentWeaponData())
+        {
+            CurrentFPWeaponFrame = Cast<AFirstPersonWeaponFrame>(GetChildActor());
+
+            if (CurrentFPWeaponFrame)
+            {
+                CurrentFPWeaponFrame->AttachToComponent(
                     PlayerOwner->GetMesh(),
                     FAttachmentTransformRules::KeepRelativeTransform,
-                    WeaponSocketInMesh);
+                    WeaponSocketInFPMesh);
 
-                CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+                CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: Child Actor is NOT AWeaponFrame (Check CurrentWeaponFrame)"),
+                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: Child Actor is NOT AFirstPersonWeaponFrame (Check CurrentWeaponFrame)"),
                     *GetNameSafe(this), *FString(__func__));
             }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lRow is NOT"),
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentWeaponData is NOT"),
                 *GetNameSafe(this), *FString(__func__));
         }
     }
@@ -294,50 +240,36 @@ void UWeaponControlComponent::DataInit()
 
 /* ---   Switching   --- */
 
-void UWeaponControlComponent::SetCurrentSlotByNum(const uint8& iNum)
+void UWeaponLocalController::SetCurrentSlotByNum(const uint8& iNum)
 {
     if (WeaponSlots.IsValidIndex(iNum))
-        SetChanging(&WeaponSlots[iNum]);
+        SetChanging(iNum);
 }
 
-void UWeaponControlComponent::ToSlot1()
+void UWeaponLocalController::ToSlot1()
 {
     SetCurrentSlotByNum(1);
 }
 
-void UWeaponControlComponent::ToSlot2()
+void UWeaponLocalController::ToSlot2()
 {
     SetCurrentSlotByNum(2);
 }
 
-void UWeaponControlComponent::ToNextSlot()
+void UWeaponLocalController::ToNextSlot()
 {
-    SetChanging(
+    SetCurrentSlotByNum(
         CurrentSlot == &WeaponSlots.Last(0)
-        ? &WeaponSlots[0]
-        : CurrentSlot + 1);
+        ? 0
+        : CurrentSlot - &WeaponSlots[0] + 1);
 }
 
-void UWeaponControlComponent::ToPrevSlot()
+void UWeaponLocalController::ToPrevSlot()
 {
-    SetChanging(
+    SetCurrentSlotByNum(
         CurrentSlot == &WeaponSlots[0]
-        ? &WeaponSlots.Last(0)
-        : CurrentSlot - 1);
-}
-
-void UWeaponControlComponent::CheckNumOfSlots()
-{
-    // Проверка количества слотов
-    if (WeaponSlots.Num())
-    {
-        CurrentSlot = &WeaponSlots[0];
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: WeaponSlots.Num() == 0"),
-            *GetNameSafe(this), *FString(__func__));
-    }
+        ? WeaponSlots.Num() - 1
+        : CurrentSlot - &WeaponSlots[0] - 1);
 }
 //--------------------------------------------------------------------------------------
 
@@ -345,11 +277,11 @@ void UWeaponControlComponent::CheckNumOfSlots()
 
 /* ---   Actions | Data   --- */
 
-void UWeaponControlComponent::UpdateCurrentActions()
+void UWeaponLocalController::UpdateCurrentActions()
 {
-    uint8 OldActions = CurrentActions;
+    uint8 OldActions = GetCurrentActions();
 
-    CurrentActions =
+    GetCurrentActions() =
 
         // 0b 1000 0000
         SettingActions & (uint8)EActionVariations::Block
@@ -372,12 +304,12 @@ void UWeaponControlComponent::UpdateCurrentActions()
     // 0b 0000 010| - Действие "Перезарядка" с отслеживанием "Прицеливания"
     // 0b 0000 00~~ - Любые свободные действия ("Стрельба" и/или "Прицеливание")
 
-    if (OldActions != CurrentActions)
+    if (OldActions != GetCurrentActions())
     {
-        Server_SetCurrentActions(CurrentActions);
+        WeaponControlNetComp->Server_SetCurrentActions(GetCurrentActions());
 
         // Завершение Действия по Отключенному Биту
-        switch (EActionVariations(OldActions & ~CurrentActions))
+        switch (EActionVariations(OldActions & ~GetCurrentActions()))
         {
         case EActionVariations::Aiming:
             StopAiming();
@@ -404,7 +336,7 @@ void UWeaponControlComponent::UpdateCurrentActions()
         }
 
         // Начать Действие по Включенному Биту
-        switch (EActionVariations(CurrentActions & ~OldActions))
+        switch (EActionVariations(GetCurrentActions() & ~OldActions))
         {
         case EActionVariations::Aiming:
             StartAiming();
@@ -433,7 +365,7 @@ void UWeaponControlComponent::UpdateCurrentActions()
         {
             SetSpeedControl(ESpeedVariations::Walk);
         }
-        else if (CurrentActions > uint8(EActionVariations::Aiming))
+        else if (GetCurrentActions() > uint8(EActionVariations::Aiming))
         {
             SetSpeedControl(ESpeedVariations::Jog);
         }
@@ -449,12 +381,7 @@ void UWeaponControlComponent::UpdateCurrentActions()
     }
 }
 
-void UWeaponControlComponent::Server_SetCurrentActions_Implementation(const uint8& Value)
-{
-    CurrentActions = Value;
-}
-
-bool UWeaponControlComponent::CheckActions(const EActionVariations& Action, ...) const
+bool UWeaponLocalController::CheckActions(const EActionVariations& Action, ...) const
 {
     uint8 bResult = 0;
     const EActionVariations* p = &Action;
@@ -473,26 +400,26 @@ bool UWeaponControlComponent::CheckActions(const EActionVariations& Action, ...)
 
 /* ---   Actions | Set   --- */
 
-void UWeaponControlComponent::SetAiming()
+void UWeaponLocalController::SetAiming()
 {
     SetActionBit(EActionVariations::Aiming);
 }
 
-void UWeaponControlComponent::SetShooting()
+void UWeaponLocalController::SetShooting()
 {
     SetActionBit(EActionVariations::Shooting);
 }
 
-void UWeaponControlComponent::SetReloading()
+void UWeaponLocalController::SetReloading()
 {
-    if (CurrentSlot && CurrentWeaponData)
+    if (CurrentSlot && GetCurrentWeaponData())
     {
         bool bChecker = false;
 
         if (CurrentSlot->bIsWeaponLoaded)
         {
             if (CurrentSlot->NumAllCartridge > 0
-                && CurrentSlot->NumPreparedCartridges < CurrentWeaponData->MaxPreparedCartridges)
+                && CurrentSlot->NumPreparedCartridges < GetCurrentWeaponData()->MaxPreparedCartridges)
             {
                 bChecker = true;
             }
@@ -513,12 +440,12 @@ void UWeaponControlComponent::SetReloading()
     }
 }
 
-void UWeaponControlComponent::SetChanging(FWeaponSlotData* iNewSlot)
+void UWeaponLocalController::SetChanging(const uint8& iNum)
 {
-    if (iNewSlot && iNewSlot != CurrentSlot)
+    if (&WeaponSlots[iNum] != CurrentSlot)
     {
         SetBlockingActionBit(EActionVariations::Changing);
-        NewSlotForChangingWeapons = iNewSlot;
+        NewSlotNum = iNum;
     }
 }
 //--------------------------------------------------------------------------------------
@@ -527,27 +454,27 @@ void UWeaponControlComponent::SetChanging(FWeaponSlotData* iNewSlot)
 
 /* ---   Actions | Reset   --- */
 
-void UWeaponControlComponent::ResetAiming()
+void UWeaponLocalController::ResetAiming()
 {
     ResetActionBit(EActionVariations::Aiming);
 }
 
-void UWeaponControlComponent::ResetShooting()
+void UWeaponLocalController::ResetShooting()
 {
     ResetActionBit(EActionVariations::Shooting);
 }
 
-void UWeaponControlComponent::ResetReloading()
+void UWeaponLocalController::ResetReloading()
 {
     ResetActionBit(EActionVariations::Reloading);
 }
 
-void UWeaponControlComponent::ResetChanging()
+void UWeaponLocalController::ResetChanging()
 {
     ResetActionBit(EActionVariations::Changing);
 }
 
-void UWeaponControlComponent::ResetBlocking()
+void UWeaponLocalController::ResetBlocking()
 {
     ResetActionBit(EActionVariations::Block);
 }
@@ -557,21 +484,21 @@ void UWeaponControlComponent::ResetBlocking()
 
 /* ---   Actions | Stopped   --- */
 
-void UWeaponControlComponent::StopAiming()
+void UWeaponLocalController::StopAiming()
 {
 }
 
-void UWeaponControlComponent::StopShooting()
+void UWeaponLocalController::StopShooting()
 {
     GetWorld()->GetTimerManager().ClearTimer(Timer_ActionControl);
 }
 
-void UWeaponControlComponent::StopReloading()
+void UWeaponLocalController::StopReloading()
 {
-    if (CurrentSlot->NumPreparedCartridges < CurrentWeaponData->MaxPreparedCartridges
+    if (CurrentSlot->NumPreparedCartridges < GetCurrentWeaponData()->MaxPreparedCartridges
         && CurrentSlot->NumAllCartridge > 0)
     {
-        int32 Difference = CurrentWeaponData->MaxPreparedCartridges - CurrentSlot->NumPreparedCartridges;
+        int32 Difference = GetCurrentWeaponData()->MaxPreparedCartridges - CurrentSlot->NumPreparedCartridges;
         Difference = FMath::Min(Difference, CurrentSlot->NumAllCartridge);
 
         CurrentSlot->NumPreparedCartridges += Difference;
@@ -585,20 +512,22 @@ void UWeaponControlComponent::StopReloading()
         --(CurrentSlot->NumPreparedCartridges);
     }
 
-    DropActor(CurrentWeaponData->StorageDropType, CurrentFPWeaponFrame->StorageDropGuidance);
+    FTransform lTransform = CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
 
-    Broadcast_OnReloadingWeapon();
+    WeaponControlNetComp->DropStorage(
+        lTransform.GetLocation(),
+        lTransform.Rotator());
 }
 
-void UWeaponControlComponent::StopChanging()
+void UWeaponLocalController::StopChanging()
 {
 }
 
-void UWeaponControlComponent::StopBlockingActions()
+void UWeaponLocalController::StopBlockingActions()
 {
-    if (CurrentActions & (uint8)EActionVariations::Block)
+    if (GetCurrentActions() & (uint8)EActionVariations::Block)
     {
-        CurrentActions ^= (uint8)EActionVariations::Block;
+        GetCurrentActions() ^= (uint8)EActionVariations::Block;
     }
 }
 //--------------------------------------------------------------------------------------
@@ -607,40 +536,40 @@ void UWeaponControlComponent::StopBlockingActions()
 
 /* ---   Actions | Started   --- */
 
-void UWeaponControlComponent::StartAiming()
+void UWeaponLocalController::StartAiming()
 {
 }
 
-void UWeaponControlComponent::StartShooting()
+void UWeaponLocalController::StartShooting()
 {
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
-        &UWeaponControlComponent::ShootingWeapon,
-        CurrentWeaponData->ShootingWeapon_Time,
+        &UWeaponLocalController::ShootingWeapon,
+        GetCurrentWeaponData()->ShootingWeapon_Time,
         true,
         0.f); // Реагировать сразу
 }
 
-void UWeaponControlComponent::StartReloading()
+void UWeaponLocalController::StartReloading()
 {
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
-        &UWeaponControlComponent::ResetReloading,
-        CurrentWeaponData->ReloadingWeapon_Time,
+        &UWeaponLocalController::ResetReloading,
+        GetCurrentWeaponData()->ReloadingWeapon_Time,
         false);
 }
 
-void UWeaponControlComponent::StartChangeWeaponSlot()
+void UWeaponLocalController::StartChangeWeaponSlot()
 {
-    Broadcast_OnStartChangingWeapon();
+    WeaponControlNetComp->Broadcast_OnStartChangingWeapon();
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
-        &UWeaponControlComponent::ChangeWeaponSlot,
-        CurrentWeaponData->RemoveWeapon_Time,
+        &UWeaponLocalController::ChangeWeaponSlot,
+        GetCurrentWeaponData()->RemoveWeapon_Time,
         false);
 }
 //--------------------------------------------------------------------------------------
@@ -649,9 +578,9 @@ void UWeaponControlComponent::StartChangeWeaponSlot()
 
 /* ---   Actions | Reaction   --- */
 
-void UWeaponControlComponent::ShootingWeapon()
+void UWeaponLocalController::ShootingWeapon()
 {
-    if (CurrentWeaponData->ProjectileType)
+    if (GetCurrentWeaponData()->ProjectileType)
     {
         // Флаг проверки условий стрельбы
         bool bChecker = false;
@@ -673,13 +602,17 @@ void UWeaponControlComponent::ShootingWeapon()
         // Результат
         if (bChecker)
         {
-            Broadcast_OnShootingWeapon();
+            FTransform lTransform = CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
 
-            if (CurrentFPWeaponFrame)
-            {
-                DropActor(CurrentWeaponData->ProjectileType, CurrentFPWeaponFrame->ShootGuidance);
-                DropActor(CurrentWeaponData->CaseDropType, CurrentFPWeaponFrame->CaseDropGuidance);
-            }
+            WeaponControlNetComp->DropProjectile(
+                lTransform.GetLocation(),
+                lTransform.Rotator());
+
+            lTransform = CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
+
+            WeaponControlNetComp->DropSleeve(
+                lTransform.GetLocation(),
+                lTransform.Rotator());
         }
         else
         {
@@ -688,59 +621,25 @@ void UWeaponControlComponent::ShootingWeapon()
     }
 }
 
-void UWeaponControlComponent::ChangeWeaponSlot()
+void UWeaponLocalController::ChangeWeaponSlot()
 {
-    CurrentSlot = NewSlotForChangingWeapons;
-    CurrentWeaponData = WeaponsDataTable->FindRow<FWeaponData>(CurrentSlot->WeaponType, "ChangeWeaponSlot");
+    CurrentSlot = &WeaponSlots[NewSlotNum];
 
-    CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+    WeaponControlNetComp->SetCurrentWeaponDataByNum(NewSlotNum);
 
-    if (CurrentFPWeaponFrame)
-    {
-        CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-    }
-
-    Broadcast_OnChangingWeapon();
+    CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
-        &UWeaponControlComponent::EndChangeWeaponSlot,
-        CurrentWeaponData->TakeWeapon_Time,
+        &UWeaponLocalController::EndChangeWeaponSlot,
+        GetCurrentWeaponData()->TakeWeapon_Time,
         false);
 }
 
-void UWeaponControlComponent::EndChangeWeaponSlot()
+void UWeaponLocalController::EndChangeWeaponSlot()
 {
     ResetChanging();
-}
-
-void UWeaponControlComponent::DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance)
-{
-    if (ActorType && Guidance)
-    {
-        Server_DropActor(ActorType.Get(), Guidance->GetComponentTransform());
-    }
-}
-
-void UWeaponControlComponent::Server_DropActor_Implementation(UClass* iActorType, const FTransform& iTransform)
-{
-    Multicast_DropActor(iActorType, iTransform);
-}
-
-void UWeaponControlComponent::Multicast_DropActor_Implementation(UClass* iActorType, const FTransform& iTransform)
-{
-    if (iActorType)
-    {
-        // Параметр создания: Всегда появляется
-        FActorSpawnParameters lSpawnParameters;
-        lSpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-        GetWorld()->SpawnActor<AActor>(
-            iActorType,
-            iTransform,
-            lSpawnParameters);
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -748,7 +647,7 @@ void UWeaponControlComponent::Multicast_DropActor_Implementation(UClass* iActorT
 
 /* ---   Character Movement Speed   --- */
 
-void UWeaponControlComponent::SetSpeedControl(const ESpeedVariations& Mode)
+void UWeaponLocalController::SetSpeedControl(const ESpeedVariations& Mode)
 {
     if (SpeedControl != Mode)
     {
@@ -756,7 +655,7 @@ void UWeaponControlComponent::SetSpeedControl(const ESpeedVariations& Mode)
     }
 }
 
-void UWeaponControlComponent::SpeedControlInit()
+void UWeaponLocalController::SpeedControlInit()
 {
     if (PlayerOwner && PlayerOwner->IsLocallyControlled())
     {
@@ -771,21 +670,9 @@ void UWeaponControlComponent::SpeedControlInit()
 
 #if WITH_EDITOR
 
-/* ---   Net   --- */
+/* ---   Local   --- */
 
-TArray<FName> UWeaponControlComponent::GetBoneSocketsInMesh() const
-{
-    APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
-
-    if (lPlayerOwner && lPlayerOwner->GetMesh())
-    {
-        return lPlayerOwner->GetMesh()->GetAllSocketNames();
-    }
-
-    return TArray<FName>();
-}
-
-TArray<FName> UWeaponControlComponent::GetBoneSocketsInFPMesh() const
+TArray<FName> UWeaponLocalController::GetBoneSocketsInFPMesh() const
 {
     APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
 
@@ -802,7 +689,7 @@ TArray<FName> UWeaponControlComponent::GetBoneSocketsInFPMesh() const
 
 /* ---   Inputs   --- */
 
-TArray<FName> UWeaponControlComponent::GetActionGroupsNames()
+TArray<FName> UWeaponLocalController::GetActionGroupsNames()
 {
     TArray<FName> ActionNames;
 
@@ -812,7 +699,7 @@ TArray<FName> UWeaponControlComponent::GetActionGroupsNames()
 }
 
 
-void UWeaponControlComponent::CheckInputsGroups()
+void UWeaponLocalController::CheckInputsGroups()
 {
     TArray<FName> lUsed = {
         /* ---   Switching   --- */
@@ -849,7 +736,7 @@ void UWeaponControlComponent::CheckInputsGroups()
 
 /* ---   Data   --- */
 
-TArray<FName> UWeaponControlComponent::GetAllWeaponsNames() const
+TArray<FName> UWeaponLocalController::GetAllWeaponsNames() const
 {
     if (WeaponsDataTable)
     {
@@ -857,6 +744,25 @@ TArray<FName> UWeaponControlComponent::GetAllWeaponsNames() const
     }
 
     return TArray<FName>();
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Switching   --- */
+
+void UWeaponLocalController::CheckNumOfSlots()
+{
+    // Проверка наличия слотов
+    if (WeaponSlots.Num())
+    {
+        CurrentSlot = &WeaponSlots[0];
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: WeaponSlots.Num() == 0"),
+            *GetNameSafe(this), *FString(__func__));
+    }
 }
 //--------------------------------------------------------------------------------------
 #endif

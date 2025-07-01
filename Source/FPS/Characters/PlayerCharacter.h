@@ -43,7 +43,8 @@ class UCameraComponent;
 
 // Interaction:
 class UFPS_CharacterMovementComponent;
-class UWeaponControlComponent;
+class UWeaponLocalController;
+class UWeaponNetworkController;
 
 // Interaction | GAS:
 class UFPS_AttributeSet;
@@ -87,11 +88,17 @@ public:
 
     /* ---   Non-scene Components   --- */
 
-    // Компонент Слотов Оружия и взаимодействия с самим Оружием
+    // Компонент сетевого контроллера Оружия
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated,
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
-    UWeaponControlComponent* WeaponControlComp = nullptr;
+    UWeaponNetworkController* WeaponControlNetComp = nullptr;
+
+    // Компонент локального (не сетевого) контроллера Оружия
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated,
+        Category = "Components",
+        meta = (AllowPrivateAccess = "true"))
+    UWeaponLocalController* WeaponControlLocComp = nullptr;
 
     // Компонент Системы Способностей (GAS)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,

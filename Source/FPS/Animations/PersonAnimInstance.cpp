@@ -9,7 +9,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 // Interaction:
-#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
+#include "FPS/ActorComponents/Data/WeaponNetworkController.h"
 #include "FPS/Characters/PlayerCharacter.h"
 //--------------------------------------------------------------------------------------
 
@@ -100,15 +100,15 @@ void UPersonAnimInstance::BaseInit()
     {
         PlayerOwner->MovementModeChangedDelegate.AddDynamic(this, &UPersonAnimInstance::UpdateMovementMode);
 
-        WeaponControlComponent = PlayerOwner->WeaponControlComp;
+        WeaponControlNetComp = PlayerOwner->WeaponControlNetComp;
 
-        if (WeaponControlComponent)
+        if (WeaponControlNetComp)
         {
-            WeaponControlComponent->OnChangingWeapon.AddDynamic(this, &UPersonAnimInstance::UpdateBasicData);
+            WeaponControlNetComp->OnChangingWeapon.AddDynamic(this, &UPersonAnimInstance::UpdateBasicData);
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlComponent is NOT"),
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlNetComp is NOT"),
                 *GetNameSafe(this), *FString(__func__));
         }
     }
@@ -141,15 +141,15 @@ void UPersonAnimInstance::UpdateMovementMode(ACharacter* Character, EMovementMod
 
 bool UPersonAnimInstance::CheckAction(const EActionVariations& InAction) const
 {
-    return WeaponControlComponent
-        && WeaponControlComponent->CheckAction(InAction);
+    return WeaponControlNetComp
+        && WeaponControlNetComp->CheckAction(InAction);
 }
 
 void UPersonAnimInstance::UpdateBasicData()
 {
-    if (WeaponControlComponent)
+    if (WeaponControlNetComp)
     {
-        PersonAnimations = WeaponControlComponent->GetCurrentWeaponData()->PersonAnimations;
+        PersonAnimations = WeaponControlNetComp->GetCurrentWeaponData()->PersonAnimations;
     }
 }
 //--------------------------------------------------------------------------------------

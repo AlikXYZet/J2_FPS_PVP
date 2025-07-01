@@ -13,10 +13,9 @@
 #include "FPS/ActorComponents/Control/SmoothRotationComponent.h"
 
 // Interaction:
-#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
+#include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Core/Online/FPS_PlayerController.h"
-#include "Projectile.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -107,9 +106,9 @@ void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iDat
     if (iData)
     {
         // Направляющие:
-        ShootGuidance->SetRelativeTransform(iData->ShootGuidanceTransform);
-        CaseDropGuidance->SetRelativeTransform(iData->CaseDropGuidanceTransform);
-        StorageDropGuidance->SetRelativeTransform(iData->StorageDropGuidanceTransform);
+        ShootGuidance->SetRelativeTransform(iData->ProjectileGuidanceTransform);
+        CaseDropGuidance->SetRelativeTransform(iData->SleeveGuidanceTransform);
+        StorageDropGuidance->SetRelativeTransform(iData->StorageGuidanceTransform);
     }
 }
 //--------------------------------------------------------------------------------------
@@ -211,9 +210,9 @@ void AFirstPersonWeaponFrame::SaveCurrentDataInWeaponsDataTable()
         }
 
         // Направляющие:
-        SelectedWeaponData->ShootGuidanceTransform = ShootGuidance->GetRelativeTransform();
-        SelectedWeaponData->CaseDropGuidanceTransform = CaseDropGuidance->GetRelativeTransform();
-        SelectedWeaponData->StorageDropGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
+        SelectedWeaponData->ProjectileGuidanceTransform = ShootGuidance->GetRelativeTransform();
+        SelectedWeaponData->SleeveGuidanceTransform = CaseDropGuidance->GetRelativeTransform();
+        SelectedWeaponData->StorageGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
 
         // Сохранение
         WeaponsDataTable->AddRow(WeaponName, *SelectedWeaponData);

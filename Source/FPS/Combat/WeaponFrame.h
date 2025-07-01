@@ -20,7 +20,7 @@
 /* ---   Pre-declaration of classes   --- */
 
 // Interaction:
-class UWeaponControlComponent;
+class UWeaponNetworkController;
 //--------------------------------------------------------------------------------------
 
 

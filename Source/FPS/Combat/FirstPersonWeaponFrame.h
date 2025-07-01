@@ -28,7 +28,7 @@ class USmoothMovementComponent;
 class USmoothRotationComponent;
 
 // Interaction:
-class UWeaponControlComponent;
+class UWeaponLocalController;
 class AProjectile;
 class APlayerCharacter;
 class AFPS_PlayerController;

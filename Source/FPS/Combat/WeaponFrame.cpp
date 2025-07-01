@@ -2,9 +2,6 @@
 
 // Base:
 #include "WeaponFrame.h"
-
-// Interaction:
-#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
 //--------------------------------------------------------------------------------------
 
 

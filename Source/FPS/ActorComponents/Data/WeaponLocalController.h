@@ -16,34 +16,12 @@
 #include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
 #include "FPS/Tools/Structs/Movement/SpeedControlData.h"
 
+// Interaction:
+#include "WeaponNetworkController.h"
+
 // Generated:
-#include "WeaponControlComponent.generated.h"
+#include "WeaponLocalController.generated.h"
 //--------------------------------------------------------------------------------------
-
-
-
-/* ---   Delegates   --- */
-
-// Делегат: При Стрельбе Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootingWeapon);
-
-// Делегат: При Перезарядке Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadingWeapon);
-
-// Делегат: При Старте смены Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartChangingWeapon);
-
-// Делегат: При Смене Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingWeapon);
-
-/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
-#define DELEGATE_METHOD_Broadcast_h(PropertyName) \
-    void Broadcast_##PropertyName() \
-    { \
-        ##PropertyName.Broadcast(); \
-        Server_##PropertyName(); \
-    }
-// ----------------------------------------------------------------------------------------------------
 
 
 
@@ -62,64 +40,18 @@ class AWeaponFrame;
 
 
 
-/* ---   Enums   --- */
-
-/** Вариации Действий Игрока */
-UENUM(meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
-enum class EActionVariations : uint8
-{
-    Aiming = 1 << 0,    // Прицеливание
-    Shooting = 1 << 1,  // Стрельба
-    Reloading = 1 << 2, // Перезарядка
-    Changing = 1 << 3,  // Смена
-
-    //X = 1 << 4, // Резерв
-    //X = 1 << 5, // Резерв
-    //X = 1 << 6, // Резерв
-    Block = 1 << 7,    // Блокировка всего
-};
-ENUM_CLASS_FLAGS(EActionVariations)
-//--------------------------------------------------------------------------------------
-
-
-
 /** Компонент контроля Оружия Игрока */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class FPS_API UWeaponControlComponent : public UChildActorComponent, public ISpeedControllerInterface
+class FPS_API UWeaponLocalController : public UChildActorComponent, public ISpeedControllerInterface
 {
     GENERATED_BODY()
 
 public:
 
-    /* ---   Delegates   --- */
-
-    // Делегат: При Стрельбе Оружия
-    UPROPERTY(BlueprintAssignable)
-    FOnShootingWeapon OnShootingWeapon;
-    DELEGATE_METHOD_Broadcast_h(OnShootingWeapon);
-
-    // Делегат: При Перезарядке Оружия
-    UPROPERTY(BlueprintAssignable)
-    FOnReloadingWeapon OnReloadingWeapon;
-    DELEGATE_METHOD_Broadcast_h(OnReloadingWeapon);
-
-    // Делегат: При Старте смены Оружия
-    UPROPERTY(BlueprintAssignable)
-    FOnStartChangingWeapon OnStartChangingWeapon;
-    DELEGATE_METHOD_Broadcast_h(OnStartChangingWeapon);
-
-    // Делегат: При Смене Оружия
-    UPROPERTY(BlueprintAssignable)
-    FOnChangingWeapon OnChangingWeapon;
-    DELEGATE_METHOD_Broadcast_h(OnChangingWeapon);
-    //-------------------------------------------
-
-
-
     /* ---   Constructors   --- */
 
     // Sets default values for this component's properties
-    UWeaponControlComponent();
+    UWeaponLocalController();
     //-------------------------------------------
 
 
@@ -131,9 +63,6 @@ public:
     /** Вызывается при Создании компонента в Редакторе или Игровом Процессе */
     virtual void OnComponentCreated() override;
 
-    /** Вызывается при Уничтожении компонента в Редакторе или Игровом Процессе */
-    virtual void DestroyComponent(bool bPromoteChildren = false) override;
-
     /** Инициализирует компонент до вызова в Игровом Процессе BeginPlay() Компонента и Актора-Владельца */
     virtual void InitializeComponent() override;
 
@@ -143,19 +72,7 @@ public:
 
 
 
-    /* ---   Net   --- */
-
-    // Создаваемый Каркас Оружия для вида от Первого Лица
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
-        meta = (DisplayName = "Weapon Frame Type"))
-    TSubclassOf<AWeaponFrame> WeaponFrameType;
-
-    /* Сокет Оружия в FPMesh */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
-        meta = (GetOptions = "GetBoneSocketsInMesh"))
-    FName WeaponSocketInMesh = NAME_None;
+    /* ---   Local   --- */
 
     // Создаваемый Каркас Оружия для вида от Первого Лица
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
@@ -169,14 +86,6 @@ public:
         meta = (GetOptions = "GetBoneSocketsInFPMesh",
             DisplayName = "Weapon Socket In FPMesh"))
     FName WeaponSocketInFPMesh = NAME_None;
-
-    //
-
-    /** Используется для регистрации реплицируемых Переменных */
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-    /** Использовать ли Каркас Оружия от Первого Лица */
-    void InitializeFirstPersonWeaponFrame();
     //-------------------------------------------
 
 
@@ -272,7 +181,8 @@ public:
         meta = (DisplayName = "Get Current Weapon Data"))
     const FWeaponData& BP_GetCurrentWeaponData() const;
 
-    FORCEINLINE const FWeaponData* GetCurrentWeaponData() const { return CurrentWeaponData; };
+    /** Получить данные текущего Оружия */
+    FORCEINLINE const FWeaponData* GetCurrentWeaponData() const { return WeaponControlNetComp->GetCurrentWeaponData(); };
 
     /** Получить данные текущего Слота */
     UFUNCTION(BlueprintCallable,
@@ -280,6 +190,7 @@ public:
         meta = (DisplayName = "Get Current Slot Data"))
     const FWeaponSlotData& BP_GetCurrentSlotData() const;
 
+    /** Получить данные текущего Слота */
     FORCEINLINE const FWeaponSlotData* GetCurrentSlotData() const { return CurrentSlot; };
     //-------------------------------------------
 
@@ -317,13 +228,11 @@ public:
 
     /* ---   Actions   --- */
 
-    // Текущие Действия Игрока
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated,
-        Category = "Weapon Control|Control",
-        meta = (Bitmask, BitmaskEnum = EActionVariations))
-    uint8 CurrentActions = 0;
-
-    //
+    /** Получить текущие Действия игрока */
+    FORCEINLINE uint8& GetCurrentActions() const
+    {
+        return WeaponControlNetComp->CurrentActions;
+    };
 
     /** Управление Оружием: Задать Действие */
     FORCEINLINE void SetActionBit(const EActionVariations& InAction)
@@ -372,43 +281,6 @@ public:
 
 private:
 
-    /* ---   Delegates | Net   --- */
-
-    /** OnShootingWeapon: Ретрансляцией на Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_OnShootingWeapon();
-
-    /** OnShootingWeapon: Ретрансляцией на Клиенты */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_OnShootingWeapon();
-
-    /** OnReloadingWeapon: Ретрансляцией на Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_OnReloadingWeapon();
-
-    /** OnReloadingWeapon: Ретрансляцией на Клиенты */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_OnReloadingWeapon();
-
-    /** OnStartChangingWeapon: Ретрансляцией на Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_OnStartChangingWeapon();
-
-    /** OnStartChangingWeapon: Ретрансляцией на Клиенты */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_OnStartChangingWeapon();
-
-    /** OnChangingWeapon: Ретрансляцией на Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_OnChangingWeapon();
-
-    /** OnChangingWeapon: Ретрансляцией на Клиенты */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_OnChangingWeapon();
-    //-------------------------------------------
-
-
-
     /* ---   Base   --- */
 
     /* Игрок-Владелец данного UWeaponControlComponent */
@@ -416,10 +288,10 @@ private:
         Category = "Weapon Control|Check")
     APlayerCharacter* PlayerOwner = nullptr;
 
-    // Указатель на текущий Каркас Оружия
+    // Компонент сетевого контроллера Оружия
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Control|Check")
-    AWeaponFrame* CurrentWeaponFrame = nullptr;
+    UWeaponNetworkController* WeaponControlNetComp = nullptr;
 
     // Указатель на текущий Каркас Оружия от Первого Лица
     UPROPERTY(VisibleInstanceOnly,
@@ -440,9 +312,6 @@ private:
     // Указатель на текущий Слот (элемент массива) оружия
     FWeaponSlotData* CurrentSlot = nullptr;
     // PS: Итератор излишен...
-
-    // Указатель на Данные выбранного Оружия из Таблицы
-    FWeaponData* CurrentWeaponData = nullptr;
 
     //
 
@@ -468,15 +337,11 @@ private:
     /** Обновить данные о Текущих действиях с предварительной проверкой */
     void UpdateCurrentActions();
 
-    /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
-    UFUNCTION(Server, Reliable)
-    void Server_SetCurrentActions(const uint8& Value);
-
     /** Проверка действий Игрока
     @param  ActionsBits - Биты проверяемых действий */
     FORCEINLINE bool CheckActions(const uint8& ActionsBits) const
     {
-        return CurrentActions & ActionsBits;
+        return GetCurrentActions() & ActionsBits;
     };
     //-------------------------------------------
 
@@ -484,8 +349,8 @@ private:
 
     /* ---   Actions | Set   --- */
 
-    // Указатель на новый Слот Оружия. Используется для контроля смены оружия
-    FWeaponSlotData* NewSlotForChangingWeapons = nullptr;
+    // Номер нового выбранного слота
+    uint8 NewSlotNum = 0;
 
     //
 
@@ -499,12 +364,12 @@ private:
     void SetReloading();
 
     /** Управление Оружием: Сменить Оружие */
-    void SetChanging(FWeaponSlotData* NewSlot);
+    void SetChanging(const uint8& Num);
 
     /** Управление Оружием: Ограничивать Действия */
     FORCEINLINE void SetBlockingActionBit(const EActionVariations& InAction)
     {
-        if (CurrentActions < (uint8)EActionVariations::Reloading)
+        if (GetCurrentActions() < (uint8)EActionVariations::Reloading)
         {
             SetActionBit(InAction);
         }
@@ -580,17 +445,6 @@ private:
 
     /** Запуск Действия: Взять новое Оружие */
     void EndChangeWeaponSlot();
-
-    /* Создание и выброс Астора согласно его Типу и Направляющей */
-    void DropActor(const TSubclassOf<AActor>& ActorType, const UArrowComponent* Guidance);
-
-    /** DropActor: Ретрансляцией на Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_DropActor(UClass* ActorType, const FTransform& Transform);
-
-    /** DropActor: Ретрансляцией на Клиенты */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_DropActor(UClass* ActorType, const FTransform& Transform);
     //-------------------------------------------
 
 
@@ -612,11 +466,7 @@ private:
 
 #if WITH_EDITOR
 
-    /* ---   Net   --- */
-
-    /** Получение наименований Сокетов текущего Меша в Mesh */
-    UFUNCTION()
-    TArray<FName> GetBoneSocketsInMesh() const;
+    /* ---   Local   --- */
 
     /** Получение наименований Сокетов текущего Меша в FPMesh */
     UFUNCTION()

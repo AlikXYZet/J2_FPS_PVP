@@ -8,14 +8,14 @@
 #include "Components/CapsuleComponent.h"
 #include "Engine/ActorChannel.h"
 #include "GameFramework/InputSettings.h"
-#include "Kismet/GameplayStatics.h"
 
 // Net:
 #include "Net/UnrealNetwork.h"
 
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
-#include "FPS/ActorComponents/Data/WeaponControlComponent.h"
+#include "FPS/ActorComponents/Data/WeaponLocalController.h"
+#include "FPS/ActorComponents/Data/WeaponNetworkController.h"
 
 // Interaction | GAS:
 #include "FPS/GAS/FPS_AttributeSet.h"
@@ -69,10 +69,15 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
     /* ---   Non-scene Components   --- */
 
-    // Компонент Слотов Оружия и взаимодействия с ним
-    WeaponControlComp = CreateDefaultSubobject<UWeaponControlComponent>(TEXT("Weapon Control Comp"));
-    WeaponControlComp->SetupAttachment(GetMesh(), "WeaponSocket_HandR");
-    WeaponControlComp->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+    // Компонент сетевого контроллера Оружия
+    WeaponControlNetComp = CreateDefaultSubobject<UWeaponNetworkController>(TEXT("Weapon Control Network Component"));
+    WeaponControlNetComp->SetupAttachment(GetMesh(), "WeaponSocket_HandR");
+    WeaponControlNetComp->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+
+    // Компонент локального (не сетевого) контроллера Оружия
+    WeaponControlLocComp = CreateDefaultSubobject<UWeaponLocalController>(TEXT("Weapon Control Local Component"));
+    WeaponControlLocComp->SetupAttachment(FPMesh, "WeaponSocket_HandR");
+    WeaponControlLocComp->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
 
     // Компонент Системы Способностей (GAS)
     AbilitySystemComp = CreateDefaultSubobject<UFPS_AbilitySystemComponent>(TEXT("Ability System Comp"));
@@ -121,12 +126,13 @@ void APlayerCharacter::Cleaning()
         GetMesh()->SetCastHiddenShadow(true);
         GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
 
-        WeaponControlComp->InitializeFirstPersonWeaponFrame();
+        WeaponControlNetComp->InitializeFirstPersonWeaponFrame();
 
         FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
     }
     else
     {
+        WeaponControlLocComp->DestroyComponent();
         FPMesh->DestroyComponent();
         FPCamera->DestroyComponent();
     }
@@ -141,8 +147,8 @@ bool APlayerCharacter::ReplicateSubobjects(class UActorChannel* Channel, class F
 {
     bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-    if (WeaponControlComp)
-        WroteSomething |= Channel->ReplicateSubobject(WeaponControlComp, *Bunch, *RepFlags);
+    if (WeaponControlNetComp)
+        WroteSomething |= Channel->ReplicateSubobject(WeaponControlNetComp, *Bunch, *RepFlags);
 
     return WroteSomething;
 }
@@ -153,9 +159,10 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     //-------------------------------------------
 
 
-    /* ---   Inputs   --- */
+    /* ---   Weapon Control   --- */
 
-    DOREPLIFETIME(APlayerCharacter, WeaponControlComp);
+    DOREPLIFETIME(APlayerCharacter, WeaponControlNetComp);
+    DISABLE_REPLICATED_PROPERTY(APlayerCharacter, WeaponControlLocComp)
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -220,8 +227,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     /* ===   Components   === */
 
-    if (WeaponControlComp)
-        WeaponControlComp->SetupPlayerInputs();
+    if (WeaponControlLocComp)
+        WeaponControlLocComp->SetupPlayerInputs();
     //===========================================
 
 

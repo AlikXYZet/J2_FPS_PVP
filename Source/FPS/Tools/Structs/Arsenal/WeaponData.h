@@ -86,35 +86,35 @@ struct FWeaponData : public FTableRowBase
     // Тип используемого Снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (DisplayAfter = "ShootGuidanceTransform"))
+        meta = (DisplayAfter = "ProjectileGuidanceTransform"))
     TSubclassOf<AProjectile> ProjectileType;
 
     // Тип выпадающей Гильзы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (DisplayAfter = "CaseDropGuidanceTransform"))
-    TSubclassOf<AActor> CaseDropType;
+        meta = (DisplayAfter = "SleeveGuidanceTransform"))
+    TSubclassOf<AActor> SleeveType;
 
     // Тип выпадающего Накопителя
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (DisplayAfter = "StorageDropGuidanceTransform"))
-    TSubclassOf<AActor> StorageDropType;
+        meta = (DisplayAfter = "StorageGuidanceTransform"))
+    TSubclassOf<AActor> StorageType;
 
     // Трансформация Направляющей Выстрела
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping")
-    FTransform ShootGuidanceTransform;
+    FTransform ProjectileGuidanceTransform;
 
     // Трансформация Направляющей вылета Гильзы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping")
-    FTransform CaseDropGuidanceTransform;
+    FTransform SleeveGuidanceTransform;
 
     // Трансформация Направляющей выпадения Накопителя
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping")
-    FTransform StorageDropGuidanceTransform;
+    FTransform StorageGuidanceTransform;
     //-------------------------------------------
 
 
