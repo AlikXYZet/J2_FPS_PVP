@@ -3,39 +3,13 @@
 // Base:
 #include "WeaponNetworkController.h"
 
-// UE:
-#include "Components/ArrowComponent.h"
-#include "Engine/DataTable.h"
-#include "GameFramework/InputSettings.h"
-
 // Net:
 #include "Net/UnrealNetwork.h"
 
 // Interaction:
-#include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
-#include "FPS/Combat/FirstPersonWeaponFrame.h"
 #include "FPS/Combat/Projectile.h"
 #include "FPS/Combat/WeaponFrame.h"
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Constructors   --- */
-
-UWeaponNetworkController::UWeaponNetworkController()
-{
-    // Set this component to be initialized when the game starts, and to be ticked every frame.
-    // You can turn these features off to improve performance if you don't need them.
-    PrimaryComponentTick.bCanEverTick = false; // Предварительно
-
-    // If true, we call the virtual InitializeComponent()
-    bWantsInitializeComponent = true;
-
-    // Компонент реплицируем по умолчанию
-    SetIsReplicatedByDefault(true);
-    //-------------------------------------------
-}
 //--------------------------------------------------------------------------------------
 
 
@@ -54,6 +28,25 @@ void UWeaponNetworkController::Multicast_##PropertyName##_Implementation() \
     if (PlayerOwner->IsLocallyControlled()) \
         return; \
     ##PropertyName.Broadcast(); \
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Constructors   --- */
+
+UWeaponNetworkController::UWeaponNetworkController()
+{
+    // Set this component to be initialized when the game starts, and to be ticked every frame.
+    // You can turn these features off to improve performance if you don't need them.
+    PrimaryComponentTick.bCanEverTick = false; // Предварительно
+
+    // If true, we call the virtual InitializeComponent()
+    bWantsInitializeComponent = true;
+
+    // Компонент реплицируем по умолчанию
+    SetIsReplicatedByDefault(true);
+    //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
 
@@ -196,7 +189,7 @@ bool UWeaponNetworkController::CheckActions(const EActionVariations& Action, ...
     return bResult && CheckActions(bResult);
 }
 
-void UWeaponNetworkController::DropActor(const TSubclassOf<AActor>& iActorType, const FVector& iLocation, const FRotator& iRotation)
+AActor* UWeaponNetworkController::DropActor(const TSubclassOf<AActor>& iActorType, const FVector& iLocation, const FRotator& iRotation)
 {
     if (iActorType.Get())
     {
@@ -204,12 +197,16 @@ void UWeaponNetworkController::DropActor(const TSubclassOf<AActor>& iActorType, 
         FActorSpawnParameters lSpawnParameters;
         lSpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-        GetWorld()->SpawnActor<AActor>(
+        AActor* Test = GetWorld()->SpawnActor<AActor>(
             iActorType.Get(),
             iLocation,
             iRotation,
             lSpawnParameters);
+
+        return Test;
     }
+
+    return nullptr;
 }
 //--------------------------------------------------------------------------------------
 
@@ -221,8 +218,6 @@ void UWeaponNetworkController::SetCurrentWeaponDataByNum(const uint8& iNum)
 {
     if (WeaponDataSlots.IsValidIndex(iNum))
     {
-        ChangingCurrentWeaponDataByNum(iNum);
-
         Server_SetCurrentWeaponDataByNum(iNum);
     }
 }
@@ -234,9 +229,6 @@ void UWeaponNetworkController::Server_SetCurrentWeaponDataByNum_Implementation(c
 
 void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementation(const uint8& iNum)
 {
-    /* Фильтрация, если вызвал Владелец */
-    if (PlayerOwner->IsLocallyControlled())
-        return;
     ChangingCurrentWeaponDataByNum(iNum);
 }
 
@@ -254,8 +246,6 @@ void UWeaponNetworkController::ChangingCurrentWeaponDataByNum(const uint8& iNum)
 
 void UWeaponNetworkController::DropProjectile(const FVector& Location, const FRotator& Rotation)
 {
-    DropActor(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
-    OnShootingWeapon.Broadcast();
     Server_DropProjectile(Location, Rotation);
 }
 
@@ -263,11 +253,14 @@ void UWeaponNetworkController::Server_DropProjectile_Implementation(const FVecto
 {
     Multicast_DropProjectile(Location, Rotation);
 }
+
 void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    /* Фильтрация, если вызвал Владелец */
-    if (PlayerOwner->IsLocallyControlled())
-        return;
+    CreateProjectile(Location, Rotation);
+}
+
+void UWeaponNetworkController::CreateProjectile(const FVector& Location, const FRotator& Rotation)
+{
     DropActor(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
     OnShootingWeapon.Broadcast();
 }
@@ -276,7 +269,6 @@ void UWeaponNetworkController::DropSleeve(const FVector& Location, const FRotato
 {
     if (CurrentWeaponData->SleeveType.Get())
     {
-        DropActor(CurrentWeaponData->SleeveType.Get(), Location, Rotation);
         Server_DropSleeve(Location, Rotation);
     }
 }
@@ -288,9 +280,6 @@ void UWeaponNetworkController::Server_DropSleeve_Implementation(const FVector& L
 
 void UWeaponNetworkController::Multicast_DropSleeve_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    /* Фильтрация, если вызвал Владелец */
-    if (PlayerOwner->IsLocallyControlled())
-        return;
     DropActor(CurrentWeaponData->SleeveType.Get(), Location, Rotation);
 }
 //--------------------------------------------------------------------------------------
@@ -301,8 +290,6 @@ void UWeaponNetworkController::Multicast_DropSleeve_Implementation(const FVector
 
 void UWeaponNetworkController::DropStorage(const FVector& Location, const FRotator& Rotation)
 {
-    DropActor(CurrentWeaponData->StorageType.Get(), Location, Rotation);
-    OnReloadingWeapon.Broadcast();
     Server_DropStorage(Location, Rotation);
 }
 
@@ -313,9 +300,6 @@ void UWeaponNetworkController::Multicast_DropStorage_Implementation(const FVecto
 
 void UWeaponNetworkController::Server_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    /* Фильтрация, если вызвал Владелец */
-    if (PlayerOwner->IsLocallyControlled())
-        return;
     DropActor(CurrentWeaponData->StorageType.Get(), Location, Rotation);
     OnReloadingWeapon.Broadcast();
 }

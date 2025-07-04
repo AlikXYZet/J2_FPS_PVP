@@ -37,10 +37,12 @@ public:
 
     /* ---   Constructors   --- */
 
-    UFPS_AttributeSet();
+    UFPS_AttributeSet() {};
     //-------------------------------------------
 
 
+
+public:
 
     /* ---   Net   --- */
 

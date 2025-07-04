@@ -25,10 +25,17 @@
 
 /* ---   Macros   --- */
 
-/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
+/** Макрос: Подписка функции к делегату для передачи значения атрибутов GAS через Событие BP */
 #define GAMEPLAYATTRIBUTE_VALUE_Delegating(PropertyName) \
     AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
         .AddUObject(this, &APlayerCharacter::Handle##PropertyName##Changed);
+
+/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
+#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(PropertyName) \
+    void APlayerCharacter::Client_Changing##PropertyName##_Implementation(const float& Value) \
+    { \
+        Event_Changing##PropertyName(Value); \
+    }
 //--------------------------------------------------------------------------------------
 
 
@@ -162,7 +169,6 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     /* ---   Weapon Control   --- */
 
     DOREPLIFETIME(APlayerCharacter, WeaponControlNetComp);
-    DISABLE_REPLICATED_PROPERTY(APlayerCharacter, WeaponControlLocComp)
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -329,6 +335,11 @@ void APlayerCharacter::InitAbilitySystemComp()
     GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
     GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
 }
+
+GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(Health);
+GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(MaxHealth);
+GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(Armor);
+GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(MaxArmor);
 //--------------------------------------------------------------------------------------
 
 

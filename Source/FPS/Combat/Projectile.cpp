@@ -6,6 +6,10 @@
 // UE:
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+
+// GAS:
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -17,6 +21,10 @@ AProjectile::AProjectile()
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false; // Предварительно
+
+    // Репликация неуместна:
+    //bReplicates = true;
+    //SetReplicateMovement(true);
     //-------------------------------------------
 
 
@@ -27,6 +35,7 @@ AProjectile::AProjectile()
     RootComponent = SphereComponent;
     SphereComponent->SetRelativeScale3D(FVector(0.2f));
     SphereComponent->SetCollisionProfileName(TEXT("InvisibleWallDynamic"));
+    SphereComponent->SetUseCCD(true);
 
     // Корневой компонент
     ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Projectile Mesh"));
@@ -63,6 +72,42 @@ void AProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    Clearing();
+    Cleaning();
+}
+
+void AProjectile::NotifyHit(
+    UPrimitiveComponent* MyComp,
+    AActor* Other,
+    UPrimitiveComponent* OtherComp,
+    bool bSelfMoved,
+    FVector HitLocation,
+    FVector HitNormal,
+    FVector NormalImpulse,
+    const FHitResult& Hit)
+{
+    Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
+
+    if (HasAuthority() && Other)
+    {
+        if (DamageEffect)
+        {
+            IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Other);
+
+            if (TargetInterface)
+            {
+                UAbilitySystemComponent* SourceASC = TargetInterface->GetAbilitySystemComponent();
+
+                if (SourceASC)
+                {
+                    SourceASC->ApplyGameplayEffectToSelf(
+                        DamageEffect.GetDefaultObject(),
+                        0,
+                        FGameplayEffectContextHandle());
+                }
+            }
+        }
+    }
+
+    Destroy();
 }
 //--------------------------------------------------------------------------------------

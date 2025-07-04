@@ -9,16 +9,6 @@
 
 
 
-/* ---   Constructors   --- */
-
-UFPS_AttributeSet::UFPS_AttributeSet()
-{
-
-}
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Net   --- */
 
 void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -28,10 +18,10 @@ void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
     /* ---   Attributes   --- */
 
-    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, Health, COND_None, REPNOTIFY_OnChanged);
-    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, MaxHealth, COND_None, REPNOTIFY_OnChanged);
-    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, Armor, COND_None, REPNOTIFY_OnChanged);
-    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, MaxArmor, COND_None, REPNOTIFY_OnChanged);
+    DOREPLIFETIME(UFPS_AttributeSet, Health);
+    DOREPLIFETIME(UFPS_AttributeSet, MaxHealth);
+    DOREPLIFETIME(UFPS_AttributeSet, Armor);
+    DOREPLIFETIME(UFPS_AttributeSet, MaxArmor);
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------

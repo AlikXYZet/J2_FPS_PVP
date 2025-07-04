@@ -101,9 +101,6 @@ void UFPS_CharacterMovementComponent::SetSpeedType(const ESpeedVariations& Type)
 
 void UFPS_CharacterMovementComponent::SetMaxWalkSpeed(const float& Value)
 {
-    // Быстрое применение значения у Клиента-Владельца
-    MaxWalkSpeed = Value;
-
     Server_SetMaxWalkSpeed(Value);
 }
 
@@ -114,10 +111,6 @@ void UFPS_CharacterMovementComponent::Server_SetMaxWalkSpeed_Implementation(cons
 
 void UFPS_CharacterMovementComponent::Multicast_SetMaxWalkSpeed_Implementation(const float& Value)
 {
-    // Фильтрация, если вызвал Владелец
-    if (!GetCharacterOwner() || GetCharacterOwner()->IsLocallyControlled())
-        return;
-
     MaxWalkSpeed = Value;
 }
 //--------------------------------------------------------------------------------------

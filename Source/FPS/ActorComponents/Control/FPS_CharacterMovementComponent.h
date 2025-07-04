@@ -92,14 +92,6 @@ public:
         Category = "FPS Movement Component|Speed Control",
         meta = (AutoCreateRefTerm = "Mode"))
     void SetMaxWalkSpeed(const float& Value);
-
-    /** Обновить значение максимальной скорости через Сервер */
-    UFUNCTION(Server, Reliable)
-    void Server_SetMaxWalkSpeed(const float& Value);
-
-    /** Обновить значение максимальной скорости у Всех, кроме владельца */
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_SetMaxWalkSpeed(const float& Value);
     //-------------------------------------------
 
 
@@ -117,6 +109,12 @@ private:
 
     /* ---   Speed Control | MaxWalkSpeed   --- */
 
+    /** Server: Изменить значение максимальной скорости */
+    UFUNCTION(Server, Reliable)
+    void Server_SetMaxWalkSpeed(const float& Value);
 
+    /** Multicast: Изменить значение максимальной скорости */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetMaxWalkSpeed(const float& Value);
     //-------------------------------------------
 };

@@ -8,12 +8,8 @@
 // Base:
 #include "Components/ChildActorComponent.h"
 
-// Interfaces:
-#include "FPS/Tools/Interfaces/Movement/SpeedControllerInterface.h"
-
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
-#include "FPS/Tools/Structs/Arsenal/WeaponSlotData.h"
 
 // Generated:
 #include "WeaponNetworkController.generated.h"
@@ -53,13 +49,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingWeapon);
 
 /* ---   Pre-declaration of classes   --- */
 
-// UE:
-class UArrowComponent;
-class UDataTable;
-
 // Interaction:
 class APlayerCharacter;
-class AFirstPersonWeaponFrame;
 class AProjectile;
 class AWeaponFrame;
 //--------------------------------------------------------------------------------------
@@ -213,27 +204,11 @@ private:
 
     /* ---   Delegates | Net   --- */
 
-    ///** OnShootingWeapon: Ретрансляцией на Сервер */
-    //UFUNCTION(Server, Reliable)
-    //void Server_OnShootingWeapon();
-
-    ///** OnShootingWeapon: Ретрансляцией на Клиенты */
-    //UFUNCTION(NetMulticast, Reliable)
-    //void Multicast_OnShootingWeapon();
-
-    ///** OnReloadingWeapon: Ретрансляцией на Сервер */
-    //UFUNCTION(Server, Reliable)
-    //void Server_OnReloadingWeapon();
-
-    ///** OnReloadingWeapon: Ретрансляцией на Клиенты */
-    //UFUNCTION(NetMulticast, Reliable)
-    //void Multicast_OnReloadingWeapon();
-
     /** OnStartChangingWeapon: Ретрансляцией на Сервер */
     UFUNCTION(Server, Reliable)
     void Server_OnStartChangingWeapon();
 
-    /** OnStartChangingWeapon: Ретрансляцией на Клиенты */
+    /** OnStartChangingWeapon: Ретрансляцией для Всех */
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_OnStartChangingWeapon();
     //-------------------------------------------
@@ -293,7 +268,7 @@ private:
     };
 
     /** Создание и выброс Астора согласно его Типу, Локацией и Ротацией */
-    void DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation);
+    AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation);
     //-------------------------------------------
 
 
@@ -329,6 +304,8 @@ private:
     /** Multicast: Выбросить Снаряд с указанными Локацией и Ротацией */
     UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
     void Multicast_DropProjectile(const FVector& Location, const FRotator& Rotation);
+
+    void CreateProjectile(const FVector& Location, const FRotator& Rotation);
 
     /** Выбросить Гильзу с указанными Локацией и Ротацией */
     void DropSleeve(const FVector& Location, const FRotator& Rotation);

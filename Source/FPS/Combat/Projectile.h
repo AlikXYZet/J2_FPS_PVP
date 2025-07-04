@@ -22,6 +22,9 @@
 // UE:
 class USphereComponent;
 class UProjectileMovementComponent;
+
+// GAS
+class UGameplayEffect;
 //--------------------------------------------------------------------------------------
 
 
@@ -89,12 +92,37 @@ protected:
 
 public:
 
+    /* ---   Base   --- */
+
+    /** Событие, когда этот актер натыкается на блокирующий объект или блокирует другого актера, который натыкается на него */
+    virtual void NotifyHit(
+        class UPrimitiveComponent* MyComp,
+        AActor* Other,
+        class UPrimitiveComponent* OtherComp,
+        bool bSelfMoved,
+        FVector HitLocation,
+        FVector HitNormal,
+        FVector NormalImpulse,
+        const FHitResult& Hit) override;
+    //-------------------------------------------
+
+
+
+    /* ---   GAS   --- */
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Projectile|GAS")
+    TSubclassOf<UGameplayEffect> DamageEffect;
+    //-------------------------------------------
+
+
 
 private:
 
     /* ---   Base   --- */
 
-    FORCEINLINE void Clearing()
+    /** Очистка от неиспользуемых компонентов */
+    FORCEINLINE void Cleaning()
     {
         if (ProjectileMesh && !ProjectileMesh->GetStaticMesh())
             ProjectileMesh->DestroyComponent();
