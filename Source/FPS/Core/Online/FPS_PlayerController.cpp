@@ -23,7 +23,7 @@ AFPS_PlayerController::AFPS_PlayerController()
 void AFPS_PlayerController::BeginPlay()
 {
     Super::BeginPlay();
-
+    
 }
 
 void AFPS_PlayerController::Tick(float DeltaSeconds)

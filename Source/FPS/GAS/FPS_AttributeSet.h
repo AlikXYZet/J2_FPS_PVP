@@ -28,12 +28,29 @@
 
 
 
+/* ---   Delegates   --- */
+
+// Делегат: Завершение вращения
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroHealth);
+// ----------------------------------------------------------------------------------------------------
+
+
+
 UCLASS()
 class FPS_API UFPS_AttributeSet : public UAttributeSet
 {
     GENERATED_BODY()
 
 public:
+
+    /* ---   Delegates   --- */
+
+    /* Делегат: Завершение вращения */
+    UPROPERTY(BlueprintAssignable)
+    FOnZeroHealth OnZeroHealth;
+    //-------------------------------------------
+
+
 
     /* ---   Constructors   --- */
 
@@ -54,7 +71,7 @@ public:
 
     /* ---   Attribute Set   --- */
 
-    /** Вызывается непосредственно перед выполнением какого-либо GameplayEffect,
+    /** Вызывается непосредственно после выполнения какого-либо GameplayEffect,
     * изменяющего базовое значение атрибута */
     virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 
@@ -81,13 +98,13 @@ public:
     // Показатель Брони
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Armor,
         Category = "Attributes")
-    FGameplayAttributeData Armor = 100.f;
+    FGameplayAttributeData Armor = 0.f;
     ATTRIBUTE_ACCESSORS(UFPS_AttributeSet, Armor);
 
     // Показатель максимальной Брони
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxArmor,
         Category = "Attributes")
-    FGameplayAttributeData MaxArmor = 100.f;
+    FGameplayAttributeData MaxArmor = 0.f;
     ATTRIBUTE_ACCESSORS(UFPS_AttributeSet, MaxArmor);
     //-------------------------------------------
 

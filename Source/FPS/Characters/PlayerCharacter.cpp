@@ -12,6 +12,8 @@
 // Net:
 #include "Net/UnrealNetwork.h"
 
+#include <Kismet/KismetSystemLibrary.h>
+
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
@@ -29,13 +31,6 @@
 #define GAMEPLAYATTRIBUTE_VALUE_Delegating(PropertyName) \
     AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
         .AddUObject(this, &APlayerCharacter::Handle##PropertyName##Changed);
-
-/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(PropertyName) \
-    void APlayerCharacter::Client_Changing##PropertyName##_Implementation(const float& Value) \
-    { \
-        Event_Changing##PropertyName(Value); \
-    }
 //--------------------------------------------------------------------------------------
 
 
@@ -121,8 +116,6 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
-
-    InitAbilitySystemComp();
 }
 
 void APlayerCharacter::Cleaning()
@@ -136,6 +129,8 @@ void APlayerCharacter::Cleaning()
         WeaponControlNetComp->InitializeFirstPersonWeaponFrame();
 
         FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
+
+        InitAbilitySystemComp();
     }
     else
     {
@@ -328,18 +323,14 @@ void APlayerCharacter::SpeedControlInit()
 
 void APlayerCharacter::InitAbilitySystemComp()
 {
-    AbilitySystemComp->InitAbilityActorInfo(this, this);
-
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+    if (AbilitySystemComp)
+    {
+        GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
+        GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
+        GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
+        GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+    }
 }
-
-GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(Health);
-GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(MaxHealth);
-GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(Armor);
-GAMEPLAYATTRIBUTE_VALUE_HandleChanged_cpp(MaxArmor);
 //--------------------------------------------------------------------------------------
 
 

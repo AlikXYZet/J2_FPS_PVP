@@ -27,10 +27,10 @@
 /* ---   Macros   --- */
 
 /** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged_h(PropertyName) \
+#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
 	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
 	{ \
-		Client_Changing##PropertyName(Data.NewValue); \
+		Event_Changing##PropertyName(Data.NewValue); \
 	}
 //--------------------------------------------------------------------------------------
 
@@ -105,7 +105,8 @@ public:
     UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
 
     // Скрытый компонент Набора Атрибутов (для GAS)
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly,
+        Category = "Components")
     UFPS_AttributeSet* AttributeSet = nullptr;
     //-------------------------------------------
 
@@ -265,28 +266,36 @@ public:
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
     void Event_ChangingHealth(const float& Data);
-    GAMEPLAYATTRIBUTE_VALUE_HandleChanged_h(Health);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Health);
 
     /** Событие BP: Изменение максимального Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Health"))
     void Event_ChangingMaxHealth(const float& Data);
-    GAMEPLAYATTRIBUTE_VALUE_HandleChanged_h(MaxHealth);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxHealth);
 
     /** Событие BP: Изменение Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Armor"))
     void Event_ChangingArmor(const float& Data);
-    GAMEPLAYATTRIBUTE_VALUE_HandleChanged_h(Armor);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Armor);
 
     /** Событие BP: Изменение максимальной Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Armor"))
     void Event_ChangingMaxArmor(const float& Data);
-    GAMEPLAYATTRIBUTE_VALUE_HandleChanged_h(MaxArmor);
+    GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
+
+    //
+
+    /** Возвращает Компонент Системы Способностей данного Игрока */
+    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+    {
+        return AbilitySystemComp;
+    };
     //-------------------------------------------
 
 
@@ -337,30 +346,8 @@ private:
 
     /* ---   GAS   --- */
 
-    /** Возвращает Компонент Системы Способностей данного Игрока */
-    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
-    {
-        return AbilitySystemComp;
-    };
-
     /** Инициализация данных AbilitySystemComp */
     void InitAbilitySystemComp();
-
-    /** Client: Изменение Здоровья */
-    UFUNCTION(Client, Reliable)
-    void Client_ChangingHealth(const float& Value);
-
-    /** Client: Изменение максимального Здоровья */
-    UFUNCTION(Client, Reliable)
-    void Client_ChangingMaxHealth(const float& Value);
-
-    /** Client: Изменение Брони */
-    UFUNCTION(Client, Reliable)
-    void Client_ChangingArmor(const float& Value);
-
-    /** Client: Изменение максимальной Брони */
-    UFUNCTION(Client, Reliable)
-    void Client_ChangingMaxArmor(const float& Value);
     //-------------------------------------------
 
 

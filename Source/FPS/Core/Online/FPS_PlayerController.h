@@ -56,12 +56,13 @@ public:
         Category = "FPS_PlayerController|Mouse To Center",
         meta = (DisplayName = "Hold Mouse in Center?"))
     bool bMouseToCenter = true;
-    //-------------------------------------------
-
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "FPS_PlayerController|Network|Animations")
     FRotator RotationInput;
+    //-------------------------------------------
+
+
 
 private:
 

@@ -18,10 +18,10 @@ void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
     /* ---   Attributes   --- */
 
-    DOREPLIFETIME(UFPS_AttributeSet, Health);
-    DOREPLIFETIME(UFPS_AttributeSet, MaxHealth);
-    DOREPLIFETIME(UFPS_AttributeSet, Armor);
-    DOREPLIFETIME(UFPS_AttributeSet, MaxArmor);
+    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, Health, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, Armor, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(UFPS_AttributeSet, MaxArmor, COND_None, REPNOTIFY_Always);
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -37,16 +37,21 @@ void UFPS_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 
 void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
-    Super::PreAttributeChange(Attribute, NewValue);
-
     if (Attribute == GetHealthAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+
+        if (GetHealth() > 0 && NewValue <= 0.01f)
+        {
+            OnZeroHealth.Broadcast();
+        }
     }
     else if (Attribute == GetArmorAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxArmor());
     }
+
+    Super::PreAttributeChange(Attribute, NewValue);
 }
 //--------------------------------------------------------------------------------------
 
