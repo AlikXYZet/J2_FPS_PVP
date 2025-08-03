@@ -493,6 +493,7 @@ private:
     UFUNCTION()
     TArray<FName> GetAllWeaponsNames() const;
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 };

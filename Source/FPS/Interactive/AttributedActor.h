@@ -74,7 +74,7 @@ public:
         meta = (AllowPrivateAccess = "true"))
     UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
 
-    // Скрытый компонент Набора Атрибутов (для GAS)
+    // Скрытый Набор Атрибутов (для GAS)
     UPROPERTY(BlueprintReadOnly,
         Category = "Components")
     UFPS_AttributeSet* AttributeSet = nullptr;
@@ -94,12 +94,10 @@ protected:
 
 public:
 
-    /* ---   GAS   --- */
+    /* ---   Base   --- */
 
-    // Способности, которые будут предоставлены персонажу в начале игры
-    UPROPERTY(EditDefaultsOnly,
-        Category = "Gameplay Ability System|Abilities")
-    TArray<TSubclassOf<UGameplayAbility>> StartingAbilities;
+    /** Вызывается перед инициализацией всех компонентов */
+    virtual void PreInitializeComponents() override;
     //-------------------------------------------
 
 

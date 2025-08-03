@@ -12,8 +12,6 @@
 // Net:
 #include "Net/UnrealNetwork.h"
 
-#include <Kismet/KismetSystemLibrary.h>
-
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
@@ -85,7 +83,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     AbilitySystemComp = CreateDefaultSubobject<UFPS_AbilitySystemComponent>(TEXT("Ability System Comp"));
     AbilitySystemComp->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-    // Скрытый компонент Набора Атрибутов (для GAS)
+    // Скрытый Набор Атрибутов (для GAS)
     AttributeSet = CreateDefaultSubobject<UFPS_AttributeSet>(TEXT("Attributes"));
     //-------------------------------------------
 }
@@ -241,7 +239,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     CheckInputsGroups();
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 }
 
@@ -425,5 +424,6 @@ void APlayerCharacter::CheckInputsGroups()
     }
 }
 //--------------------------------------------------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
 //======================================================================================

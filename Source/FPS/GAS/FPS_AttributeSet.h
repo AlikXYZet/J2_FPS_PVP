@@ -130,4 +130,8 @@ protected:
     UFUNCTION()
     virtual void OnRep_MaxArmor(const FGameplayAttributeData& OldMaxArmor);
     //-------------------------------------------
+
+
+
+private:
 };

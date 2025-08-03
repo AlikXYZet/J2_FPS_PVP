@@ -50,7 +50,7 @@ void UWeaponLocalController::OnComponentCreated()
 
 #if WITH_EDITOR
     CheckNumOfSlots();
-#endif
+#endif // WITH_EDITOR
 }
 
 void UWeaponLocalController::InitializeComponent()
@@ -158,7 +158,8 @@ void UWeaponLocalController::SetupPlayerInputs()
 
     CheckInputsGroups();
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 }
 //--------------------------------------------------------------------------------------
@@ -765,5 +766,6 @@ void UWeaponLocalController::CheckNumOfSlots()
     }
 }
 //--------------------------------------------------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
 //======================================================================================

@@ -10,7 +10,7 @@
 #include <windows.h> // Conflict header file
 #include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformTypes.h"
-#endif
+#endif // PLATFORM_WINDOWS
 
 // UE:
 #include "Kismet/GameplayStatics.h"
@@ -52,7 +52,7 @@ const int32 USettingsWidget::GetDisplayFrequency() const
     dm.dmSize = sizeof(DEVMODE);
     EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &dm);
     lFPS = dm.dmDisplayFrequency;
-#endif
+#endif // PLATFORM_WINDOWS
 
     return lFPS;
 }

@@ -13,9 +13,6 @@ UFPS_AbilitySystemComponent::UFPS_AbilitySystemComponent()
     // Set this component to be initialized when the game starts, and to be ticked every frame.
     // You can turn these features off to improve performance if you don't need them.
     PrimaryComponentTick.bCanEverTick = false; // Предварительно
-
-    // Компонент реплицируем по умолчанию
-    SetIsReplicatedByDefault(true);
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -35,6 +32,11 @@ void UFPS_AbilitySystemComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
 }
+
+void UFPS_AbilitySystemComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+    Super::OnComponentDestroyed(bDestroyingHierarchy);
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -43,58 +45,157 @@ void UFPS_AbilitySystemComponent::OnComponentCreated()
 
 void UFPS_AbilitySystemComponent::InitStartingData()
 {
+    /* ---   GAS : Checks   --- */
+
+    CheckTagsInAbilitiesEffectsParams();
+    CheckTagsInStartingEffectsWithParameters();
+    //-------------------------------------------
+
     if (GetOwnerActor() && GetOwnerActor()->HasAuthority())
     {
-        for (TPair<FGameplayAttribute, float>& Data : StartingAttributes)
+        InitStartingAttributes();
+        InitAvailableAbilities();
+        InitStartingEffectsWithParameters();
+    }
+}
+
+void UFPS_AbilitySystemComponent::SetParamsInGameplayEffectSpec(FGameplayEffectSpec& Spec, const TMap<FGameplayTag, float>& Params)
+{
+    Spec.SetByCallerTagMagnitudes.Append(Params);
+}
+
+void UFPS_AbilitySystemComponent::CheckTagsInParams(TMap<FGameplayTag, float>& Params)
+{
+#if WITH_EDITOR
+
+    for (TPair<FGameplayTag, float>& Param : Params)
+    {
+        if (!Param.Key.IsValid())
         {
-            // Фильтрация от незаполненного значения с проверкой свойства на тип "FGameplayAttributeData"
-            // PS: Является защитой, от ошибки при попытке изменить данные-"не атрибуты" в "AttributeSet",
-            // например при ключе == "UFPS_AttributeSet.OnZeroHealth"
-            if (Data.Key.IsGameplayAttributeDataProperty(Data.Key.GetUProperty()))
+            UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s: Invalid param: '%s' with a value of '%f' "),
+                *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__),
+                *Param.Key.GetTagName().ToString(), Param.Value);
+        }
+    }
+#endif // WITH_EDITOR
+
+    Params.Remove(FGameplayTag::EmptyTag);
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   GAS | Attributes   --- */
+
+FGameplayEffectSpecHandle UFPS_AbilitySystemComponent::MakeEffectSpecWithParams(
+    const TSubclassOf<UGameplayEffect> EffectClass,
+    const float Level)
+{
+    if (!EffectClass) return FGameplayEffectSpecHandle();
+
+    FGameplayEffectSpecHandle lResult = MakeOutgoingSpec(EffectClass, Level, MakeEffectContext());
+    SetParamsInGameplayEffectSpec(*lResult.Data, AbilitiesEffectsParams);
+
+    return lResult;
+}
+
+FActiveGameplayEffectHandle UFPS_AbilitySystemComponent::ApplyEffectSpecToTargetWithParams(
+    UAbilitySystemComponent* TargetASC,
+    const TSubclassOf<UGameplayEffect> EffectClass,
+    const float Level)
+{
+    if (!EffectClass || !TargetASC) return FActiveGameplayEffectHandle();
+
+    return ApplyGameplayEffectSpecToTarget(
+        *MakeEffectSpecWithParams(EffectClass, Level).Data,
+        TargetASC);
+}
+
+void UFPS_AbilitySystemComponent::InitStartingAttributes()
+{
+    for (const TPair<FGameplayAttribute, float>& Pair : StartingAttributes)
+    {
+        // Фильтрация от незаполненного значения с проверкой свойства на тип "FGameplayAttributeData"
+        // PS: Является защитой, от ошибки при попытке изменить данные-"не атрибуты" в "AttributeSet",
+        // например при ключе == "UFPS_AttributeSet.OnZeroHealth"
+        if (Pair.Key.IsGameplayAttributeDataProperty(Pair.Key.GetUProperty()))
+        {
+            if (GetAttributeSubobject(Pair.Key.GetAttributeSetClass()))
             {
-                if (GetAttributeSubobject(Data.Key.GetAttributeSetClass()))
-                {
-                    SetNumericAttributeBase(Data.Key, Data.Value);
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Error, TEXT("'%s'::'%s'::%s: '%s' is NOT used for this Actor. See Attribute '%s' "),
-                        *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__),
-                        *Data.Key.GetAttributeSetClass()->GetName(), *Data.Key.GetName());
-                }
+                SetNumericAttributeBase(Pair.Key, Pair.Value);
             }
             else
             {
-                UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s: Incorrect Attribute Name: '%s'"),
-                    *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__), *Data.Key.GetName());
+                UE_LOG(LogTemp, Error, TEXT("'%s'::'%s'::%s: '%s' is NOT used for this Actor. See Attribute '%s' "),
+                    *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__),
+                    *Pair.Key.GetAttributeSetClass()->GetName(), *Pair.Key.GetName());
             }
         }
-
-        for (TSubclassOf<UGameplayAbility>& GAClass : StartingAbilities)
+        else
         {
-            // Фильтрация от незаполненного значения
-            if (GAClass.Get())
-            {
-                GiveAbility(
-                    FGameplayAbilitySpec(
-                        GAClass,
-                        1,
-                        INDEX_NONE,
-                        GetOwnerActor()));
-            }
+            UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s: Incorrect Attribute Name: '%s'"),
+                *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__), *Pair.Key.GetName());
         }
+    }
+}
+//--------------------------------------------------------------------------------------
 
-        for (TSubclassOf<UGameplayEffect>& GEClass : StartingEffects)
+
+
+/* ---   GAS | Abilities   --- */
+
+void UFPS_AbilitySystemComponent::InitAvailableAbilities()
+{
+    for (TSubclassOf<UGameplayAbility>& GAClass : AvailableAbilities)
+    {
+        // Фильтрация от незаполненного значения
+        if (GAClass.Get())
         {
-            // Фильтрация от незаполненного значения
-            if (GEClass.Get())
-            {
-                ApplyGameplayEffectSpecToSelf(
-                    FGameplayEffectSpec(
-                        GEClass->GetDefaultObject<UGameplayEffect>(),
-                        MakeEffectContext()));
-            }
+            GiveAbility(
+                FGameplayAbilitySpec(
+                    GAClass,
+                    1,
+                    INDEX_NONE,
+                    GetOwnerActor()));
         }
+    }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   GAS | Effects   --- */
+
+void UFPS_AbilitySystemComponent::RemoveAllGameplayEffects()
+{
+    for (const FActiveGameplayEffect& AGE : &ActiveGameplayEffects)
+    {
+        RemoveActiveGameplayEffect(AGE.Handle);
+    }
+}
+
+void UFPS_AbilitySystemComponent::InitStartingEffectsWithParameters()
+{
+    for (TPair<TSubclassOf<UGameplayEffect>, FEffectsParamData>& Pair : StartingEffectsWithParameters)
+    {
+        // Фильтрация от незаполненного значения
+        if (Pair.Key.Get())
+        {
+            FGameplayEffectSpec lSpec = FGameplayEffectSpec(
+                Pair.Key->GetDefaultObject<UGameplayEffect>(), MakeEffectContext());
+
+            SetParamsInGameplayEffectSpec(lSpec, Pair.Value.SetByCallerValues);
+
+            ApplyGameplayEffectSpecToSelf(lSpec);
+        }
+    }
+}
+
+void UFPS_AbilitySystemComponent::CheckTagsInStartingEffectsWithParameters()
+{
+    for (TPair<TSubclassOf<UGameplayEffect>, FEffectsParamData>& Pair : StartingEffectsWithParameters)
+    {
+        CheckTagsInParams(Pair.Value.SetByCallerValues);
     }
 }
 //--------------------------------------------------------------------------------------

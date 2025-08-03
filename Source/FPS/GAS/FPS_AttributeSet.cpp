@@ -5,6 +5,9 @@
 
 // Net:
 #include "Net/UnrealNetwork.h"
+
+// GAS:
+#include "FPS/Tools/GAS/FPS_GameplayTags.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -41,8 +44,12 @@ void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
 
-        if (GetHealth() > 0 && NewValue <= 0.01f)
+        if (NewValue < 0.5f
+            && GetHealth() >= 0.5f)
         {
+            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_OnDestroyed);
+            
             OnZeroHealth.Broadcast();
         }
     }

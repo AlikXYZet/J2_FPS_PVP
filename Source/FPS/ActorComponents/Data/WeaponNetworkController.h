@@ -347,6 +347,7 @@ private:
     UFUNCTION()
     TArray<FName> GetBoneSocketsInMesh() const;
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 };

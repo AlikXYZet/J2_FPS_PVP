@@ -46,9 +46,6 @@ AAttributedActor::AAttributedActor()
     // Компонент Системы Способностей (GAS)
     AbilitySystemComp = CreateDefaultSubobject<UFPS_AbilitySystemComponent>(TEXT("Ability System Comp"));
     AbilitySystemComp->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-
-    // Скрытый компонент Набора Атрибутов (для GAS)
-    AttributeSet = CreateDefaultSubobject<UFPS_AttributeSet>(TEXT("Attributes"));
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -63,6 +60,22 @@ void AAttributedActor::BeginPlay()
 
     InitAbilitySystemComp();
 }
+
+void AAttributedActor::PreInitializeComponents()
+{
+    Super::PreInitializeComponents();
+
+    // Скрытый Набор Атрибутов (для GAS)
+    if (!AttributeSet)
+    {
+        AttributeSet = NewObject<UFPS_AttributeSet>(this, TEXT("Attributes"));
+        AbilitySystemComp->AddAttributeSetSubobject(AttributeSet);
+    }
+    // PS: Создание здесь экземпляра AttributeSet через NewObject<T>(*),
+    // а не в конструкторе через CreateDefaultSubobject<T>(*),
+    // является решением ошибки, описанной в UE-81109:
+    // "уничтожение сборщиком AttributeSet у дубликатов актора-владельца"
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -71,13 +84,29 @@ void AAttributedActor::BeginPlay()
 
 void AAttributedActor::InitAbilitySystemComp()
 {
-    AbilitySystemComp->InitAbilityActorInfo(this, this);
+    if (AbilitySystemComp)
+    {
+        AbilitySystemComp->InitAbilityActorInfo(this, this);
 
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
-    GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+        if (AttributeSet)
+        {
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
 
-    AttributeSet->OnZeroHealth.AddDynamic(this, &AAttributedActor::Event_OnZeroHealth);
+            AttributeSet->OnZeroHealth.AddDynamic(this, &AAttributedActor::Event_OnZeroHealth);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AttributeSet is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AbilitySystemComp is NOT"),
+            *GetNameSafe(this), *FString(__func__));
+    }
 }
 //--------------------------------------------------------------------------------------

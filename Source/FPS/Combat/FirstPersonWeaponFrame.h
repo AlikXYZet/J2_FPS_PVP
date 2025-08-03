@@ -121,7 +121,7 @@ public:
 
     /* ===   For EDITOR only   === */
 
-#if WITH_EDITOR
+#if WITH_EDITORONLY_DATA
 
     /* ---   Data   --- */
 
@@ -138,7 +138,9 @@ public:
     FName WeaponName = NAME_None;
     //-------------------------------------------
 
+#endif // WITH_EDITORONLY_DATA
 
+#if WITH_EDITOR
 
     /* ---   Editor   --- */
 
@@ -152,7 +154,8 @@ public:
         Category = "Weapon Frame|Editor")
     void SaveCurrentDataInWeaponsDataTable();
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 
 
@@ -191,19 +194,25 @@ private:
 
     /* ===   For EDITOR only   === */
 
-#if WITH_EDITOR
+#if WITH_EDITORONLY_DATA
 
     /* ---   Data   --- */
 
     // Указатель на Данные выбранного Оружия из Таблицы
     FWeaponData* SelectedWeaponData = nullptr;
+    //-------------------------------------------
 
-    //
+#endif // WITH_EDITORONLY_DATA
+
+#if WITH_EDITOR
+
+    /* ---   Data   --- */
 
     /** Получение Названий строк из таблицы WeaponsDataTable */
     UFUNCTION()
     TArray<FName> GetRowNamesFromWeaponsDataTable() const;
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITORONLY_DATA
     //===========================================
 };

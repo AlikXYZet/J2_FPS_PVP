@@ -35,7 +35,7 @@ class FPS_API ISpeedControllerInterface
 
 public:
 
-    /* ---   Base   --- */
+    /* ---   Speed Control   --- */
 
     /** Задать значение скорости */
     UFUNCTION()
@@ -53,6 +53,8 @@ public:
 
 
 private:
+
+    /* ---   Speed Control   --- */
 
     /** Базовая инициализация для работоспособности */
     virtual void SpeedControlInit() = 0;

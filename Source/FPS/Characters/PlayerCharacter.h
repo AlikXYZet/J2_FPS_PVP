@@ -104,7 +104,7 @@ public:
         meta = (AllowPrivateAccess = "true"))
     UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
 
-    // Скрытый компонент Набора Атрибутов (для GAS)
+    // Скрытый Набор Атрибутов (для GAS)
     UPROPERTY(BlueprintReadOnly,
         Category = "Components")
     UFPS_AttributeSet* AttributeSet = nullptr;
@@ -361,7 +361,6 @@ private:
     /** Получение наименований Костей текущего Меша в FPMesh */
     UFUNCTION()
     TArray<FName> GetBoneNamesInFPMesh() const;
-
     //-------------------------------------------
 
 
@@ -379,6 +378,7 @@ private:
     /* Проверить группы входных данных */
     void CheckInputsGroups();
     //-------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
     //===========================================
 };

@@ -6,7 +6,7 @@
 // Win:
 #if PLATFORM_WINDOWS
 #include "excpt.h"
-#endif
+#endif // PLATFORM_WINDOWS
 
 // UE:
 #include "GameFramework/InputSettings.h"
@@ -159,7 +159,7 @@ bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
     {
         UE_LOG(LogTemp, Warning, TEXT("%s::%s: %s() function NOT found:"),
             *GetNameSafe(this), *FString(__func__), *NameFunction.ToString());
-#endif
+#endif // WITH_EDITOR
     }
 
     return false;
@@ -354,5 +354,6 @@ void UInteractiveComponent::ReinitActionGroup()
     }
 }
 //--------------------------------------------------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
 //======================================================================================

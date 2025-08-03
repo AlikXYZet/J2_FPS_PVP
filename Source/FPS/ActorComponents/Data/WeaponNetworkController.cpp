@@ -325,5 +325,6 @@ TArray<FName> UWeaponNetworkController::GetBoneSocketsInMesh() const
     return TArray<FName>();
 }
 //--------------------------------------------------------------------------------------
-#endif
+
+#endif // WITH_EDITOR
 //======================================================================================
