@@ -24,10 +24,7 @@ void UWeaponNetworkController::Server_##PropertyName##_Implementation() \
 } \
 void UWeaponNetworkController::Multicast_##PropertyName##_Implementation() \
 { \
-    /* Фильтрация, если вызвал Владелец */ \
-    if (PlayerOwner->IsLocallyControlled()) \
-        return; \
-    ##PropertyName.Broadcast(); \
+    ##PropertyName.Broadcast(*CurrentWeaponData); \
 }
 //--------------------------------------------------------------------------------------
 
@@ -46,6 +43,13 @@ UWeaponNetworkController::UWeaponNetworkController()
 
     // Компонент реплицируем по умолчанию
     SetIsReplicatedByDefault(true);
+    //-------------------------------------------
+
+
+    /* ---   Actions | Data   --- */
+
+    // Параметр создания: Всегда появляется
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -69,7 +73,6 @@ void UWeaponNetworkController::OnComponentCreated()
     Super::OnComponentCreated();
 
     BaseInit();
-    //CheckNumOfSlots();
 }
 
 void UWeaponNetworkController::InitializeComponent()
@@ -91,16 +94,6 @@ void UWeaponNetworkController::BaseInit()
         UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
             *GetNameSafe(this), *FString(__func__));
     }
-
-    if (WeaponFrameType)
-    {
-        SetChildActorClass(WeaponFrameType);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrameType is NOT"),
-            *GetNameSafe(this), *FString(__func__));
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -115,15 +108,22 @@ void UWeaponNetworkController::GetLifetimeReplicatedProps(TArray<FLifetimeProper
     DOREPLIFETIME_CONDITION(UWeaponNetworkController, CurrentActions, COND_SkipOwner);
 }
 
-void UWeaponNetworkController::InitializeFirstPersonWeaponFrame()
+void UWeaponNetworkController::InitializeForFirstPersonDisplay()
 {
     if (CurrentWeaponFrame)
     {
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
+        // Отключить визуальное отображение
+        CurrentWeaponFrame->GetRootComponent()->SetVisibility(false, true);
 
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetVisibility(false);
-        CurrentWeaponFrame->WeaponSkeletalMesh->SetCastHiddenShadow(true);
+        // Получить все UPrimitiveComponent
+        TInlineComponentArray<UPrimitiveComponent*> PrimComponents;
+        CurrentWeaponFrame->GetComponents(PrimComponents);
+
+        // Включить тень во всех UPrimitiveComponent
+        for (UPrimitiveComponent* Comp : PrimComponents)
+        {
+            Comp->SetCastHiddenShadow(true);
+        }
     }
 }
 //--------------------------------------------------------------------------------------
@@ -145,11 +145,6 @@ void UWeaponNetworkController::DataInit()
 
         if (CurrentWeaponFrame)
         {
-            CurrentWeaponFrame->AttachToComponent(
-                PlayerOwner->GetMesh(),
-                FAttachmentTransformRules::KeepRelativeTransform,
-                WeaponSocketInMesh);
-
             CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
         }
         else
@@ -193,17 +188,26 @@ AActor* UWeaponNetworkController::DropActor(const TSubclassOf<AActor>& iActorTyp
 {
     if (iActorType.Get())
     {
-        // Параметр создания: Всегда появляется
-        FActorSpawnParameters lSpawnParameters;
-        lSpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        return GetWorld()->SpawnActor(
+            iActorType.Get(),
+            &iLocation,
+            &iRotation,
+            SpawnParameters);
+    }
 
-        AActor* Test = GetWorld()->SpawnActor<AActor>(
+    return nullptr;
+}
+
+template<class T>
+T* UWeaponNetworkController::DropActor(const TSubclassOf<T>& iActorType, const FVector& iLocation, const FRotator& iRotation)
+{
+    if (iActorType.Get())
+    {
+        return GetWorld()->SpawnActor<T>(
             iActorType.Get(),
             iLocation,
             iRotation,
-            lSpawnParameters);
-
-        return Test;
+            SpawnParameters);
     }
 
     return nullptr;
@@ -229,14 +233,9 @@ void UWeaponNetworkController::Server_SetCurrentWeaponDataByNum_Implementation(c
 
 void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementation(const uint8& iNum)
 {
-    ChangingCurrentWeaponDataByNum(iNum);
-}
-
-void UWeaponNetworkController::ChangingCurrentWeaponDataByNum(const uint8& iNum)
-{
     CurrentWeaponData = WeaponDataSlots[iNum];
     CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-    OnChangingWeapon.Broadcast();
+    OnChangingWeapon.Broadcast(*CurrentWeaponData);
 }
 //--------------------------------------------------------------------------------------
 
@@ -256,13 +255,14 @@ void UWeaponNetworkController::Server_DropProjectile_Implementation(const FVecto
 
 void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    CreateProjectile(Location, Rotation);
-}
+    AProjectile* Projectile = DropActor<AProjectile>(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
 
-void UWeaponNetworkController::CreateProjectile(const FVector& Location, const FRotator& Rotation)
-{
-    DropActor(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
-    OnShootingWeapon.Broadcast();
+    if (Projectile)
+    {
+        Projectile->SetInstigator(PlayerOwner->GetAbilitySystemComponent());
+    }
+
+    OnShootingWeapon.Broadcast(*CurrentWeaponData);
 }
 
 void UWeaponNetworkController::DropSleeve(const FVector& Location, const FRotator& Rotation)
@@ -293,12 +293,12 @@ void UWeaponNetworkController::DropStorage(const FVector& Location, const FRotat
     Server_DropStorage(Location, Rotation);
 }
 
-void UWeaponNetworkController::Multicast_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
+void UWeaponNetworkController::Server_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
 {
     Multicast_DropStorage(Location, Rotation);
 }
 
-void UWeaponNetworkController::Server_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
+void UWeaponNetworkController::Multicast_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
 {
     DropActor(CurrentWeaponData->StorageType.Get(), Location, Rotation);
     OnReloadingWeapon.Broadcast();
@@ -310,6 +310,35 @@ void UWeaponNetworkController::Server_DropStorage_Implementation(const FVector& 
 /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+/* ---   Base: Debugs   --- */
+
+void UWeaponNetworkController::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    if (PropertyChangedEvent.Property
+        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UWeaponNetworkController, WeaponFrameType))
+    {
+        if (WeaponFrameType)
+        {
+            SetChildActorClass(WeaponFrameType);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrameType is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
+void UWeaponNetworkController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+}
+//--------------------------------------------------------------------------------------
+
+
 
 /* ---   Net   --- */
 

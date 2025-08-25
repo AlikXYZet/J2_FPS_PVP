@@ -87,24 +87,19 @@ void AProjectile::NotifyHit(
 {
     Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
-    if (HasAuthority() && Other)
+    if (HasAuthority()
+        && Other
+        && DamageEffect
+        && InstigatorASC)
     {
-        if (DamageEffect)
+        IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Other);
+        if (TargetInterface)
         {
-            IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Other);
-
-            if (TargetInterface)
-            {
-                UAbilitySystemComponent* SourceASC = TargetInterface->GetAbilitySystemComponent();
-
-                if (SourceASC)
-                {
-                    SourceASC->ApplyGameplayEffectToSelf(
-                        DamageEffect.GetDefaultObject(),
-                        0,
-                        FGameplayEffectContextHandle());
-                }
-            }
+            InstigatorASC->ApplyGameplayEffectToTarget(
+                DamageEffect.GetDefaultObject(),
+                TargetInterface->GetAbilitySystemComponent(),
+                0,
+                FGameplayEffectContextHandle());
         }
     }
 

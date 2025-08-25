@@ -3,9 +3,8 @@
 // Base:
 #include "AttributedActor.h"
 
-// Interaction | GAS:
-#include "FPS/GAS/FPS_AttributeSet.h"
-//--------------------------------------------------------------------------------------
+// GAS:
+#include "FPS/GAS/FPS_AttributeSet.h"//--------------------------------------------------------------------------------------
 
 
 

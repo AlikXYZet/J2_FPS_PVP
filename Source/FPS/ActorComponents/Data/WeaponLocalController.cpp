@@ -64,7 +64,7 @@ void UWeaponLocalController::BeginPlay()
 {
     Super::BeginPlay();
 
-    SpeedControlInit();
+    InitSpeedControl();
 }
 
 void UWeaponLocalController::BaseInit()
@@ -84,16 +84,6 @@ void UWeaponLocalController::BaseInit()
     else
     {
         UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
-            *GetNameSafe(this), *FString(__func__));
-    }
-
-    if (FPWeaponFrameType)
-    {
-        SetChildActorClass(FPWeaponFrameType);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: FPWeaponFrameType is NOT"),
             *GetNameSafe(this), *FString(__func__));
     }
 }
@@ -187,12 +177,12 @@ void UWeaponLocalController::DataInit()
 
         if (WeaponControlNetComp)
         {
-            WeaponControlNetComp->WeaponDataSlots.Empty(WeaponsDataTable->GetRowNames().Num());
+            WeaponControlNetComp->WeaponDataSlots.Empty(WeaponSlots.Num());
 
-            for (FWeaponSlotData& Data : WeaponSlots)
+            for (FWeaponSlotData& Slot : WeaponSlots)
             {
                 WeaponControlNetComp->WeaponDataSlots.Add(
-                    WeaponsDataTable->FindRow<FWeaponData>(Data.WeaponType, "DataInit"));
+                    WeaponsDataTable->FindRow<FWeaponData>(Slot.WeaponType, "DataInit"));
             }
 
             WeaponControlNetComp->CurrentWeaponData = WeaponControlNetComp->WeaponDataSlots[0];
@@ -205,11 +195,6 @@ void UWeaponLocalController::DataInit()
 
             if (CurrentFPWeaponFrame)
             {
-                CurrentFPWeaponFrame->AttachToComponent(
-                    PlayerOwner->GetMesh(),
-                    FAttachmentTransformRules::KeepRelativeTransform,
-                    WeaponSocketInFPMesh);
-
                 CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
             }
             else
@@ -249,12 +234,12 @@ void UWeaponLocalController::SetCurrentSlotByNum(const uint8& iNum)
 
 void UWeaponLocalController::ToSlot1()
 {
-    SetCurrentSlotByNum(1);
+    SetCurrentSlotByNum(0);
 }
 
 void UWeaponLocalController::ToSlot2()
 {
-    SetCurrentSlotByNum(2);
+    SetCurrentSlotByNum(1);
 }
 
 void UWeaponLocalController::ToNextSlot()
@@ -628,7 +613,7 @@ void UWeaponLocalController::ChangeWeaponSlot()
 
     WeaponControlNetComp->SetCurrentWeaponDataByNum(NewSlotNum);
 
-    CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+    CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(WeaponControlNetComp->WeaponDataSlots[NewSlotNum]);
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
@@ -656,7 +641,7 @@ void UWeaponLocalController::SetSpeedControl(const ESpeedVariations& Mode)
     }
 }
 
-void UWeaponLocalController::SpeedControlInit()
+void UWeaponLocalController::InitSpeedControl()
 {
     if (PlayerOwner && PlayerOwner->IsLocallyControlled())
     {
@@ -670,6 +655,35 @@ void UWeaponLocalController::SpeedControlInit()
 /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+/* ---   Base: Debugs   --- */
+
+void UWeaponLocalController::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    if (PropertyChangedEvent.Property
+        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UWeaponLocalController, FPWeaponFrameType))
+    {
+        if (FPWeaponFrameType)
+        {
+            SetChildActorClass(FPWeaponFrameType);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: FPWeaponFrameType is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
+void UWeaponLocalController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+}
+//--------------------------------------------------------------------------------------
+
+
 
 /* ---   Local   --- */
 
@@ -755,11 +769,7 @@ TArray<FName> UWeaponLocalController::GetAllWeaponsNames() const
 void UWeaponLocalController::CheckNumOfSlots()
 {
     // Проверка наличия слотов
-    if (WeaponSlots.Num())
-    {
-        CurrentSlot = &WeaponSlots[0];
-    }
-    else
+    if (!WeaponSlots.Num())
     {
         UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: WeaponSlots.Num() == 0"),
             *GetNameSafe(this), *FString(__func__));

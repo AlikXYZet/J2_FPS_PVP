@@ -317,9 +317,6 @@ private:
 
     /** Инициализация данных */
     void DataInit();
-
-    /** Проверка количества Слотов */
-    void CheckNumOfSlots();
     //-------------------------------------------
 
 
@@ -457,7 +454,7 @@ private:
     //
 
     /** Инициализация контроля Скорости */
-    void SpeedControlInit() override;
+    void InitSpeedControl() override;
     //-------------------------------------------
 
 
@@ -465,6 +462,23 @@ private:
     /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+public:
+
+    /* ---   Base: Debugs   --- */
+
+    /** Вызывается, когда какое-либо свойство этого объекта было изменено
+    * @note Используется для проверки изменённых переменных
+    */
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
+    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
+    //-------------------------------------------
+
+
+
+private:
 
     /* ---   Local   --- */
 
@@ -492,6 +506,14 @@ private:
     /** Получение Названия строк из таблицы WeaponsDataTable */
     UFUNCTION()
     TArray<FName> GetAllWeaponsNames() const;
+    //-------------------------------------------
+
+
+
+    /* ---   Switching   --- */
+
+    /** Проверка количества Слотов */
+    void CheckNumOfSlots();
     //-------------------------------------------
 
 #endif // WITH_EDITOR

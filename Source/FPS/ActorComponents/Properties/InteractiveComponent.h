@@ -183,15 +183,22 @@ private:
 
 #if WITH_EDITOR
 
+public:
+
     /* ---   Base: Debugs   --- */
 
     /** Вызывается, когда какое-либо свойство этого объекта было изменено
     * @note Используется для проверки изменённых переменных
     */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
+    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
     //-------------------------------------------
 
 
+
+private:
 
     /* ---   Highlighting   --- */
 

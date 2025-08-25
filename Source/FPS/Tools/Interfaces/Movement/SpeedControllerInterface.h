@@ -57,7 +57,7 @@ private:
     /* ---   Speed Control   --- */
 
     /** Базовая инициализация для работоспособности */
-    virtual void SpeedControlInit() = 0;
+    virtual void InitSpeedControl() = 0;
     /*{
         // На примере "APlayerCharacter":
         GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);

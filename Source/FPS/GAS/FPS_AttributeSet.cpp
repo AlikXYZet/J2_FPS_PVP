@@ -33,6 +33,11 @@ void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 /* ---   AttributeSet   --- */
 
+bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
+{
+    return Super::PreGameplayEffectExecute(Data);
+}
+
 void UFPS_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
     Super::PostGameplayEffectExecute(Data);
@@ -40,16 +45,22 @@ void UFPS_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 
 void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
+    Super::PreAttributeChange(Attribute, NewValue);
+}
+
+void UFPS_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
+{
     if (Attribute == GetHealthAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
 
+        // Отслеживание со стороны сервера
         if (NewValue < 0.5f
             && GetHealth() >= 0.5f)
         {
             GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
                 FPS_GameplayTags::GameplayState_OnDestroyed);
-            
+
             OnZeroHealth.Broadcast();
         }
     }
@@ -58,7 +69,7 @@ void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxArmor());
     }
 
-    Super::PreAttributeChange(Attribute, NewValue);
+    Super::PreAttributeBaseChange(Attribute, NewValue);
 }
 //--------------------------------------------------------------------------------------
 
@@ -68,6 +79,14 @@ void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 
 void UFPS_AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
+    // Отслеживание со стороны клиента
+    if (OnZeroHealth.IsBound()
+        && Health.GetBaseValue() < 0.5f
+        && OldHealth.GetBaseValue() >= 0.5f)
+    {
+        OnZeroHealth.Broadcast();
+    }
+
     GAMEPLAYATTRIBUTE_REPNOTIFY(UFPS_AttributeSet, Health, OldHealth);
 }
 

@@ -24,6 +24,7 @@ class USphereComponent;
 class UProjectileMovementComponent;
 
 // GAS
+class UAbilitySystemComponent;
 class UGameplayEffect;
 //--------------------------------------------------------------------------------------
 
@@ -110,9 +111,18 @@ public:
 
     /* ---   GAS   --- */
 
+    // Эффект поражения данным снарядом
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Projectile|GAS")
     TSubclassOf<UGameplayEffect> DamageEffect;
+
+    //
+
+    /** Сохранить указатель на Компонент-подстрекатель, что вызывает эффект поражения данным снарядом */
+    FORCEINLINE void SetInstigator(UAbilitySystemComponent* iInstigatorASC)
+    {
+        InstigatorASC = iInstigatorASC;
+    };
     //-------------------------------------------
 
 
@@ -133,5 +143,13 @@ private:
         if (NiagaraFXComponent && !NiagaraFXComponent->GetAsset())
             NiagaraFXComponent->DestroyComponent();
     };
+    //-------------------------------------------
+
+
+
+    /* ---   GAS   --- */
+
+    // Компонент-подстрекатель, что вызывает эффект поражения данным снарядом
+    UAbilitySystemComponent* InstigatorASC;
     //-------------------------------------------
 };

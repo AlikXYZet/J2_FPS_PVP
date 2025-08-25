@@ -71,12 +71,17 @@ public:
 
     /* ---   Attribute Set   --- */
 
-    /** Вызывается непосредственно после выполнения какого-либо GameplayEffect,
-    * изменяющего базовое значение атрибута */
+    /** Вызывается непосредственно перед выполнения какого-либо GameplayEffect */
+    virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data);
+
+    /** Вызывается непосредственно после выполнения какого-либо GameplayEffect, изменяющего базовое значение атрибута */
     virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 
-    /** Вызывается непосредственно перед изменением какого-либо атрибута */
+    /** Вызывается непосредственно перед изменением значения "Current Value" какого-либо атрибута */
     virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+
+    /** Вызывается непосредственно перед изменением значения "Base Value" какого-либо атрибута */
+    virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
     //-------------------------------------------
 
 

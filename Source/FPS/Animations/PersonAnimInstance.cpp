@@ -145,12 +145,9 @@ bool UPersonAnimInstance::CheckAction(const EActionVariations& InAction) const
         && WeaponControlNetComp->CheckAction(InAction);
 }
 
-void UPersonAnimInstance::UpdateBasicData()
+void UPersonAnimInstance::UpdateBasicData(const FWeaponData& CurrentNewWeaponData)
 {
-    if (WeaponControlNetComp)
-    {
-        PersonAnimations = WeaponControlNetComp->GetCurrentWeaponData()->PersonAnimations;
-    }
+    PersonAnimations = CurrentNewWeaponData.PersonAnimations;
 }
 //--------------------------------------------------------------------------------------
 

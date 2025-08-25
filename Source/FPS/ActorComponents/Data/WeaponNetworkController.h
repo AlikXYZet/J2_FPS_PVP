@@ -23,7 +23,6 @@
 #define DELEGATE_METHOD_Broadcast_h(PropertyName) \
     void Broadcast_##PropertyName() \
     { \
-        ##PropertyName.Broadcast(); \
         Server_##PropertyName(); \
     }
 //--------------------------------------------------------------------------------------
@@ -33,16 +32,16 @@
 /* ---   Delegates   --- */
 
 // Делегат: При Стрельбе Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnShootingWeapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShootingWeapon, const FWeaponData&, CurrentWeaponData);
 
 // Делегат: При Перезарядке Оружия
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadingWeapon);
 
 // Делегат: При Старте смены Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartChangingWeapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStartChangingWeapon, const FWeaponData&, CurrentOldWeaponData);
 
 // Делегат: При Смене Оружия
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingWeapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChangingWeapon, const FWeaponData&, CurrentNewWeaponData);
 // ----------------------------------------------------------------------------------------------------
 
 
@@ -139,10 +138,9 @@ public:
 
     /* ---   Net   --- */
 
-    // Создаваемый Каркас Оружия для вида от Первого Лица
+    // Создаваемый Каркас Оружия для вида со стороны
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
-        meta = (DisplayName = "Weapon Frame Type"))
+        Category = "Weapon Control|Net")
     TSubclassOf<AWeaponFrame> WeaponFrameType;
 
     /* Сокет Оружия в FPMesh */
@@ -156,8 +154,8 @@ public:
     /** Используется для регистрации реплицируемых Переменных */
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    /** Использовать ли Каркас Оружия от Первого Лица */
-    void InitializeFirstPersonWeaponFrame();
+    /** Инициализировать под отображение от Первого Лица (скрыть отображение, но оставить тень) */
+    void InitializeForFirstPersonDisplay();
     //-------------------------------------------
 
 
@@ -247,18 +245,20 @@ private:
 
     /** Инициализация данных */
     void DataInit();
-
-    /** Проверка количества Слотов */
-    void CheckNumOfSlots();
     //-------------------------------------------
 
 
 
     /* ---   Actions | Data   --- */
 
+    // Параметр создания выбрасываемых Акторов посредством метода DropActor()
+    FActorSpawnParameters SpawnParameters;
+
+    //
+
     /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
-    void Server_SetCurrentActions(const uint8& Value);
+        void Server_SetCurrentActions(const uint8& Value);
 
     /** Проверка действий Игрока
     @param  ActionsBits - Биты проверяемых действий */
@@ -267,8 +267,14 @@ private:
         return CurrentActions & ActionsBits;
     };
 
-    /** Создание и выброс Астора согласно его Типу, Локацией и Ротацией */
+    /** Создание и выброс Астора согласно его Типу, Локации и Ротации
+    @note   Более быстрый вызов для простого Актора */
     AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation);
+
+    /** Создание и выброс Наследника от Астора согласно его Подтипу, Локации и Ротации
+    @note   Более быстрый вызов для наследника Актора */
+    template<class T>
+    T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation);
     //-------------------------------------------
 
 
@@ -280,14 +286,11 @@ private:
 
     /** Server: Установить текущие данные оружия согласно Номеру */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
-    void Server_SetCurrentWeaponDataByNum(const uint8& Num);
+        void Server_SetCurrentWeaponDataByNum(const uint8& Num);
 
     /** Multicast: Установить текущие данные оружия согласно Номеру */
     UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
-    void Multicast_SetCurrentWeaponDataByNum(const uint8& Num);
-
-    /** Изменение текущие данные слота согласно номеру */
-    void ChangingCurrentWeaponDataByNum(const uint8& Num);
+        void Multicast_SetCurrentWeaponDataByNum(const uint8& Num);
     //-------------------------------------------
 
 
@@ -299,13 +302,11 @@ private:
 
     /** Server: Выбросить Снаряд с указанными Локацией и Ротацией */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
-    void Server_DropProjectile(const FVector& Location, const FRotator& Rotation);
+        void Server_DropProjectile(const FVector& Location, const FRotator& Rotation);
 
     /** Multicast: Выбросить Снаряд с указанными Локацией и Ротацией */
     UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
-    void Multicast_DropProjectile(const FVector& Location, const FRotator& Rotation);
-
-    void CreateProjectile(const FVector& Location, const FRotator& Rotation);
+        void Multicast_DropProjectile(const FVector& Location, const FRotator& Rotation);
 
     /** Выбросить Гильзу с указанными Локацией и Ротацией */
     void DropSleeve(const FVector& Location, const FRotator& Rotation);
@@ -340,6 +341,23 @@ private:
     /* ===   For EDITOR only   === */
 
 #if WITH_EDITOR
+
+public:
+
+    /* ---   Base: Debugs   --- */
+
+    /** Вызывается, когда какое-либо свойство этого объекта было изменено
+    * @note Используется для проверки изменённых переменных
+    */
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
+    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
+    //-------------------------------------------
+
+
+
+private:
 
     /* ---   Net   --- */
 

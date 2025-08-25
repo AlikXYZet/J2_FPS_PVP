@@ -13,6 +13,7 @@
 
 // Structs:
 #include "FPS/Tools/Structs/Animations/PersonAnimData.h"
+#include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 
 // Generated:
 #include "PersonAnimInstance.generated.h"
@@ -89,7 +90,7 @@ protected:
 
     /** Обновить данные  */
     UFUNCTION()
-    virtual void UpdateBasicData();
+    virtual void UpdateBasicData(const FWeaponData& CurrentNewWeaponData);
     //-------------------------------------------
 
 

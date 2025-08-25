@@ -261,16 +261,23 @@ void UInteractiveComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    // Здесь можно написать логику проверки изменённого свойства.
-    FName PropertyName = (PropertyChangedEvent.Property != nullptr)
-        ? PropertyChangedEvent.Property->GetFName()
-        : NAME_None;
-
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UInteractiveComponent, SelectedActionGroups))
+    if (PropertyChangedEvent.Property
+        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UInteractiveComponent, SelectedActionGroups))
     {
         ReinitActionGroup();
     }
 };
+
+void UInteractiveComponent::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+
+    if (PropertyChangedEvent.Property
+        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UInteractiveComponent, SelectedActionGroups))
+    {
+        ReinitActionGroup();
+    }
+}
 //--------------------------------------------------------------------------------------
 
 

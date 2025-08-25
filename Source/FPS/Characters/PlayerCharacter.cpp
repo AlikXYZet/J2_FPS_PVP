@@ -17,7 +17,7 @@
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
 
-// Interaction | GAS:
+// GAS:
 #include "FPS/GAS/FPS_AttributeSet.h"
 //--------------------------------------------------------------------------------------
 
@@ -107,8 +107,8 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    SpeedControlInit();
     Cleaning();
+    CorrectingAttachmentChildActor();
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -124,17 +124,29 @@ void APlayerCharacter::Cleaning()
         GetMesh()->SetCastHiddenShadow(true);
         GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
 
-        WeaponControlNetComp->InitializeFirstPersonWeaponFrame();
-
         FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
 
+        WeaponControlNetComp->InitializeForFirstPersonDisplay();
+
         InitAbilitySystemComp();
+        InitSpeedControl();
     }
     else
     {
         WeaponControlLocComp->DestroyComponent();
         FPMesh->DestroyComponent();
         FPCamera->DestroyComponent();
+    }
+}
+
+void APlayerCharacter::CorrectingAttachmentChildActor()
+{
+    if (WeaponControlNetComp->GetChildActor())
+    {
+        WeaponControlNetComp->GetChildActor()->AttachToComponent(
+            GetMesh(),
+            FAttachmentTransformRules::KeepWorldTransform,
+            "WeaponSocket_HandR");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -306,13 +318,10 @@ void APlayerCharacter::SetSpeedControl(const ESpeedVariations& Mode)
     }
 }
 
-void APlayerCharacter::SpeedControlInit()
+void APlayerCharacter::InitSpeedControl()
 {
-    if (IsLocallyControlled())
-    {
-        GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
-        SetSpeedControl(ESpeedVariations::Jog);
-    }
+    GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
+    SetSpeedControl(ESpeedVariations::Jog);
 }
 //--------------------------------------------------------------------------------------
 
@@ -324,10 +333,25 @@ void APlayerCharacter::InitAbilitySystemComp()
 {
     if (AbilitySystemComp)
     {
-        GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
-        GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
-        GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
-        GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+        if (AttributeSet)
+        {
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+
+            AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::Event_OnZeroHealth);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AttributeSet is NOT"),
+                *GetNameSafe(this), *FString(__func__));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AbilitySystemComp is NOT"),
+            *GetNameSafe(this), *FString(__func__));
     }
 }
 //--------------------------------------------------------------------------------------

@@ -261,7 +261,18 @@ public:
 
     /* ---   GAS   --- */
 
-    /** Событие BP: Изменение Здоровья */
+    /** Возвращает Компонент Системы Способностей данного Игрока */
+    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+    {
+        return AbilitySystemComp;
+    };
+    //-------------------------------------------
+
+
+
+    /* ---   GAS Events   --- */
+
+        /** Событие BP: Изменение Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
@@ -289,14 +300,13 @@ public:
     void Event_ChangingMaxArmor(const float& Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
 
-    //
-
-    /** Возвращает Компонент Системы Способностей данного Игрока */
-    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
-    {
-        return AbilitySystemComp;
-    };
+    /** Событие BP: При Нулевом Здоровье */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "On Zero Health"))
+    void Event_OnZeroHealth();
     //-------------------------------------------
+
 
 
 private:
@@ -305,6 +315,11 @@ private:
 
     /** Очистка от неиспользуемых компонентов */
     void Cleaning();
+
+    /** Исправление Привязки дочернего актора
+    @note   На стороне клиента слетает привязанность Дочернего Актора не смотря на то,
+            что данный компонент уже привязан к нужному сокету. Поэтому исправляем данным кодом */
+    void CorrectingAttachmentChildActor();
     //-------------------------------------------
 
 
@@ -339,7 +354,7 @@ private:
     //
 
     /** Инициализация контроля Скорости */
-    void SpeedControlInit() override;
+    void InitSpeedControl() override;
     //-------------------------------------------
 
 
