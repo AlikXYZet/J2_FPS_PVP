@@ -40,7 +40,7 @@ void USmoothMovementComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
-    CurrentComponentInit();
+    InitCurrentComponent();
 }
 
 void USmoothMovementComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -53,7 +53,7 @@ void USmoothMovementComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 /* ---   Init   --- */
 
-void USmoothMovementComponent::CurrentComponentInit()
+void USmoothMovementComponent::InitCurrentComponent()
 {
     CurrentActor = GetOwner();
 

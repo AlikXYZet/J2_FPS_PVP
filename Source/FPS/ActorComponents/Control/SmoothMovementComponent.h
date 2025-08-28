@@ -162,7 +162,7 @@ private:
     //
 
     /** Инициализация данных текущего компонента*/
-    void CurrentComponentInit();
+    void InitCurrentComponent();
     //-------------------------------------------
 
 

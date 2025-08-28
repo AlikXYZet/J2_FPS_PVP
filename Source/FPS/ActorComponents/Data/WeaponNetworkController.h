@@ -146,7 +146,7 @@ public:
     /* Сокет Оружия в FPMesh */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
         Category = "Weapon Control|Net",
-        meta = (GetOptions = "GetBoneSocketsInMesh"))
+        meta = (GetOptions = "GetSocketNamesInMesh"))
     FName WeaponSocketInMesh = NAME_None;
 
     //
@@ -244,7 +244,7 @@ private:
     //
 
     /** Инициализация данных */
-    void DataInit();
+    void InitData();
     //-------------------------------------------
 
 
@@ -363,7 +363,7 @@ private:
 
     /** Получение наименований Сокетов текущего Меша в Mesh */
     UFUNCTION()
-    TArray<FName> GetBoneSocketsInMesh() const;
+    TArray<FName> GetSocketNamesInMesh() const;
     //-------------------------------------------
 
 #endif // WITH_EDITOR

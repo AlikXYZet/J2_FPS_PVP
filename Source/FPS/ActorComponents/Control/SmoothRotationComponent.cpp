@@ -40,7 +40,7 @@ void USmoothRotationComponent::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
-    CurrentComponentInit();
+    InitCurrentComponent();
 }
 
 void USmoothRotationComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -53,7 +53,7 @@ void USmoothRotationComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 /* ---   Init   --- */
 
-void USmoothRotationComponent::CurrentComponentInit()
+void USmoothRotationComponent::InitCurrentComponent()
 {
     CurrentActor = GetOwner();
 

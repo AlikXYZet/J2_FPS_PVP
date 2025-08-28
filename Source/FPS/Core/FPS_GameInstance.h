@@ -62,6 +62,6 @@ private:
     /* ---   Settings System | Saving   --- */
 
     /** Инициализация сохранения данных Настроек */
-    void SettingsSavingInit();
+    void InitSettingsSaving();
     //-------------------------------------------
 };

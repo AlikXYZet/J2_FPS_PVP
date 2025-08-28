@@ -17,7 +17,7 @@
 
 void UFPS_GameInstance::Init()
 {
-    SettingsSavingInit();
+    InitSettingsSaving();
 
     Super::Init();
 }
@@ -27,7 +27,7 @@ void UFPS_GameInstance::Init()
 
 /* ---   Settings System | Saving   --- */
 
-void UFPS_GameInstance::SettingsSavingInit()
+void UFPS_GameInstance::InitSettingsSaving()
 {
     USaveSettings* SaveSettings = Cast<USaveSettings>(UGameplayStatics::LoadGameFromSlot("SettingsData", 0));
 

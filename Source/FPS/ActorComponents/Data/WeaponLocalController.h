@@ -76,14 +76,14 @@ public:
 
     // Создаваемый Каркас Оружия для вида от Первого Лица
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
+        Category = "Weapon Control|Local",
         meta = (DisplayName = "FP Weapon Frame Type"))
     TSubclassOf<AFirstPersonWeaponFrame> FPWeaponFrameType;
 
     /* Сокет Оружия в FPMesh */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
-        meta = (GetOptions = "GetBoneSocketsInFPMesh",
+        Category = "Weapon Control|Local",
+        meta = (GetOptions = "GetSocketNamesInFPMesh",
             DisplayName = "Weapon Socket In FPMesh"))
     FName WeaponSocketInFPMesh = NAME_None;
     //-------------------------------------------
@@ -316,7 +316,7 @@ private:
     //
 
     /** Инициализация данных */
-    void DataInit();
+    void InitData();
     //-------------------------------------------
 
 
@@ -484,7 +484,7 @@ private:
 
     /** Получение наименований Сокетов текущего Меша в FPMesh */
     UFUNCTION()
-    TArray<FName> GetBoneSocketsInFPMesh() const;
+    TArray<FName> GetSocketNamesInFPMesh() const;
     //-------------------------------------------
 
 

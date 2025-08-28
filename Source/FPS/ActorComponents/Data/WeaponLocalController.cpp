@@ -57,7 +57,7 @@ void UWeaponLocalController::InitializeComponent()
 {
     Super::InitializeComponent();
 
-    DataInit();
+    InitData();
 }
 
 void UWeaponLocalController::BeginPlay()
@@ -168,7 +168,7 @@ const FWeaponSlotData& UWeaponLocalController::BP_GetCurrentSlotData() const
     return *GetCurrentSlotData();
 }
 
-void UWeaponLocalController::DataInit()
+void UWeaponLocalController::InitData()
 {
     if (WeaponsDataTable
         && WeaponSlots.IsValidIndex(0))
@@ -182,11 +182,11 @@ void UWeaponLocalController::DataInit()
             for (FWeaponSlotData& Slot : WeaponSlots)
             {
                 WeaponControlNetComp->WeaponDataSlots.Add(
-                    WeaponsDataTable->FindRow<FWeaponData>(Slot.WeaponType, "DataInit"));
+                    WeaponsDataTable->FindRow<FWeaponData>(Slot.WeaponType, "InitData"));
             }
 
             WeaponControlNetComp->CurrentWeaponData = WeaponControlNetComp->WeaponDataSlots[0];
-            WeaponControlNetComp->DataInit();
+            WeaponControlNetComp->InitData();
         }
 
         if (GetCurrentWeaponData())
@@ -196,6 +196,15 @@ void UWeaponLocalController::DataInit()
             if (CurrentFPWeaponFrame)
             {
                 CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+
+                if (PlayerOwner
+                    && CurrentFPWeaponFrame->GetAttachParentSocketName() != WeaponSocketInFPMesh)
+                {
+                    CurrentFPWeaponFrame->AttachToComponent(
+                        PlayerOwner->FPMesh,
+                        FAttachmentTransformRules::KeepWorldTransform,
+                        WeaponSocketInFPMesh);
+                }
             }
             else
             {
@@ -687,7 +696,7 @@ void UWeaponLocalController::PostEditChangeChainProperty(FPropertyChangedChainEv
 
 /* ---   Local   --- */
 
-TArray<FName> UWeaponLocalController::GetBoneSocketsInFPMesh() const
+TArray<FName> UWeaponLocalController::GetSocketNamesInFPMesh() const
 {
     APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
 

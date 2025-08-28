@@ -21,7 +21,7 @@ void UPersonAnimInstance::NativeInitializeAnimation()
 {
     Super::NativeInitializeAnimation();
 
-    SoundsInit();
+    InitSounds();
 }
 
 void UPersonAnimInstance::NativeUninitializeAnimation()
@@ -216,7 +216,7 @@ TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> UPersonAnimInstance::GetMapForS
     return TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>();
 }
 
-void UPersonAnimInstance::SoundsInit()
+void UPersonAnimInstance::InitSounds()
 {
     MapOfSurfaceSoundsWhenStep = GetMapForSound(SurfaceSoundsWhenStep);
     MapOfSurfaceSoundsWhenLanding = GetMapForSound(SurfaceSoundsWhenLanding);

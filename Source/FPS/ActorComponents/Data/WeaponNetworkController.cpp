@@ -137,7 +137,7 @@ const FWeaponData& UWeaponNetworkController::BP_GetCurrentWeaponData() const
     return *GetCurrentWeaponData();
 }
 
-void UWeaponNetworkController::DataInit()
+void UWeaponNetworkController::InitData()
 {
     if (CurrentWeaponData)
     {
@@ -146,6 +146,18 @@ void UWeaponNetworkController::DataInit()
         if (CurrentWeaponFrame)
         {
             CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
+
+            /* Исправление Привязки дочернего актора
+            @note   На стороне клиента слетает привязанность Дочернего Актора не смотря на то,
+                    что данный компонент уже привязан к нужному сокету. Поэтому исправляем данным кодом */
+            if (PlayerOwner
+                && CurrentWeaponFrame->GetAttachParentSocketName() != WeaponSocketInMesh)
+            {
+                CurrentWeaponFrame->AttachToComponent(
+                    PlayerOwner->GetMesh(),
+                    FAttachmentTransformRules::KeepWorldTransform,
+                    WeaponSocketInMesh);
+            }
         }
         else
         {
@@ -342,7 +354,7 @@ void UWeaponNetworkController::PostEditChangeChainProperty(FPropertyChangedChain
 
 /* ---   Net   --- */
 
-TArray<FName> UWeaponNetworkController::GetBoneSocketsInMesh() const
+TArray<FName> UWeaponNetworkController::GetSocketNamesInMesh() const
 {
     APlayerCharacter* lPlayerOwner = Cast<APlayerCharacter>(GetOwner());
 
