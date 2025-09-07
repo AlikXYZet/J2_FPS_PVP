@@ -24,18 +24,6 @@
 
 
 
-/* ---   Macros   --- */
-
-/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
-	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
-	{ \
-		Event_Changing##PropertyName(Data.NewValue); \
-	}
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Pre-declaration of classes   --- */
 
 // UE:
@@ -48,6 +36,18 @@ class UWeaponNetworkController;
 
 // Interaction | GAS:
 class UFPS_AttributeSet;
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Macros   --- */
+
+/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
+#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
+	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
+	{ \
+		Event_Changing##PropertyName(Data.NewValue); \
+	}
 //--------------------------------------------------------------------------------------
 
 
@@ -131,16 +131,6 @@ public:
     @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой)
     */
     virtual void PossessedBy(AController* NewController) override;
-    //-------------------------------------------
-
-
-
-    /* ---   Components   --- */
-
-    /** Возвращает подобъект CharacterMovement, приведённый к типу UFPS_CharacterMovementComponent */
-    UFUNCTION(BlueprintPure,
-        Category = "Player Character")
-    virtual UFPS_CharacterMovementComponent* GetFPSCharacterMovement() const;
     //-------------------------------------------
 
 
@@ -250,6 +240,20 @@ public:
 
     //
 
+    /** Возвращает подобъект 'CharacterMovement', приведённый к типу "UFPS_CharacterMovementComponent" */
+    UFUNCTION(BlueprintPure,
+        Category = "Player Character|Movement Speed",
+        meta = (DisplayName = "Get FPS Character Movement"))
+    virtual UFPS_CharacterMovementComponent* BP_GetFPSCharacterMovement() const;
+
+    /** Возвращает подобъект 'CharacterMovement', приведённый к типу "UFPS_CharacterMovementComponent" */
+    FORCEINLINE UFPS_CharacterMovementComponent* GetFPSCharacterMovement() const
+    {
+        // Текущий 'CharacterMovement' гарантированно является компонентом
+        // типа "UFPS_CharacterMovementComponent" (см. конструктор класса)
+        return (UFPS_CharacterMovementComponent*)GetCharacterMovement();
+    };
+
     /** Задать значение скорости */
     UFUNCTION(BlueprintCallable,
         Category = "Player Character|Movement Speed",
@@ -313,13 +317,11 @@ private:
 
     /* ---   Base   --- */
 
-    /** Очистка от неиспользуемых компонентов */
-    void Cleaning();
+    /** Очистка от неиспользуемых компонентов при Локальном контроллере */
+    void CleaningForLocally();
 
-    /** Исправление Привязки дочернего актора
-    @note   На стороне клиента слетает привязанность Дочернего Актора не смотря на то,
-            что данный компонент уже привязан к нужному сокету. Поэтому исправляем данным кодом */
-    void CorrectingAttachmentChildActor();
+    /** Очистка от неиспользуемых компонентов при Сетевом контроллере */
+    void CleaningForNetwork();
     //-------------------------------------------
 
 

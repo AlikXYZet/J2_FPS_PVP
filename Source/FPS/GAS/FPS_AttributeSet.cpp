@@ -8,6 +8,10 @@
 
 // GAS:
 #include "FPS/Tools/GAS/FPS_GameplayTags.h"
+#include "GameplayEffectExtension.h"
+
+// Interaction:
+#include "FPS/Core/Online/FPS_GameMode.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -35,6 +39,24 @@ void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
 {
+    if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+    {
+        // Отслеживание со стороны сервера
+        if (GetHealth() > 0.f
+            && GetHealth() <= -Data.EvaluatedData.Magnitude)
+        {
+            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_OnDestroyed);
+
+            OnZeroHealth.Broadcast();
+
+            if (AFPS_GameMode* lGameMode = GetWorld()->GetAuthGameMode<AFPS_GameMode>())
+            {
+                lGameMode->DestructionRegistration(Data.Target, Data.EffectSpec);
+            }
+        }
+    }
+
     return Super::PreGameplayEffectExecute(Data);
 }
 
@@ -53,16 +75,6 @@ void UFPS_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
     if (Attribute == GetHealthAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
-
-        // Отслеживание со стороны сервера
-        if (NewValue < 0.5f
-            && GetHealth() >= 0.5f)
-        {
-            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
-                FPS_GameplayTags::GameplayState_OnDestroyed);
-
-            OnZeroHealth.Broadcast();
-        }
     }
     else if (Attribute == GetArmorAttribute())
     {

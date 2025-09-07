@@ -20,6 +20,14 @@
 
 
 
+/* ---   Pre-declaration of classes   --- */
+
+// Interaction | GAS:
+class UFPS_AttributeSet;
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Macros   --- */
 
 /** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
@@ -28,14 +36,6 @@
 	{ \
 		Event_Changing##PropertyName(Data.NewValue); \
 	}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Pre-declaration of classes   --- */
-
-// Interaction | GAS:
-class UFPS_AttributeSet;
 //--------------------------------------------------------------------------------------
 
 
@@ -102,6 +102,17 @@ public:
 
 
 
+    /* ---   GAS   --- */
+
+    /** Возвращает Компонент Системы Способностей данного Игрока */
+    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+    {
+        return AbilitySystemComp;
+    };
+    //-------------------------------------------
+
+
+
     /* ---   GAS Events   --- */
 
     /** Событие BP: Изменение Здоровья */
@@ -144,12 +155,6 @@ public:
 private:
 
     /* ---   GAS   --- */
-
-    /** Возвращает Компонент Системы Способностей данного Игрока */
-    FORCEINLINE virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
-    {
-        return AbilitySystemComp;
-    };
 
     /** Инициализация данных AbilitySystemComp */
     void InitAbilitySystemComp();

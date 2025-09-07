@@ -12,13 +12,13 @@
 // Net:
 #include "Net/UnrealNetwork.h"
 
+// GAS:
+#include "FPS/GAS/FPS_AttributeSet.h"
+
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
-
-// GAS:
-#include "FPS/GAS/FPS_AttributeSet.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -36,6 +36,7 @@
 /* ---   Constructors   --- */
 
 // Конструктор с подменной стандартного "UCharacterMovementComponent"
+// на его дочерний тип "UFPS_CharacterMovementComponent"
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer.SetDefaultSubobjectClass<UFPS_CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
@@ -91,24 +92,23 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
 
 
-/* ---   Components   --- */
-
-UFPS_CharacterMovementComponent* APlayerCharacter::GetFPSCharacterMovement() const
-{
-    return Cast<UFPS_CharacterMovementComponent>(GetCharacterMovement());
-}
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Base   --- */
 
 void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    Cleaning();
-    CorrectingAttachmentChildActor();
+    if (IsLocallyControlled())
+    {
+        CleaningForLocally();
+
+        InitAbilitySystemComp();
+        InitSpeedControl();
+    }
+    else
+    {
+        CleaningForNetwork();
+    }
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -116,38 +116,22 @@ void APlayerCharacter::PossessedBy(AController* NewController)
     Super::PossessedBy(NewController);
 }
 
-void APlayerCharacter::Cleaning()
+void APlayerCharacter::CleaningForLocally()
 {
-    if (IsLocallyControlled())
-    {
-        GetMesh()->SetVisibility(false);
-        GetMesh()->SetCastHiddenShadow(true);
-        GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
+    GetMesh()->SetVisibility(false);
+    GetMesh()->SetCastHiddenShadow(true);
+    GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
 
-        FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
+    FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
 
-        WeaponControlNetComp->InitializeForFirstPersonDisplay();
-
-        InitAbilitySystemComp();
-        InitSpeedControl();
-    }
-    else
-    {
-        WeaponControlLocComp->DestroyComponent();
-        FPMesh->DestroyComponent();
-        FPCamera->DestroyComponent();
-    }
+    WeaponControlNetComp->InitializeForFirstPersonDisplay();
 }
 
-void APlayerCharacter::CorrectingAttachmentChildActor()
+void APlayerCharacter::CleaningForNetwork()
 {
-    if (WeaponControlNetComp->GetChildActor())
-    {
-        WeaponControlNetComp->GetChildActor()->AttachToComponent(
-            GetMesh(),
-            FAttachmentTransformRules::KeepWorldTransform,
-            "WeaponSocket_HandR");
-    }
+    WeaponControlLocComp->DestroyComponent();
+    FPMesh->DestroyComponent();
+    FPCamera->DestroyComponent();
 }
 //--------------------------------------------------------------------------------------
 
@@ -308,6 +292,11 @@ void APlayerCharacter::StopSprint()
 
 
 /* ---   Movement Speed   --- */
+
+UFPS_CharacterMovementComponent* APlayerCharacter::BP_GetFPSCharacterMovement() const
+{
+    return GetFPSCharacterMovement();
+}
 
 void APlayerCharacter::SetSpeedControl(const ESpeedVariations& Mode)
 {
