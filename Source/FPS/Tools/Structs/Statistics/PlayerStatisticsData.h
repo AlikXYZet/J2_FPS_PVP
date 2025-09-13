@@ -11,20 +11,37 @@
 
 
 
+/* ---   Delegates   --- */
+
+// Делегат: Изменено количество элементов Массива
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChangingNumbers, int32, Size);
+
+// Делегат: Изменены элементы Массива
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingArrayData);
+// ----------------------------------------------------------------------------------------------------
+
+
+
 /** Структура данных о Статистике Игрока */
 USTRUCT(BlueprintType)
 struct FPlayerStatisticsData : public FFastArraySerializerItem
 {
     GENERATED_BODY()
 
-    friend FPlayerStatisticsArray;
+    /* ---   Constructors   --- */
+
+    FPlayerStatisticsData() {};
+    FPlayerStatisticsData(APlayerState* InPlayerState) : PlayerState(InPlayerState) {};
+    //-------------------------------------------
+
+
 
     /* ---   Data   --- */
 
-    // Имя Игрока
+    // Указатель на 'Player State' Игрока, хранящий информацию о Имени и Пинге
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    FName Name = NAME_None;
+    APlayerState* PlayerState = nullptr;
 
     // Количество Убийств (+3 Points)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -52,8 +69,14 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
 
     /* ---   Serializer Item Methods   --- */
 
+    /** Вызывается перед удалением текущего элемента */
+    void PreReplicatedRemove(const struct FFastArraySerializer& InArraySerializer) {}
+
+    /** Вызывается после добавления текущего элемента */
+    void PostReplicatedAdd(const struct FFastArraySerializer& InArraySerializer) {}
+
     /** Вызывается после изменения Реплицируемых Данных текущего элемента */
-    FORCEINLINE void PostReplicatedChange(const struct FFastArraySerializer& InArraySerializer)
+    void PostReplicatedChange(const struct FFastArraySerializer& InArraySerializer)
     {
         PointsCalculation();
     }
@@ -88,6 +111,13 @@ private:
         Points = Kills + Assists - Deaths;
     };
     //-------------------------------------------
+
+
+
+    /* ---   friends   --- */
+
+    friend FPlayerStatisticsArray;
+    //-------------------------------------------
 };
 //--------------------------------------------------------------------------------------
 
@@ -99,8 +129,20 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 {
     GENERATED_BODY()
 
+    /* ---   Delegates   --- */
+
+    // Делегат: Изменён сам Массив
+    FOnChangingNumbers OnChangingNumbers;
+
+    // Делегат: Изменены данные Массива
+    FOnChangingArrayData OnChangingArrayData;
+    //-------------------------------------------
+
+
+
     /* ---   Array   --- */
 
+    // Массив данных о Статистике Игрока
     UPROPERTY()
     TArray<FPlayerStatisticsData> Items;
     //-------------------------------------------
@@ -136,6 +178,15 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
     {
         Items.Init(Element, Number);
         MarkArrayDirty();
+        OnChangingNumbers.Broadcast(Number);
+    }
+
+    FORCEINLINE int32 Add(FPlayerStatisticsData&& Item)
+    {
+        int32 lIndex = Items.Add(Item);
+        MarkArrayDirty();
+        OnChangingNumbers.Broadcast(Items.Num());
+        return lIndex;
     }
     //-------------------------------------------
 
@@ -146,6 +197,37 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
     bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
     {
         return FFastArraySerializer::FastArrayDeltaSerialize<FPlayerStatisticsData, FPlayerStatisticsArray>(Items, DeltaParms, *this);
+    }
+
+    /** Предполагалось, что вызывается Перед Удалением элементов,
+        однако вызывается Перед любым изменением массива и его элементов */
+    void PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize)
+    {
+        if (RemovedIndices.Num())
+        {
+            OnChangingNumbers.Broadcast(FinalSize);
+        }
+    }
+
+    /** Предполагалось, что вызывается После Добавления элементов,
+        однако вызывается Перед любым изменением массива и его элементов,
+        но после срабатывания 'PreReplicatedRemove(*)' в массивах и добавленных элементов */
+    void PostReplicatedAdd(const TArrayView<int32>& AddedIndices, int32 FinalSize)
+    {
+        if (AddedIndices.Num())
+        {
+            OnChangingNumbers.Broadcast(FinalSize);
+        }
+    }
+
+    /** Предполагалось, что вызывается После Изменении Реплицируемых Данных элементов,
+        однако вызывается Последним После любого изменением массива и его элементов */
+    void PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize)
+    {
+        if (ChangedIndices.Num())
+        {
+            OnChangingArrayData.Broadcast();
+        }
     }
     //-------------------------------------------
 };

@@ -31,8 +31,6 @@ class FPS_API AFPS_GameState : public AGameState
 {
     GENERATED_BODY()
 
-    friend AFPS_GameMode;
-
 public:
 
     /* ---   Constructors   --- */
@@ -50,13 +48,6 @@ public:
 
 
 
-    /* ---   Statistics   --- */
-
-
-    //-------------------------------------------
-
-
-
 private:
 
     /* ---   Statistics   --- */
@@ -64,5 +55,13 @@ private:
     /** Быстро реплицируемый Контейнер о Статистиках всех активных Игроков */
     UPROPERTY(Replicated)
     FPlayerStatisticsArray PlayersStatistics;
+    //-------------------------------------------
+
+
+
+    /* ---   friends   --- */
+
+    friend AFPS_GameMode;
+    friend class UPlayerStatisticsWidget;
     //-------------------------------------------
 };

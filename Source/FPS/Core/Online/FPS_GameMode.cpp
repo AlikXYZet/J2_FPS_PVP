@@ -119,6 +119,8 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                     GetPlayerStatistics().AddAssists(**lWreckerStats);
                 }
             }
+
+            GetPlayerStatistics().OnChangingArrayData.Broadcast();
         }
     }
 }
@@ -132,13 +134,21 @@ void AFPS_GameMode::InitDestructionAccounting()
     if (lActors.Num())
     {
         PlayersStatisticsMap.Reserve(lActors.Num());
-        GetPlayerStatistics().Init(FPlayerStatisticsData(), lActors.Num());
+        GetPlayerStatistics().Items.Empty(lActors.Num());
         // @note    Предварительный резерв необходим для сохранения
         //          валидности указателей при заполнении контейнеров
+
         for (int32 lIndex = 0; lIndex < lActors.Num(); ++lIndex)
         {
+            // Создание данных с указателем на 'Player State'
+            GetPlayerStatistics().Add(
+                FPlayerStatisticsData(
+                    ((APlayerCharacter*)lActors[lIndex])->GetPlayerState()));
+
             // Создание взаимосвязи между Игроком и его Статистикой
-            PlayersStatisticsMap.Add((APlayerCharacter*)lActors[lIndex], &GetPlayerStatistics().Items[lIndex]);
+            PlayersStatisticsMap.Add(
+                (APlayerCharacter*)lActors[lIndex],
+                &GetPlayerStatistics().Items[lIndex]);
         }
     }
 
