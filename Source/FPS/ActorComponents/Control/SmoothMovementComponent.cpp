@@ -3,6 +3,9 @@
 // Base:
 #include "SmoothMovementComponent.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "GameFramework/Actor.h"
 //--------------------------------------------------------------------------------------
@@ -59,8 +62,7 @@ void USmoothMovementComponent::InitCurrentComponent()
 
     if (!CurrentActor)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentActor is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG_Component(Error, TEXT("CurrentActor is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -174,9 +176,6 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
                 }
             }
             //-------------------------------------------
-
-            //UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lNewSpeed_Vector == %s"),
-            //    *GetNameSafe(this), *FString(__func__), *(lNewSpeed_Vector.ToString()));
 
             // Сделать шаг (Плавное перемещение)
             if (bUseRelativeLocation)

@@ -3,6 +3,9 @@
 // Base:
 #include "FPS_GameInstance.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/GameUserSettings.h"
@@ -89,8 +92,7 @@ void UFPS_GameInstance::InitSettingsSaving()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: MusicSoundClass is NOT"),
-                    *GetNameSafe(this), *FString(__func__));
+                FPS_LOG(Error, TEXT("MusicSoundClass is NOT"));
             }
 
             if (EffectsSoundClass)
@@ -105,14 +107,12 @@ void UFPS_GameInstance::InitSettingsSaving()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: EffectsSoundClass is NOT"),
-                    *GetNameSafe(this), *FString(__func__));
+                FPS_LOG(Error, TEXT("EffectsSoundClass is NOT"));
             }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: SoundMix is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("SoundMix is NOT"));
         }
         //-------------------------------------------
     }

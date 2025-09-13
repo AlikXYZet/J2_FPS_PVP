@@ -3,6 +3,9 @@
 // Base:
 #include "PersonAnimInstance.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -108,14 +111,12 @@ void UPersonAnimInstance::BaseInit()
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlNetComp is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("WeaponControlNetComp is NOT"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
     }
 
     // Timer_CustomUpdateAnimation

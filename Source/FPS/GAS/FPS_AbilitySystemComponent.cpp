@@ -2,6 +2,9 @@
 
 // Base:
 #include "FPS_AbilitySystemComponent.h"
+
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -72,8 +75,7 @@ void UFPS_AbilitySystemComponent::CheckTagsInParams(TMap<FGameplayTag, float>& P
     {
         if (!Param.Key.IsValid())
         {
-            UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s: Invalid param: '%s' with a value of '%f' "),
-                *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__),
+            FPS_LOG_Component(Warning, TEXT("Invalid param: '%s' with a value of '%f' "),
                 *Param.Key.GetTagName().ToString(), Param.Value);
         }
     }
@@ -126,15 +128,14 @@ void UFPS_AbilitySystemComponent::InitStartingAttributes()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::'%s'::%s: '%s' is NOT used for this Actor. See Attribute '%s' "),
-                    *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__),
+                FPS_LOG_Component(Error, TEXT("'%s' is NOT used for this Actor. See Attribute '%s' "),
                     *Pair.Key.GetAttributeSetClass()->GetName(), *Pair.Key.GetName());
             }
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s: Incorrect Attribute Name: '%s'"),
-                *GetNameSafe(GetOwnerActor()), *GetNameSafe(this), *FString(__func__), *Pair.Key.GetName());
+            FPS_LOG_Component(Warning, TEXT("Incorrect Attribute Name: '%s'"),
+                *Pair.Key.GetName());
         }
     }
 }

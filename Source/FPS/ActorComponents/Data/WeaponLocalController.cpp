@@ -3,6 +3,9 @@
 // Base:
 #include "WeaponLocalController.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Components/ArrowComponent.h"
 #include "Engine/DataTable.h"
@@ -77,14 +80,12 @@ void UWeaponLocalController::BaseInit()
 
         if (!WeaponControlNetComp)
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponControlNetComp is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("WeaponControlNetComp is NOT"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -135,8 +136,7 @@ void UWeaponLocalController::SetupPlayerInputs()
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lInputComponent is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("lInputComponent is NOT"));
     }
 
 
@@ -208,25 +208,24 @@ void UWeaponLocalController::InitData()
             }
             else
             {
-                UE_LOG(LogTemp, Error, TEXT("'%s'::%s: Child Actor is NOT AFirstPersonWeaponFrame (Check CurrentWeaponFrame)"),
-                    *GetNameSafe(this), *FString(__func__));
+                FPS_LOG(Error, TEXT("'%s' is NOT AFirstPersonWeaponFrame (Check CurrentWeaponFrame)"),
+                    GetChildActor()
+                    ? *GetChildActor()->GetFName().ToString()
+                    : *FString("None"));
             }
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentWeaponData is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("CurrentWeaponData is NOT"));
         }
     }
     else if (!WeaponsDataTable)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponsDataTable is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("WeaponsDataTable is NOT"));
     }
     else if (!WeaponSlots.IsValidIndex(0))
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponSlots[0] is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("WeaponSlots[0] is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -678,8 +677,7 @@ void UWeaponLocalController::PostEditChangeProperty(FPropertyChangedEvent& Prope
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: FPWeaponFrameType is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("FPWeaponFrameType is NOT"));
         }
     }
 
@@ -744,13 +742,13 @@ void UWeaponLocalController::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: Not used at least one of the Actions ('%s')"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Warning, TEXT("Not used at least one of the Actions ('%s')"),
+                *Data.ToString());
         }
         else if (lArray_ActionNames.Find(Data) == INDEX_NONE)
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: '%s' is NOT an Action"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Error, TEXT("'%s' is NOT an Action"),
+                *Data.ToString());
         }
     }
 }
@@ -780,8 +778,7 @@ void UWeaponLocalController::CheckNumOfSlots()
     // Проверка наличия слотов
     if (!WeaponSlots.Num())
     {
-        UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: WeaponSlots.Num() == 0"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Warning, TEXT("WeaponSlots.Num() == 0"));
     }
 }
 //--------------------------------------------------------------------------------------

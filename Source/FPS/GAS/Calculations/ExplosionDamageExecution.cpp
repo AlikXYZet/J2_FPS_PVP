@@ -86,16 +86,6 @@ void UExplosionDamageExecution::Execute_Implementation(const FGameplayEffectCust
         FPS_GameplayTags::AbilityData_Explosion_EffectiveRadius,
         false, 100.f);
 
-    //UE_LOG(LogTemp, Warning, TEXT("'%s'::'%s'::%s:  (%d) MaxDamage == %f; MaxRadius == %f;"),
-    //    *GetNameSafe(SourceActor), *GetNameSafe(this), *FString(__func__),
-    //    Spec.SetByCallerTagMagnitudes.Num(), MaxDamage, MaxRadius);
-
-    //for (const TPair<FGameplayTag, float>& Data : Spec.SetByCallerTagMagnitudes)
-    //{
-    //    UE_LOG(LogTemp, Error, TEXT("'%s' == %d"),
-    //        *Data.Key.ToString(), Data.Value);
-    //}
-
     float FinalDamage = 0.f;
 
     if (SourceActor && TargetActor)

@@ -3,6 +3,9 @@
 // Base:
 #include "WeaponNetworkController.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // Net:
 #include "Net/UnrealNetwork.h"
 
@@ -91,8 +94,7 @@ void UWeaponNetworkController::BaseInit()
 
     if (!PlayerOwner)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: PlayerOwner is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -161,14 +163,15 @@ void UWeaponNetworkController::InitData()
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: Child Actor is NOT AWeaponFrame (Check CurrentWeaponFrame)"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("'%s' is NOT AWeaponFrame (Check CurrentWeaponFrame)"),
+                GetChildActor()
+                ? *GetChildActor()->GetFName().ToString()
+                : *FString("None"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentWeaponData is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("CurrentWeaponData is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -336,8 +339,7 @@ void UWeaponNetworkController::PostEditChangeProperty(FPropertyChangedEvent& Pro
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: WeaponFrameType is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("WeaponFrameType is NOT"));
         }
     }
 

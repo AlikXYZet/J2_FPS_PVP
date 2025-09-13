@@ -3,6 +3,9 @@
 // Base:
 #include "SmoothRotationComponent.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Kismet/KismetMathLibrary.h"
 //--------------------------------------------------------------------------------------
@@ -59,8 +62,7 @@ void USmoothRotationComponent::InitCurrentComponent()
 
     if (!CurrentActor)
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: CurrentActor is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG_Component(Error, TEXT("CurrentActor is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -200,12 +202,6 @@ void USmoothRotationComponent::RotationForTick(const float& DeltaTime)
                 }
             }
             //-------------------------------------------
-
-            //UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lCurrentRotation == %s"),
-            //    *GetNameSafe(this), *FString(__func__), *lCurrentRotation.ToString());
-
-            //UE_LOG(LogTemp, Error, TEXT("'%s'::%s: lNewSpeed == %s"),
-            //    *GetNameSafe(this), *FString(__func__), *lNewSpeed.ToString());
 
             lNewRotation = lNewSpeed * DeltaTime;
             CurrentActor->AddActorLocalRotation(lNewRotation);

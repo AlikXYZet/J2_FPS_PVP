@@ -3,38 +3,14 @@
 // Base:
 #include "PlayerStatisticsWidget.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "GameFramework/PlayerState.h"
 
 // Interaction:
 #include "FPS/Core/Online/FPS_GameState.h"
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Macros   --- */
-
-/** Макрос: Предикат сортировки
-@param  Value - Переменная класса или структуры, значение которого используется для сортировки
-@param  Operator - Оператор сортировки */
-#define SORTING_PREDICATE(Value, Operator) \
-    [](const auto& first, const auto& second) \
-    { \
-        return first.##Value ##Operator## second.##Value; \
-    };
-
-/** Макрос: Предикат сортировки
-@param  Ptr - Переменная класса или структуры, что является Указателем
-@param  Value - Переменная из Указателя, значение которого используется для сортировки
-@param  Operator - Оператор сортировки */
-#define SORTING_PREDICATE_ByPtr(Ptr, Value, NoneValue, Operator) \
-    [](const auto& first, const auto& second) \
-    { \
-        return \
-            (first.##Ptr ? first.##Ptr->##Value : ##NoneValue) \
-            ##Operator## \
-            (second.##Ptr ? second.##Ptr->##Value : ##NoneValue); \
-    };
 //--------------------------------------------------------------------------------------
 
 
@@ -96,8 +72,7 @@ void UPlayerStatisticsWidget::InitStatisticsData()
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: '%s' is NOT 'AFPS_GameState'"),
-            *GetNameSafe(this), *FString(__func__),
+        FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),
             GetWorld()->GetGameState<AGameStateBase>()
             ? *GetWorld()->GetGameState<AGameStateBase>()->GetFName().ToString()
             : *FString("None"));

@@ -3,6 +3,9 @@
 // Base:
 #include "AttributedActor.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // GAS:
 #include "FPS/GAS/FPS_AttributeSet.h"
 //--------------------------------------------------------------------------------------
@@ -12,9 +15,8 @@
 /* ---   Macros   --- */
 
 /** Макрос: Подписка функции к делегату для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_Delegating(PropertyName) \
-    AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
-        .AddUObject(this, &AAttributedActor::Handle##PropertyName##Changed);
+#define GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(PropertyName) \
+    GAMEPLAYATTRIBUTE_VALUE_Delegating(AAttributedActor, PropertyName)
 //--------------------------------------------------------------------------------------
 
 
@@ -90,23 +92,21 @@ void AAttributedActor::InitAbilitySystemComp()
 
         if (AttributeSet)
         {
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(Health);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(MaxHealth);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(Armor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(MaxArmor);
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &AAttributedActor::Event_OnZeroHealth);
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AttributeSet is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("AttributeSet is NOT"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AbilitySystemComp is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("AbilitySystemComp is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------

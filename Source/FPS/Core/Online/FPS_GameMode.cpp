@@ -3,6 +3,9 @@
 // Base:
 #include "FPS_GameMode.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Kismet/GameplayStatics.h"
 
@@ -39,8 +42,7 @@ void AFPS_GameMode::BaseInit()
 {
     if (!GetGameState<AFPS_GameState>())
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: '%s' is NOT 'AFPS_GameState'"),
-            *GetNameSafe(this), *FString(__func__),
+        FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),   
             GetGameState<AGameStateBase>()
             ? *GetGameState<AGameStateBase>()->GetFName().ToString()
             : *FString("None"));

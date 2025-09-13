@@ -3,6 +3,9 @@
 // Base:
 #include "PlayerCharacter.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -26,9 +29,8 @@
 /* ---   Macros   --- */
 
 /** Макрос: Подписка функции к делегату для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_Delegating(PropertyName) \
-    AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
-        .AddUObject(this, &APlayerCharacter::Handle##PropertyName##Changed);
+#define GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(PropertyName) \
+    GAMEPLAYATTRIBUTE_VALUE_Delegating(APlayerCharacter, PropertyName)
 //--------------------------------------------------------------------------------------
 
 
@@ -324,23 +326,21 @@ void APlayerCharacter::InitAbilitySystemComp()
     {
         if (AttributeSet)
         {
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(Health);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxHealth);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(Armor);
-            GAMEPLAYATTRIBUTE_VALUE_Delegating(MaxArmor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(Health);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(MaxHealth);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(Armor);
+            GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(MaxArmor);
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::Event_OnZeroHealth);
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AttributeSet is NOT"),
-                *GetNameSafe(this), *FString(__func__));
+            FPS_LOG(Error, TEXT("AttributeSet is NOT"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("'%s'::%s: AbilitySystemComp is NOT"),
-            *GetNameSafe(this), *FString(__func__));
+        FPS_LOG(Error, TEXT("AbilitySystemComp is NOT"));
     }
 }
 //--------------------------------------------------------------------------------------
@@ -402,13 +402,13 @@ void APlayerCharacter::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: Not used at least one of the Actions ('%s')"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Warning, TEXT("Not used at least one of the Actions ('%s')"),
+                *Data.ToString());
         }
         else if (lArray_ActionNames.Find(Data) == INDEX_NONE)
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: '%s' is NOT an Action"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Error, TEXT("'%s' is NOT an Action"),
+                *Data.ToString());
         }
     }
 
@@ -426,13 +426,13 @@ void APlayerCharacter::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            UE_LOG(LogTemp, Warning, TEXT("'%s'::%s: Not used at least one of the Axes ('%s')"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Warning, TEXT("Not used at least one of the Axes ('%s')"),
+                *Data.ToString());
         }
         else if (lArray_AxisNames.Find(Data) == INDEX_NONE)
         {
-            UE_LOG(LogTemp, Error, TEXT("'%s'::%s: '%s' is NOT an Axis"),
-                *GetNameSafe(this), *FString(__func__), *Data.ToString());
+            FPS_LOG(Error, TEXT("'%s' is NOT an Axis"),
+                *Data.ToString());
         }
     }
 }

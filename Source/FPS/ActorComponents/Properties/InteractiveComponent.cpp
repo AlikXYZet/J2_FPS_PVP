@@ -3,6 +3,9 @@
 // Base:
 #include "InteractiveComponent.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // Win:
 #if PLATFORM_WINDOWS
 #include "excpt.h"
@@ -10,13 +13,6 @@
 
 // UE:
 #include "GameFramework/InputSettings.h"
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   define   --- */
-
-//#define CHECKER_UE_LOG(Text) UE_LOG(LogTemp, Error, TEXT("%s::%s: %s"), *GetNameSafe(this), *FString(__func__), *FString(Text))
 //--------------------------------------------------------------------------------------
 
 
@@ -62,7 +58,7 @@ static bool SafeProcessEvent(UObject* Owner, UFunction* Function)
 {
     if (!IsValid(Owner) || !Function)
     {
-        UE_LOG(LogTemp, Error, TEXT("SafeProcessEvent: Invalid object or function!"));
+        FPS_LOG_Empty(Error, TEXT("Invalid object or function!"));
         return false;
     }
 
@@ -142,23 +138,23 @@ bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
 #if WITH_EDITOR
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("%s::%s: %s is Unsuitable Function:"),
-                *GetNameSafe(this), *FString(__func__), *NameFunction.ToString());
+            FPS_LOG(Warning, TEXT("%s is Unsuitable Function:"),
+                *NameFunction.ToString());
 
             if (CheckError & 0b0001)
-                UE_LOG(LogTemp, Warning, TEXT("* Input parameters more than 1"));
+                FPS_LOG_Empty(Warning, TEXT("* Input parameters more than 1"));
             if (CheckError & 0b0010)
-                UE_LOG(LogTemp, Warning, TEXT("* Is NOT constant (not const or pure)"));
+                FPS_LOG_Empty(Warning, TEXT("* Is NOT constant (not const or pure)"));
             if (CheckError & 0b0100)
-                UE_LOG(LogTemp, Warning, TEXT("* Return value is NOT bool or Byte (uint8)"));
+                FPS_LOG_Empty(Warning, TEXT("* Return value is NOT bool or Byte (uint8)"));
             if (CheckError & 0b1000)
-                UE_LOG(LogTemp, Warning, TEXT("* SafeProcessEvent() failed"));
+                FPS_LOG_Empty(Warning, TEXT("* SafeProcessEvent() failed"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s::%s: %s() function NOT found:"),
-            *GetNameSafe(this), *FString(__func__), *NameFunction.ToString());
+        FPS_LOG(Warning, TEXT("%s() function NOT found:"),
+            *NameFunction.ToString());
 #endif // WITH_EDITOR
     }
 

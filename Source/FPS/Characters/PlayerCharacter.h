@@ -40,18 +40,6 @@ class UFPS_AttributeSet;
 
 
 
-/* ---   Macros   --- */
-
-/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
-#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
-	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
-	{ \
-		Event_Changing##PropertyName(Data.NewValue); \
-	}
-//--------------------------------------------------------------------------------------
-
-
-
 UCLASS()
 class FPS_API APlayerCharacter : public ACharacter, public IAbilitySystemInterface, public ISpeedControllerInterface
 {

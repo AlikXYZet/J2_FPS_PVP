@@ -14,6 +14,23 @@
 
 
 
+/* ---   Macros   --- */
+
+/** Макрос: Создание функции делегата для передачи значения атрибутов GAS через Событие BP */
+#define GAMEPLAYATTRIBUTE_VALUE_HandleChanged(PropertyName) \
+	FORCEINLINE void Handle##PropertyName##Changed(const FOnAttributeChangeData& Data) \
+	{ \
+		Event_Changing##PropertyName(Data.NewValue); \
+	}
+
+/** Макрос: Подписка функции к делегату для передачи значения атрибутов GAS через Событие BP */
+#define GAMEPLAYATTRIBUTE_VALUE_Delegating(Class, PropertyName) \
+    AbilitySystemComp->GetGameplayAttributeValueChangeDelegate(AttributeSet->Get##PropertyName##Attribute()) \
+        .AddUObject(this, &##Class##::Handle##PropertyName##Changed);
+//--------------------------------------------------------------------------------------
+
+
+
 /* Структура данных параметров для Эффектов */
 USTRUCT()
 struct FEffectsParamData
