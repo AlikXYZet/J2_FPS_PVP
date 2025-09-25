@@ -41,7 +41,7 @@ AProjectile::AProjectile()
     ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Projectile Mesh"));
     ProjectileMesh->SetupAttachment(RootComponent);
     ProjectileMesh->SetRelativeScale3D(FVector(0.63f));
-    ProjectileMesh->SetCollisionProfileName(TEXT("NoCollision"));
+    ProjectileMesh->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
     ProjectileMesh->SetGenerateOverlapEvents(false);
     ProjectileMesh->SetCastShadow(false);
 

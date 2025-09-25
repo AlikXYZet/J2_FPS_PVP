@@ -33,14 +33,14 @@ AWeaponFrame::AWeaponFrame()
     WeaponSkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Skeletal Mesh"));
     WeaponSkeletalMesh->SetupAttachment(RootComponent);
     WeaponSkeletalMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
-    WeaponSkeletalMesh->SetCollisionProfileName(TEXT("NoCollision"));
+    WeaponSkeletalMesh->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
     WeaponSkeletalMesh->SetGenerateOverlapEvents(false);
 
     // Компонент статического Меша Оружия
     WeaponStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon Static Mesh"));
     WeaponStaticMesh->SetupAttachment(RootComponent);
     WeaponStaticMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
-    WeaponStaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+    WeaponStaticMesh->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
     WeaponStaticMesh->SetGenerateOverlapEvents(false);
     //-------------------------------------------
 }
