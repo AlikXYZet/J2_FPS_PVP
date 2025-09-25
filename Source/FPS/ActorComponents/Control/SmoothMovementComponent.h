@@ -144,7 +144,7 @@ public:
     //
 
     /** Переместиться к указанной Точке */
-    void MoveToLocation(const FVector& Point);
+    void MoveToLocation(const FVector& Point = FVector::ZeroVector);
     //-------------------------------------------
 
 

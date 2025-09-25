@@ -25,6 +25,26 @@
 
 
 
+/* ---   Macros   --- */
+
+/** Управление Оружием: Задать действие */
+#define SET_ACTION(PropertyName) \
+    FORCEINLINE void Set##PropertyName() \
+    { \
+        SetActionBit(EActionVariations::##PropertyName); \
+    }
+
+/** Управление Оружием: Сброс действия */
+#define RESET_ACTION(PropertyName) \
+    FORCEINLINE void Reset##PropertyName() \
+    { \
+        ResetActionBit(EActionVariations::##PropertyName); \
+    }
+
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Pre-declaration of classes   --- */
 
 // UE:
@@ -86,6 +106,14 @@ public:
         meta = (GetOptions = "GetSocketNamesInFPMesh",
             DisplayName = "Weapon Socket In FPMesh"))
     FName WeaponSocketInFPMesh = NAME_None;
+
+    //
+
+    /** Получить текущий Каркас Оружия от Первого Лица */
+    FORCEINLINE const AFirstPersonWeaponFrame* GetCurrentFPWeaponFrame()
+    {
+        return CurrentFPWeaponFrame;
+    }
     //-------------------------------------------
 
 
@@ -258,12 +286,8 @@ public:
     @param  Action - Проверяемое действие */
     FORCEINLINE bool CheckAction(const EActionVariations& Action) const
     {
-        return CheckActions((uint8)Action);
+        return WeaponControlNetComp->CheckAction(Action);
     };
-
-    /** Проверка одного из действий Игрока
-    @param  Action - Проверяемое действие */
-    bool CheckActions(const EActionVariations& Action, ...) const;
     //-------------------------------------------
 
 
@@ -273,7 +297,10 @@ public:
     /** Задать значение скорости */
     UFUNCTION(BlueprintCallable,
         Category = "Speed Control",
-        meta = (AutoCreateRefTerm = "Mode"))
+        meta = (DisplayName = "Set Speed Control", AutoCreateRefTerm = "Mode"))
+    void BP_SetSpeedControl(const ESpeedVariations& Mode);
+
+    /** Задать значение скорости */
     void SetSpeedControl(const ESpeedVariations& Mode) override;
     //-------------------------------------------
 
@@ -281,7 +308,7 @@ public:
 
 private:
 
-    /* ---   Base   --- */
+    /* ---   Local   --- */
 
     /* Игрок-Владелец данного UWeaponControlComponent */
     UPROPERTY(VisibleInstanceOnly,
@@ -293,7 +320,7 @@ private:
         Category = "Weapon Control|Check")
     UWeaponNetworkController* WeaponControlNetComp = nullptr;
 
-    // Указатель на текущий Каркас Оружия от Первого Лица
+    // Текущий Каркас Оружия от Первого Лица
     UPROPERTY(VisibleInstanceOnly,
         Category = "Weapon Control|Check",
         meta = (DisplayName = "Current FP Weapon Frame"))
@@ -303,6 +330,25 @@ private:
 
     /** Инициализация базовых Данных */
     void BaseInit();
+    //-------------------------------------------
+
+
+
+    /* ---   Direction Fire   --- */
+
+    // Флаг: Использовать трассировку для направления стрельбы
+    bool bUseTracingToGuideShooting = true;
+
+    // Параметры Коллизии для Трассировки
+    FCollisionQueryParams CollisionParamsForTrace;
+
+    //
+
+    /** Перекрепить оружие для положения Прицеливания */
+    void ReAttachWeaponForAiming();
+
+    /** Перекрепить оружие для положения от бедра */
+    void ReAttachWeaponForFromHip();
     //-------------------------------------------
 
 
@@ -333,13 +379,6 @@ private:
 
     /** Обновить данные о Текущих действиях с предварительной проверкой */
     void UpdateCurrentActions();
-
-    /** Проверка действий Игрока
-    @param  ActionsBits - Биты проверяемых действий */
-    FORCEINLINE bool CheckActions(const uint8& ActionsBits) const
-    {
-        return GetCurrentActions() & ActionsBits;
-    };
     //-------------------------------------------
 
 
@@ -352,10 +391,10 @@ private:
     //
 
     /** Управление Оружием: Прицеливаться */
-    void SetAiming();
+    SET_ACTION(Aiming);
 
     /** Управление Оружием: Стрелять */
-    void SetShooting();
+    SET_ACTION(Shooting);
 
     /** Управление Оружием: Перезарядить */
     void SetReloading();
@@ -378,19 +417,19 @@ private:
     /* ---   Actions | Reset   --- */
 
     /** Управление Оружием: Прекратить Прицеливаться */
-    void ResetAiming();
+    RESET_ACTION(Aiming);
 
     /** Управление Оружием: Прекратить Стрелять */
-    void ResetShooting();
+    RESET_ACTION(Shooting);
 
     /** Управление Оружием: Прекратить Перезарядку */
-    void ResetReloading();
+    RESET_ACTION(Reloading);
 
     /** Управление Оружием: Прекратить Смену Оружия */
-    void ResetChanging();
+    RESET_ACTION(Changing);
 
     /** Управление Оружием: Прекратить Ограничивать Действия */
-    void ResetBlocking();
+    RESET_ACTION(Block);
     //-------------------------------------------
 
 
@@ -398,19 +437,28 @@ private:
     /* ---   Actions | Stop   --- */
 
     /** Останов Действия: Прицеливаться */
-    void StopAiming();
+    FORCEINLINE void StopAiming() {};
 
     /** Останов Действия: Стрелять */
-    void StopShooting();
+    FORCEINLINE void StopShooting()
+    {
+        GetWorld()->GetTimerManager().ClearTimer(Timer_ActionControl);
+    };
 
-    /** Останов Действия: Стрелять */
+    /** Останов Действия: Прекратить Перезарядку */
     void StopReloading();
 
-    /** Останов Действия: Стрелять */
-    void StopChanging();
+    /** Останов Действия: Прекратить Смену оружия */
+    void StopChanging() {};
 
     /** Останов Действия: Прекратить Ограничивать Действия */
-    void StopBlockingActions();
+    FORCEINLINE void StopBlockingActions()
+    {
+        if (GetCurrentActions() & (uint8)EActionVariations::Block)
+        {
+            GetCurrentActions() ^= (uint8)EActionVariations::Block;
+        }
+    };
     //-------------------------------------------
 
 
@@ -418,7 +466,7 @@ private:
     /* ---   Actions | Start   --- */
 
     /** Запуск Действия: Прицеливаться */
-    void StartAiming();
+    FORCEINLINE void StartAiming() {};
 
     /** Запуск Действия: Стрелять */
     void StartShooting();
@@ -428,6 +476,9 @@ private:
 
     /** Запуск Действия: Убрать старое Оружие */
     void StartChangeWeaponSlot();
+
+    /** Запуск Действия: Ограничивать Действия */
+    void StartBlockingActions() {};
     //-------------------------------------------
 
 
@@ -441,7 +492,10 @@ private:
     void ChangeWeaponSlot();
 
     /** Запуск Действия: Взять новое Оружие */
-    void EndChangeWeaponSlot();
+    FORCEINLINE void EndChangeWeaponSlot()
+    {
+        ResetChanging();
+    };
     //-------------------------------------------
 
 
@@ -519,3 +573,10 @@ private:
 #endif // WITH_EDITOR
     //===========================================
 };
+
+
+
+/* ---   undef   --- */
+
+#undef DELEGATE_METHOD_Broadcast_h
+//--------------------------------------------------------------------------------------

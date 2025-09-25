@@ -8,9 +8,6 @@
 // Base:
 #include "Animation/AnimInstance.h"
 
-// UE:
-#include "Engine/DataTable.h"
-
 // Structs:
 #include "FPS/Tools/Structs/Animations/PersonAnimData.h"
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
@@ -23,34 +20,9 @@
 
 /* ---   Pre-declaration of classes   --- */
 
-// UE:
-class UDataTable;
-
 // Interaction:
 class APlayerCharacter;
 class UWeaponNetworkController;
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Structs   --- */
-
-/* Структура Таблиц Данных:
-Звуки в зависимости от Типа Поверхности
-*/
-USTRUCT(BlueprintType)
-struct FSoundBySurfaceType : public FTableRowBase
-{
-    GENERATED_BODY()
-
-    // Тип Поверхности
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TEnumAsByte<EPhysicalSurface> SurfaceType = EPhysicalSurface::SurfaceType_Default;
-
-    // Звук, соответствующий поверхности
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    USoundBase* Sound = nullptr;
-};
 //--------------------------------------------------------------------------------------
 
 
@@ -171,11 +143,36 @@ public:
     //
 
     /** Проверка действий Игрока
-    * @note (Быстрая потокобезопасная проверка) */
-    UFUNCTION(BlueprintCallable, BlueprintPure,
+    * @note   Быстрая потокобезопасная проверка */
+    UFUNCTION(BlueprintPure,
         Category = "PersonAnim|Actions",
-        meta = (CompactNodeTitle = "Check_Action", AutoCreateRefTerm = "InAction", BlueprintThreadSafe))
+        meta = (CompactNodeTitle = "Check Action", AutoCreateRefTerm = "InAction",
+            BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
     bool CheckAction(const EActionVariations& InAction) const;
+
+    /* Проверить на Все действия Игрока
+    * @note   Быстрая потокобезопасная проверка */
+    UFUNCTION(BlueprintPure,
+        Category = "PersonAnim|Actions",
+        meta = (CompactNodeTitle = "Check All Actions ( & )", Keywords = "& and",
+            CommutativeAssociativeBinaryOperator, BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
+    bool CheckAllActions(const EActionVariations A, const EActionVariations B) const;
+
+    /* Проверить на Одно Из действий Игрока
+    * @note   Быстрая потокобезопасная проверка */
+    UFUNCTION(BlueprintPure,
+        Category = "PersonAnim|Actions",
+        meta = (CompactNodeTitle = "Check One Of Actions ( | )", Keywords = "| or",
+            CommutativeAssociativeBinaryOperator, BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
+    bool CheckOneOfActions(const EActionVariations A, const EActionVariations B) const;
+
+    /* Проверить на все, Кроме следующих действий Игрока
+    * @note   Быстрая потокобезопасная проверка */
+    UFUNCTION(BlueprintPure,
+        Category = "PersonAnim|Actions",
+        meta = (CompactNodeTitle = "Check Except Actions ( ^ )", Keywords = "^ xor",
+            CommutativeAssociativeBinaryOperator, BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
+    bool CheckExceptActions(const EActionVariations A, const EActionVariations B) const;
     //-------------------------------------------
 
 
@@ -210,47 +207,6 @@ public:
 
 
 
-    /* ---   Sounds   --- */
-
-    // Таблица Данных для Звуков Поверхностей при Шаге
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "PersonAnim|Sounds|Step",
-        meta = (RequiredAssetDataTags = "RowStructure=SoundBySurfaceType"))
-    UDataTable* SurfaceSoundsWhenStep = nullptr;
-
-    // TMap Данных для Звуков Поверхностей при Шаге
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "PersonAnim|Sounds|Step",
-        meta = (ForceInlineRow))
-    TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> MapOfSurfaceSoundsWhenStep;
-
-    // Таблица Данных для Звуков Поверхностей при Падении
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "PersonAnim|Sounds|Landing",
-        meta = (RequiredAssetDataTags = "RowStructure=SoundBySurfaceType"))
-    UDataTable* SurfaceSoundsWhenLanding = nullptr;
-
-    // TMap Данных для Звуков Поверхностей при Падении
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "PersonAnim|Sounds|Landing",
-        meta = (ForceInlineRow))
-    TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> MapOfSurfaceSoundsWhenLanding;
-
-    //
-
-    /** Воспроизвести Звук согласно поверхности, на которой находиться игрок */
-    UFUNCTION(BlueprintCallable,
-        Category = "PersonAnim|Sounds")
-    void PlaySurfaceSound(const TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>& SoundsMap);
-
-    /** Получить контейнер типа TMap из Таблицы Данных  */
-    UFUNCTION(BlueprintPure,
-        Category = "PersonAnim|Sounds")
-    TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> GetMapForSound(const UDataTable* SoundTable);
-    //-------------------------------------------
-
-
-
 private:
 
     /* ---   Customized Base   --- */
@@ -271,13 +227,5 @@ private:
     /** Вызывается при обновлении Режима Перемещения */
     UFUNCTION()
     void UpdateMovementMode(ACharacter* Character, EMovementMode PrevMovementMode, uint8 PrevCustomMode);
-    //-------------------------------------------
-
-
-
-    /* ---   Sounds   --- */
-
-    /** Инициализация Данных о Звуках */
-    void InitSounds();
     //-------------------------------------------
 };

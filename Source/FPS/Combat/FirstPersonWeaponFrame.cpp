@@ -3,9 +3,13 @@
 // Base:
 #include "FirstPersonWeaponFrame.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Camera/CameraComponent.h"
 #include "Components/ArrowComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Kismet/GameplayStatics.h"
 
 // Actor Components:
@@ -20,13 +24,22 @@
 
 
 
+/* ---   Macros   --- */
+
+/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
+#define COPYING_ComponentValues(ComponentName, Param) \
+ComponentName->Set##Param(lTemplate->ComponentName->Get##Param()); \
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Constructors   --- */
 
 AFirstPersonWeaponFrame::AFirstPersonWeaponFrame()
 {
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true; // Принудительно
+    PrimaryActorTick.bCanEverTick = false; // Предварительно
     //-------------------------------------------
 
 
@@ -63,6 +76,14 @@ AFirstPersonWeaponFrame::AFirstPersonWeaponFrame()
     StorageDropGuidance->ArrowLength = 40.f;
     StorageDropGuidance->bIsScreenSizeScaled = true;
     StorageDropGuidance->SetRelativeRotation(FRotator(-75.f, 00.f, 0.f));
+
+    // Точка Схвата оружия Правой рукой
+    GripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Grip Point"));
+    GripPoint->SetupAttachment(RootComponent);
+
+    // Точка Удержания оружия Левой рукой
+    HoldingPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Holding Point"));
+    HoldingPoint->SetupAttachment(RootComponent);
     //-------------------------------------------
 
 
@@ -74,6 +95,7 @@ AFirstPersonWeaponFrame::AFirstPersonWeaponFrame()
 
     // Компонент плавного Вращения
     SmoothRotationComponent = CreateDefaultSubobject<USmoothRotationComponent>(TEXT("Smooth Rotation Component"));
+    SmoothRotationComponent->bUseRelativeRotation = true;
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -85,13 +107,13 @@ AFirstPersonWeaponFrame::AFirstPersonWeaponFrame()
 void AFirstPersonWeaponFrame::BeginPlay()
 {
     Super::BeginPlay();
+
+    InitDirectionFireData();
 }
 
 void AFirstPersonWeaponFrame::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-
-    //RotateToTraceResult();
 }
 //--------------------------------------------------------------------------------------
 
@@ -101,14 +123,60 @@ void AFirstPersonWeaponFrame::Tick(float DeltaSeconds)
 
 void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iData)
 {
-    Super::UpdateWeaponOnSelectedData(iData);
+    //Super::UpdateWeaponOnSelectedData(iData);
 
-    if (iData)
+    if (iData && iData->WeaponTemplate)
     {
+        const AFirstPersonWeaponFrame* lTemplate = iData->WeaponTemplate.GetDefaultObject();
+
+        // Skeletal Mesh:
+        WeaponSkeletalMesh->SetSkeletalMesh(lTemplate->WeaponSkeletalMesh->SkeletalMesh);
+        COPYING_ComponentValues(WeaponSkeletalMesh, RelativeTransform);
+
+        // Static Mesh:
+        WeaponStaticMesh->SetStaticMesh(lTemplate->WeaponStaticMesh->GetStaticMesh());
+        COPYING_ComponentValues(WeaponStaticMesh, RelativeTransform);
+
         // Направляющие:
-        ShootGuidance->SetRelativeTransform(iData->ProjectileGuidanceTransform);
-        CaseDropGuidance->SetRelativeTransform(iData->SleeveGuidanceTransform);
-        StorageDropGuidance->SetRelativeTransform(iData->StorageGuidanceTransform);
+        COPYING_ComponentValues(ShootGuidance, RelativeTransform);
+        COPYING_ComponentValues(CaseDropGuidance, RelativeTransform);
+        COPYING_ComponentValues(StorageDropGuidance, RelativeTransform);
+
+        // Обновить Точки крепления к Skeletal Mesh:
+        if (lTemplate->WeaponSkeletalMesh->SkeletalMesh)
+        {
+            GripPoint->AttachToComponent(
+                WeaponSkeletalMesh,
+                FAttachmentTransformRules::KeepRelativeTransform,
+                lTemplate->GripSocketName);
+
+            HoldingPoint->AttachToComponent(
+                WeaponSkeletalMesh,
+                FAttachmentTransformRules::KeepRelativeTransform,
+                lTemplate->HoldingSocketName);
+        }
+        else if (lTemplate->WeaponStaticMesh->GetStaticMesh())
+        {
+            GripPoint->AttachToComponent(
+                RootComponent,
+                FAttachmentTransformRules::KeepRelativeTransform);
+
+            HoldingPoint->AttachToComponent(
+                RootComponent,
+                FAttachmentTransformRules::KeepRelativeTransform);
+        }
+
+        // Точки:
+        COPYING_ComponentValues(GripPoint, RelativeTransform);
+        COPYING_ComponentValues(HoldingPoint, RelativeTransform);
+    }
+    else if (!iData)
+    {
+        FPS_LOG(Error, "iData is NOT");
+    }
+    else if (!iData->WeaponTemplate)
+    {
+        FPS_LOG(Error, "WeaponTemplate is NOT");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -116,47 +184,31 @@ void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iDat
 
 
 /* ---   Direction Fire   --- */
-//
-//void AFirstPersonWeaponFrame::RotateToTraceResult()
-//{
-//    if (!bIsAiming && ParentPlayerController)
-//    {
-//        FHitResult lHitResult;
-//
-//        if (!ParentPlayerController->GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, lHitResult))
-//        {
-//            lHitResult.Location = ParentPlayerCharacter->FPCamera->GetComponentTransform()
-//                .TransformPosition(FVector(1000.f, 0.f, 0.f));
-//        }
-//
-//        SmoothRotationComponent->RotateToLocation(lHitResult.Location);
-//    }
-//}
-//
-//void AFirstPersonWeaponFrame::AttachWhenStoppedAiming()
-//{
-//    bIsAiming = false;
-//
-//    AttachToComponent(
-//        ParentPlayerCharacter->FPMesh,
-//        FAttachmentTransformRules::KeepWorldTransform);
-//
-//    SmoothMovementComponent->MoveToLocation(SelectedWeaponData->HipLocation);
-//}
-//
-//void AFirstPersonWeaponFrame::AttachWhenAiming()
-//{
-//    bIsAiming = true;
-//
-//    AttachToComponent(
-//        ParentPlayerCharacter->FPCamera,
-//        FAttachmentTransformRules::KeepWorldTransform);
-//
-//    SmoothRotationComponent->StopRotate();
-//    SetActorRelativeRotation(FRotator::ZeroRotator);
-//
-//    SmoothMovementComponent->MoveToLocation(SelectedWeaponData->AimingLocation);
-//}
+
+void AFirstPersonWeaponFrame::InitDirectionFireData()
+{
+    //IsLocallyControlled();
+
+    if (GetAttachParentActor()
+        && GetAttachParentActor()->GetInstigatorController())
+    {
+        ParentPlayerCharacter = Cast<APlayerCharacter>(GetAttachParentActor());
+        if (ParentPlayerCharacter)
+        {
+            CollisionParamsForTrace.AddIgnoredActor(ParentPlayerCharacter);
+
+            ParentPlayerController = ParentPlayerCharacter->GetController<AFPS_PlayerController>();
+            if (!ParentPlayerController)
+            {
+                FPS_LOG(Error, TEXT("ParentPlayerController is NOT"));
+            }
+        }
+        else
+        {
+            FPS_LOG(Error, TEXT("ParentPlayerCharacter is NOT"));
+        }
+    }
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -165,58 +217,16 @@ void AFirstPersonWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iDat
 
 #if WITH_EDITOR
 
-/* ---   Data   --- */
+/* ---   Base   --- */
 
-TArray<FName> AFirstPersonWeaponFrame::GetRowNamesFromWeaponsDataTable() const
+TArray<FName> AFirstPersonWeaponFrame::GetSocketNamesInSkeletalMesh() const
 {
-    if (WeaponsDataTable)
+    if (WeaponSkeletalMesh)
     {
-        return WeaponsDataTable->GetRowNames();
+        return WeaponSkeletalMesh->GetAllSocketNames();
     }
 
     return TArray<FName>();
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Editor   --- */
-
-void AFirstPersonWeaponFrame::LoadDataFromWeaponsDataTable()
-{
-    if (WeaponName != NAME_None)
-    {
-        // Получение
-        SelectedWeaponData = WeaponsDataTable->FindRow<FWeaponData>(WeaponName, "LoadDataFromWeaponsDataTable()");
-
-        UpdateWeaponOnSelectedData(SelectedWeaponData);
-    }
-}
-
-void AFirstPersonWeaponFrame::SaveCurrentDataInWeaponsDataTable()
-{
-    if (WeaponName != NAME_None)
-    {
-        // Меш:
-        if (WeaponSkeletalMesh->SkeletalMesh)
-        {
-            SelectedWeaponData->SkeletalMesh = WeaponSkeletalMesh->SkeletalMesh;
-            SelectedWeaponData->MeshTransform = WeaponSkeletalMesh->GetRelativeTransform();
-        }
-        else if (WeaponStaticMesh->GetStaticMesh())
-        {
-            SelectedWeaponData->StaticMesh = WeaponStaticMesh->GetStaticMesh();
-            SelectedWeaponData->MeshTransform = WeaponStaticMesh->GetRelativeTransform();
-        }
-
-        // Направляющие:
-        SelectedWeaponData->ProjectileGuidanceTransform = ShootGuidance->GetRelativeTransform();
-        SelectedWeaponData->SleeveGuidanceTransform = CaseDropGuidance->GetRelativeTransform();
-        SelectedWeaponData->StorageGuidanceTransform = StorageDropGuidance->GetRelativeTransform();
-
-        // Сохранение
-        WeaponsDataTable->AddRow(WeaponName, *SelectedWeaponData);
-    }
 }
 //--------------------------------------------------------------------------------------
 

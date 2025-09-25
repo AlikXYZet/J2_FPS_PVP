@@ -8,6 +8,8 @@
 // Base:
 #include "Components/ActorComponent.h"
 
+#include "PhysicsEngine/BodyInstance.h"
+
 // Generated:
 #include "SmoothRotationComponent.generated.h"
 //--------------------------------------------------------------------------------------
@@ -19,6 +21,29 @@
 // Делегат: Завершение вращения
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCompletedRotate);
 // ----------------------------------------------------------------------------------------------------
+
+
+
+/* ---   Enums   --- */
+
+/** Вариации Ротации Актора */
+UENUM(meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
+enum class ERotationVariations : uint8
+{
+    NotLock = 0,
+
+    Roll = 0b001, // Roll
+    Pitch = 0b010, // Pitch
+    Yaw = 0b100, // Yaw
+
+    XY = Roll | Pitch, // Roll and Pitch
+    XZ = Roll | Yaw, // Roll and Yaw
+    YZ = Pitch | Yaw, // Pitch and Yaw
+
+    XYZ = 0b111    UMETA(DisplayName = "XYZ: Component is Disabled")// All
+};
+ENUM_CLASS_FLAGS(ERotationVariations)
+//--------------------------------------------------------------------------------------
 
 
 
@@ -77,6 +102,17 @@ public:
 
     /* ---   Actor Rotate   --- */
 
+    /* Флаг использования Относительной Ротации, а не Мировой
+    @note   НЕ корректно работает, если у компонента-владельца изменена Ротация */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Rotation")
+    bool bUseRelativeRotation = false;
+
+    // Блокировка направления ротации
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Rotation")
+    ERotationVariations LockRotation = ERotationVariations::NotLock;
+
     // Максимальная скорость вращения
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings|Rotation|Speed")
@@ -106,12 +142,20 @@ public:
     //
 
     /** Повернуться к указанной Точке */
-    void RotateToLocation(const FVector& Point);
+    void RotateToLocation(const FVector& Point = FVector::ZeroVector);
+
+    /** Повернуться к указанной Точке */
+    void RotateToRotator(const FRotator& Rotator = FRotator::ZeroRotator);
 
     /** Остановить контроль Вращения */
     FORCEINLINE void StopRotate()
     {
         bIsRotatedToNewRotation = false;
+    };
+
+    FORCEINLINE bool CheckRotationLock(const ERotationVariations& Value)
+    {
+        return LockRotation == Value;
     };
     //-------------------------------------------
 

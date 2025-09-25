@@ -75,19 +75,10 @@ void USmoothMovementComponent::MoveToLocation(const FVector& iPoint)
 {
     if (CurrentActor)
     {
-        if (OnStartMove.IsBound())
-        {
-            OnStartMove.Broadcast();
-        }
+        OnStartMove.Broadcast();
 
-        if (bUseRelativeLocation)
-        {
-            StartLocation = CurrentActor->GetRootComponent()->GetRelativeLocation();
-        }
-        else
-        {
-            StartLocation = CurrentActor->GetActorLocation();
-        }
+        StartLocation = bUseRelativeLocation
+            ? CurrentActor->GetRootComponent()->GetRelativeLocation() : CurrentActor->GetActorLocation();
 
         EndLocation = iPoint;
         bIsMovingToNewLocation = true;
@@ -101,8 +92,8 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
     // Контроль перемещения
     if (bIsMovingToNewLocation)
     {
-        FVector lCurrentLocation = bUseRelativeLocation ?
-            CurrentActor->GetRootComponent()->GetRelativeLocation() : CurrentActor->GetActorLocation();
+        FVector lCurrentLocation = bUseRelativeLocation
+            ? CurrentActor->GetRootComponent()->GetRelativeLocation() : CurrentActor->GetActorLocation();
 
         // Контроль близости к новой локации
         if ((lCurrentLocation - EndLocation).Size() < MinStep)
@@ -118,10 +109,7 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
 
             bIsMovingToNewLocation = false;
 
-            if (OnCompletedMove.IsBound())
-            {
-                OnCompletedMove.Broadcast();
-            }
+            OnCompletedMove.Broadcast();
         }
         else
         {
@@ -133,10 +121,7 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
             if (!bApproachWork
                 && lNewSpeed_Vector.Size() <= ApproachDistance)
             {
-                if (OnApproach.IsBound())
-                {
-                    OnApproach.Broadcast();
-                }
+                OnApproach.Broadcast();
 
                 bApproachWork = true;
             }
@@ -160,10 +145,7 @@ void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
             if (!bSeparationWork
                 && lDistanceTraveled >= ApproachDistance)
             {
-                if (OnSeparation.IsBound())
-                {
-                    OnSeparation.Broadcast();
-                }
+                OnSeparation.Broadcast();
 
                 bSeparationWork = true;
             }

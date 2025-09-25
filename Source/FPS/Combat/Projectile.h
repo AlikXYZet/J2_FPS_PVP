@@ -30,7 +30,7 @@ class UGameplayEffect;
 
 
 
-UCLASS()
+UCLASS(Abstract)
 class FPS_API AProjectile : public AActor
 {
     GENERATED_BODY()

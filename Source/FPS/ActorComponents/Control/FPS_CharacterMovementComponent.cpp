@@ -92,7 +92,8 @@ void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
 
 void UFPS_CharacterMovementComponent::SetSpeedType(const ESpeedVariations& Type)
 {
-    if (Type < ESpeedVariations::COUNT)
+    if (Type < ESpeedVariations::COUNT
+        && MaxWalkSpeed != BaseMovementSpeeds[(uint8)Type])
     {
         // Быстрое применение значения у Клиента-Владельца
         SetMaxWalkSpeed(BaseMovementSpeeds[(uint8)Type]);

@@ -22,6 +22,7 @@
 
 // Interaction:
 class AProjectile;
+class AFirstPersonWeaponFrame;
 //--------------------------------------------------------------------------------------
 
 
@@ -51,22 +52,11 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Visualization   --- */
 
-    /* Скелетный Меш Оружия */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    // Образец Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Visualization",
-        meta = (EditCondition = "StaticMesh==nullptr"))
-    USkeletalMesh* SkeletalMesh = nullptr;
-
-    // Статический Меш Оружия
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization",
-        meta = (EditCondition = "SkeletalMesh==nullptr"))
-    UStaticMesh* StaticMesh = nullptr;
-
-    // Трансформация Меша Оружия
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Visualization")
-    FTransform MeshTransform;
+        meta = (BlueprintBaseOnly))
+    TSubclassOf<AFirstPersonWeaponFrame> WeaponTemplate;
 
     // Локация Оружия в положении от Бедра
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -84,37 +74,22 @@ struct FWeaponData : public FTableRowBase
     /* ---   Dropping   --- */
 
     // Тип используемого Снаряда
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Dropping",
-        meta = (DisplayAfter = "ProjectileGuidanceTransform"))
+        meta = (BlueprintBaseOnly))
     TSubclassOf<AProjectile> ProjectileType;
 
     // Тип выпадающей Гильзы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (DisplayAfter = "SleeveGuidanceTransform"))
+        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable))
     TSubclassOf<AActor> SleeveType;
 
     // Тип выпадающего Накопителя
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (DisplayAfter = "StorageGuidanceTransform"))
+        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable))
     TSubclassOf<AActor> StorageType;
-
-    // Трансформация Направляющей Выстрела
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Dropping")
-    FTransform ProjectileGuidanceTransform;
-
-    // Трансформация Направляющей вылета Гильзы
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Dropping")
-    FTransform SleeveGuidanceTransform;
-
-    // Трансформация Направляющей выпадения Накопителя
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Dropping")
-    FTransform StorageGuidanceTransform;
     //-------------------------------------------
 
 

@@ -7,15 +7,19 @@
 #include "FPS/Tools/GlobalMacros.h"
 
 // UE:
+#include "Camera/CameraComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/InputSettings.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Net:
 #include "Net/UnrealNetwork.h"
 
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
+#include "FPS/ActorComponents/Control/SmoothMovementComponent.h"
+#include "FPS/ActorComponents/Control/SmoothRotationComponent.h"
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Combat/FirstPersonWeaponFrame.h"
 #include "FPS/Combat/Projectile.h"
@@ -69,6 +73,11 @@ void UWeaponLocalController::BeginPlay()
 
     InitSpeedControl();
 }
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Local   --- */
 
 void UWeaponLocalController::BaseInit()
 {
@@ -76,6 +85,8 @@ void UWeaponLocalController::BaseInit()
 
     if (PlayerOwner)
     {
+        CollisionParamsForTrace.AddIgnoredActor(PlayerOwner);
+
         WeaponControlNetComp = PlayerOwner->WeaponControlNetComp;
 
         if (!WeaponControlNetComp)
@@ -86,6 +97,41 @@ void UWeaponLocalController::BaseInit()
     else
     {
         FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
+    }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Direction Fire   --- */
+
+void UWeaponLocalController::ReAttachWeaponForAiming()
+{
+    if (CurrentFPWeaponFrame->GetRootComponent()->GetAttachParent() != PlayerOwner->FPCamera)
+    {
+        CurrentFPWeaponFrame->AttachToComponent(
+            PlayerOwner->FPCamera,
+            FAttachmentTransformRules::KeepWorldTransform);
+
+        CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
+            GetCurrentWeaponData()->AimingLocation);
+
+        CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
+    }
+}
+
+void UWeaponLocalController::ReAttachWeaponForFromHip()
+{
+    if (CurrentFPWeaponFrame->GetRootComponent()->GetAttachParent() != this)
+    {
+        CurrentFPWeaponFrame->AttachToComponent(
+            this,
+            FAttachmentTransformRules::KeepWorldTransform);
+
+        CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
+            GetCurrentWeaponData()->HipLocation);
+
+        CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
     }
 }
 //--------------------------------------------------------------------------------------
@@ -197,14 +243,10 @@ void UWeaponLocalController::InitData()
             {
                 CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
 
-                if (PlayerOwner
-                    && CurrentFPWeaponFrame->GetAttachParentSocketName() != WeaponSocketInFPMesh)
-                {
-                    CurrentFPWeaponFrame->AttachToComponent(
-                        PlayerOwner->FPMesh,
-                        FAttachmentTransformRules::KeepWorldTransform,
-                        WeaponSocketInFPMesh);
-                }
+                CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
+                    GetCurrentWeaponData()->HipLocation);
+
+                CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
             }
             else
             {
@@ -236,23 +278,22 @@ void UWeaponLocalController::InitData()
 
 void UWeaponLocalController::SetCurrentSlotByNum(const uint8& iNum)
 {
-    if (WeaponSlots.IsValidIndex(iNum))
-        SetChanging(iNum);
+    SetChanging(iNum);
 }
 
 void UWeaponLocalController::ToSlot1()
 {
-    SetCurrentSlotByNum(0);
+    SetChanging(0);
 }
 
 void UWeaponLocalController::ToSlot2()
 {
-    SetCurrentSlotByNum(1);
+    SetChanging(1);
 }
 
 void UWeaponLocalController::ToNextSlot()
 {
-    SetCurrentSlotByNum(
+    SetChanging(
         CurrentSlot == &WeaponSlots.Last(0)
         ? 0
         : CurrentSlot - &WeaponSlots[0] + 1);
@@ -260,7 +301,7 @@ void UWeaponLocalController::ToNextSlot()
 
 void UWeaponLocalController::ToPrevSlot()
 {
-    SetCurrentSlotByNum(
+    SetChanging(
         CurrentSlot == &WeaponSlots[0]
         ? WeaponSlots.Num() - 1
         : CurrentSlot - &WeaponSlots[0] - 1);
@@ -302,8 +343,13 @@ void UWeaponLocalController::UpdateCurrentActions()
     {
         WeaponControlNetComp->Server_SetCurrentActions(GetCurrentActions());
 
+        // Отключённый бит
+        EActionVariations bDisabledBit = EActionVariations(OldActions & ~GetCurrentActions());
+        // Включённый бит
+        EActionVariations bEnabledBit = EActionVariations(GetCurrentActions() & ~OldActions);
+
         // Завершение Действия по Отключенному Биту
-        switch (EActionVariations(OldActions & ~GetCurrentActions()))
+        switch (bDisabledBit)
         {
         case EActionVariations::Aiming:
             StopAiming();
@@ -330,7 +376,7 @@ void UWeaponLocalController::UpdateCurrentActions()
         }
 
         // Начать Действие по Включенному Биту
-        switch (EActionVariations(GetCurrentActions() & ~OldActions))
+        switch (bEnabledBit)
         {
         case EActionVariations::Aiming:
             StartAiming();
@@ -349,60 +395,56 @@ void UWeaponLocalController::UpdateCurrentActions()
             break;
 
         case EActionVariations::Block:
+            StartBlockingActions();
             break;
 
         default:
             break;
         }
 
-        if (CheckAction(EActionVariations::Aiming))
+        /** Реакции на совокупность действий: */
+
+        /* Скорость передвижения */
         {
-            SetSpeedControl(ESpeedVariations::Walk);
-        }
-        else if (GetCurrentActions() > uint8(EActionVariations::Aiming))
-        {
-            SetSpeedControl(ESpeedVariations::Jog);
-        }
-        else
-        {
-            SetSpeedControl(ESpeedVariations::Sprint);
+            ESpeedVariations lSpeedMode = ESpeedVariations::Sprint;
+
+            if (CheckAction(EActionVariations::Aiming))
+            {
+                lSpeedMode = ESpeedVariations::Walk;
+            }
+            else if (GetCurrentActions() > uint8(EActionVariations::Aiming))
+            {
+                lSpeedMode = ESpeedVariations::Jog;
+            }
+
+            SetSpeedControl(lSpeedMode);
         }
 
-        if (PlayerOwner)
+        /* Положение оружия */
+        if (bool(EActionVariations::Shooting ^ (bDisabledBit | bEnabledBit))) // Игнорировать, если изменился только бит Стрельбы
         {
-            PlayerOwner->GetFPSCharacterMovement()->UpdateMaxSpeed();
+            if (GetCurrentActions() >= uint8(EActionVariations::Reloading))
+            {
+                ReAttachWeaponForFromHip();
+                bUseTracingToGuideShooting = false;
+            }
+            else if (CheckAction(EActionVariations::Aiming))
+            {
+                ReAttachWeaponForAiming();
+            }
+            else
+            {
+                ReAttachWeaponForFromHip();
+                bUseTracingToGuideShooting = true;
+            }
         }
     }
-}
-
-bool UWeaponLocalController::CheckActions(const EActionVariations& Action, ...) const
-{
-    uint8 bResult = 0;
-    const EActionVariations* p = &Action;
-
-    while (p)
-    {
-        bResult |= uint8(*p);
-        ++p;
-    }
-
-    return bResult && CheckActions(bResult);
 }
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Actions | Set   --- */
-
-void UWeaponLocalController::SetAiming()
-{
-    SetActionBit(EActionVariations::Aiming);
-}
-
-void UWeaponLocalController::SetShooting()
-{
-    SetActionBit(EActionVariations::Shooting);
-}
 
 void UWeaponLocalController::SetReloading()
 {
@@ -436,7 +478,8 @@ void UWeaponLocalController::SetReloading()
 
 void UWeaponLocalController::SetChanging(const uint8& iNum)
 {
-    if (&WeaponSlots[iNum] != CurrentSlot)
+    if (WeaponSlots.IsValidIndex(iNum)
+        && &WeaponSlots[iNum] != CurrentSlot)
     {
         SetBlockingActionBit(EActionVariations::Changing);
         NewSlotNum = iNum;
@@ -447,45 +490,12 @@ void UWeaponLocalController::SetChanging(const uint8& iNum)
 
 
 /* ---   Actions | Reset   --- */
-
-void UWeaponLocalController::ResetAiming()
-{
-    ResetActionBit(EActionVariations::Aiming);
-}
-
-void UWeaponLocalController::ResetShooting()
-{
-    ResetActionBit(EActionVariations::Shooting);
-}
-
-void UWeaponLocalController::ResetReloading()
-{
-    ResetActionBit(EActionVariations::Reloading);
-}
-
-void UWeaponLocalController::ResetChanging()
-{
-    ResetActionBit(EActionVariations::Changing);
-}
-
-void UWeaponLocalController::ResetBlocking()
-{
-    ResetActionBit(EActionVariations::Block);
-}
+// Упрощено в '.h'
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Actions | Stopped   --- */
-
-void UWeaponLocalController::StopAiming()
-{
-}
-
-void UWeaponLocalController::StopShooting()
-{
-    GetWorld()->GetTimerManager().ClearTimer(Timer_ActionControl);
-}
 
 void UWeaponLocalController::StopReloading()
 {
@@ -512,27 +522,11 @@ void UWeaponLocalController::StopReloading()
         lTransform.GetLocation(),
         lTransform.Rotator());
 }
-
-void UWeaponLocalController::StopChanging()
-{
-}
-
-void UWeaponLocalController::StopBlockingActions()
-{
-    if (GetCurrentActions() & (uint8)EActionVariations::Block)
-    {
-        GetCurrentActions() ^= (uint8)EActionVariations::Block;
-    }
-}
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Actions | Started   --- */
-
-void UWeaponLocalController::StartAiming()
-{
-}
 
 void UWeaponLocalController::StartShooting()
 {
@@ -596,17 +590,47 @@ void UWeaponLocalController::ShootingWeapon()
         // Результат
         if (bChecker)
         {
-            FTransform lTransform = CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
+            const FTransform* lTransform = &CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
+
+            FVector lStartLocation = lTransform->GetLocation();
+            FRotator lRotator;
+
+            if (bUseTracingToGuideShooting)
+            {
+                FHitResult lHitResult;
+
+                FVector lEndTraceLocation =
+                    PlayerOwner->FPCamera->GetComponentTransform()
+                    .TransformPosition(FVector(10000.f, 0.f, 0.f));
+
+                bool bCheckTraceResult =
+                    GetWorld()->LineTraceSingleByChannel(
+                        lHitResult,
+                        PlayerOwner->FPCamera->GetComponentLocation(),
+                        lEndTraceLocation,
+                        ECollisionChannel::ECC_Visibility,
+                        CollisionParamsForTrace);
+
+                lRotator = UKismetMathLibrary::FindLookAtRotation(
+                    lStartLocation,
+                    bCheckTraceResult
+                    ? lHitResult.Location
+                    : lEndTraceLocation);
+            }
+            else
+            {
+                lRotator = lTransform->Rotator();
+            }
 
             WeaponControlNetComp->DropProjectile(
-                lTransform.GetLocation(),
-                lTransform.Rotator());
+                lStartLocation,
+                lRotator);
 
-            lTransform = CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
+            lTransform = &CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
 
             WeaponControlNetComp->DropSleeve(
-                lTransform.GetLocation(),
-                lTransform.Rotator());
+                lTransform->GetLocation(),
+                lTransform->Rotator());
         }
         else
         {
@@ -630,24 +654,26 @@ void UWeaponLocalController::ChangeWeaponSlot()
         GetCurrentWeaponData()->TakeWeapon_Time,
         false);
 }
-
-void UWeaponLocalController::EndChangeWeaponSlot()
-{
-    ResetChanging();
-}
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Character Movement Speed   --- */
 
+void UWeaponLocalController::BP_SetSpeedControl(const ESpeedVariations& Mode)
+{
+    SetSpeedControl(Mode);
+};
+
 void UWeaponLocalController::SetSpeedControl(const ESpeedVariations& Mode)
 {
     if (SpeedControl != Mode)
     {
         SpeedControl = Mode;
+
+        PlayerOwner->GetFPSCharacterMovement()->UpdateMaxSpeed();
     }
-}
+};
 
 void UWeaponLocalController::InitSpeedControl()
 {

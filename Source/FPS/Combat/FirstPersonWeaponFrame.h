@@ -8,9 +8,6 @@
 // Base:
 #include "WeaponFrame.h"
 
-// Structs:
-#include "FPS/Tools/Structs/Arsenal/WeaponData.h"
-
 // Generated:
 #include "FirstPersonWeaponFrame.generated.h"
 //--------------------------------------------------------------------------------------
@@ -36,7 +33,7 @@ class AFPS_PlayerController;
 
 
 
-UCLASS()
+UCLASS(Abstract)
 class FPS_API AFirstPersonWeaponFrame : public AWeaponFrame
 {
     GENERATED_BODY()
@@ -70,6 +67,18 @@ public:
         Category = "Components|Arrows",
         meta = (AllowPrivateAccess = "true"))
     UArrowComponent* StorageDropGuidance = nullptr;
+
+    // Точка Схвата оружия Правой рукой
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components|Points",
+        meta = (AllowPrivateAccess = "true"))
+    USceneComponent* GripPoint;
+
+    // Точка Удержания оружия Левой рукой
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Components|Points",
+        meta = (AllowPrivateAccess = "true"))
+    USceneComponent* HoldingPoint;
     //-------------------------------------------
 
 
@@ -111,6 +120,23 @@ public:
 
 
 
+    /* ---   Control   --- */
+
+    // Имя Сокета для Точка Схвата оружия Правой рукой
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "Components|Points",
+        meta = (GetOptions = "GetSocketNamesInSkeletalMesh"))
+    FName GripSocketName = NAME_None;
+
+    // Имя Сокета для Точка Удержания оружия Левой рукой
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "Components|Points",
+        meta = (GetOptions = "GetSocketNamesInSkeletalMesh"))
+    FName HoldingSocketName = NAME_None;
+    //-------------------------------------------
+
+
+
     /* ---   Data   --- */
 
     /** Обновить Оружие по Данным */
@@ -119,100 +145,45 @@ public:
 
 
 
-    /* ===   For EDITOR only   === */
-
-#if WITH_EDITORONLY_DATA
-
-    /* ---   Data   --- */
-
-    /* Таблица данных местоположения фигур */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Frame|Data",
-        meta = (RequiredAssetDataTags = "RowStructure=WeaponData"))
-    UDataTable* WeaponsDataTable = nullptr;
-
-    // Текущее выбранное Оружие из Таблицы
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Weapon Frame|Data",
-        meta = (GetOptions = "GetRowNamesFromWeaponsDataTable"))
-    FName WeaponName = NAME_None;
-    //-------------------------------------------
-
-#endif // WITH_EDITORONLY_DATA
-
-#if WITH_EDITOR
-
-    /* ---   Editor   --- */
-
-    /** Выгрузить Данные для выбранного Оружия из Таблицы Данных Оружий */
-    UFUNCTION(CallInEditor,
-        Category = "Weapon Frame|Editor")
-    void LoadDataFromWeaponsDataTable();
-
-    /** Сохранить текущие Данные в Таблицу Данных Оружий */
-    UFUNCTION(CallInEditor,
-        Category = "Weapon Frame|Editor")
-    void SaveCurrentDataInWeaponsDataTable();
-    //-------------------------------------------
-
-#endif // WITH_EDITOR
-    //===========================================
-
-
-
 private:
 
     /* ---   Control   --- */
 
     // Игрок-Владелец данного Оружия
-    //APlayerCharacter* ParentPlayerCharacter = nullptr;
+    APlayerCharacter* ParentPlayerCharacter = nullptr;
     //-------------------------------------------
 
 
 
     /* ---   Direction Fire   --- */
 
-    //// Контроллер Игрока-Владельца данного Оружия
-    //AFPS_PlayerController* ParentPlayerController = nullptr;
+    // Контроллер Игрока-Владельца данного Оружия
+    AFPS_PlayerController* ParentPlayerController = nullptr;
 
-    //// Флаг отслеживания состояния прицеливания
-    //bool bIsAiming = false;
+    // Параметры Коллизии для Трассировки
+    FCollisionQueryParams CollisionParamsForTrace;
 
-    ////
+    //
 
-    ///** Повернуть в сторону Результата Трассировки */
-    //void RotateToTraceResult();
-
-    ///** Прикрепить данное Оружие к Руке */
-    //void AttachWhenStoppedAiming();
-
-    ///** Прикрепить данное Оружие к Камере */
-    //void AttachWhenAiming();
+    /* Инициализация данных Направления Огня данного оружия */
+    void InitDirectionFireData();
     //-------------------------------------------
 
 
 
     /* ===   For EDITOR only   === */
 
-#if WITH_EDITORONLY_DATA
-
-    /* ---   Data   --- */
-
-    // Указатель на Данные выбранного Оружия из Таблицы
-    FWeaponData* SelectedWeaponData = nullptr;
-    //-------------------------------------------
-
-#endif // WITH_EDITORONLY_DATA
-
 #if WITH_EDITOR
 
-    /* ---   Data   --- */
+private:
 
-    /** Получение Названий строк из таблицы WeaponsDataTable */
+    /* ---   Control   --- */
+
+    /** Получение наименований Костей текущего Меша в FPMesh */
     UFUNCTION()
-    TArray<FName> GetRowNamesFromWeaponsDataTable() const;
+    TArray<FName> GetSocketNamesInSkeletalMesh() const;
     //-------------------------------------------
 
-#endif // WITH_EDITORONLY_DATA
+#endif // WITH_EDITOR
     //===========================================
 };

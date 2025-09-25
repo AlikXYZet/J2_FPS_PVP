@@ -73,10 +73,17 @@ void USmoothRotationComponent::InitCurrentComponent()
 
 void USmoothRotationComponent::RotateToLocation(const FVector& iPoint)
 {
+    RotateToRotator(UKismetMathLibrary::FindLookAtRotation(CurrentActor->GetActorLocation(), iPoint));
+}
+
+void USmoothRotationComponent::RotateToRotator(const FRotator& iRotator)
+{
     if (CurrentActor)
     {
-        StartRotation = CurrentActor->GetActorRotation();
-        EndRotation = UKismetMathLibrary::FindLookAtRotation(CurrentActor->GetActorLocation(), iPoint);
+        StartRotation = bUseRelativeRotation
+            ? CurrentActor->GetRootComponent()->GetRelativeRotation() : CurrentActor->GetActorRotation();
+
+        EndRotation = iRotator;
         bIsRotatedToNewRotation = true;
     }
 }
@@ -84,127 +91,168 @@ void USmoothRotationComponent::RotateToLocation(const FVector& iPoint)
 void USmoothRotationComponent::RotationForTick(const float& DeltaTime)
 {
     // Контроль вращения
-    if (bIsRotatedToNewRotation)
+    if (bIsRotatedToNewRotation
+        && !CheckRotationLock(ERotationVariations::XYZ))
     {
-        FRotator lNewRotation = CurrentActor->GetActorRotation();
+        FRotator lNewRotation = bUseRelativeRotation
+            ? CurrentActor->GetRootComponent()->GetRelativeRotation() : CurrentActor->GetActorRotation();
+
         FRotator lCurrentRotation = lNewRotation;
 
         // Контроль близости к новой ротации
         if ((lCurrentRotation - EndRotation).IsNearlyZero(MinStep))
         {
-            CurrentActor->SetActorRotation(EndRotation);
+            if (bUseRelativeRotation)
+            {
+                CurrentActor->SetActorRelativeRotation(EndRotation);
+            }
+            else
+            {
+                CurrentActor->SetActorRotation(EndRotation);
+            }
+
             bIsRotatedToNewRotation = false;
 
-            if (OnCompletedRotate.IsBound())
-            {
-                OnCompletedRotate.Broadcast();
-            }
+            OnCompletedRotate.Broadcast();
         }
         else
         {
             // Рассчитанная угловая Скорость Вращения
             FRotator lNewSpeed = EndRotation - lCurrentRotation;
 
+            // Переменная, используемая для проверки и изменении данных
+            FRotator lChecker = lNewSpeed * DecelerationCoefficient;
 
-            /* ---   Корректировка направления   --- */
+            if (!CheckRotationLock(ERotationVariations::Pitch))
             {
+                // Корректировка направления
                 if (int(lNewSpeed.Pitch / 180))
                 {
                     lNewSpeed.Pitch -= 360 * (lNewSpeed.Pitch > 0 ? 1 : -1);
                 }
 
+                // Приближение к Цели
+                if (abs(lChecker.Pitch) > MaxSpeed)
+                {
+                    // Ограничение скорости с сохранением знака
+                    lNewSpeed.Pitch = MaxSpeed * (lNewSpeed.Pitch > 0 ? 1 : -1);
+                }
+                else
+                {
+                    lNewSpeed.Pitch *= DecelerationCoefficient;
+                }
+
+                // Отдаление от предыдущей Цели
+                if (bControlSpeedAtStart)
+                {
+                    // Пройденный поворот
+                    lChecker.Pitch = (lCurrentRotation - StartRotation).Pitch;
+
+                    // Корректировка направления
+                    if (int(lChecker.Pitch / 180))
+                    {
+                        lChecker.Pitch -= 360 * (lChecker.Pitch > 0 ? 1 : -1);
+                    }
+
+                    lChecker.Pitch *= AccelerationCoefficient;
+
+                    if (lNewSpeed.Pitch > lChecker.Pitch)
+                    {
+                        lNewSpeed.Pitch = (abs(lChecker.Pitch) + MinStep) * (lNewSpeed.Pitch > 0 ? 1 : -1);
+                    }
+                }
+            }
+
+            if (!CheckRotationLock(ERotationVariations::Yaw))
+            {
+                // Корректировка направления
                 if (int(lNewSpeed.Yaw / 180))
                 {
                     lNewSpeed.Yaw -= 360 * (lNewSpeed.Yaw > 0 ? 1 : -1);
                 }
 
+                // Приближение к Цели
+                if (abs(lChecker.Yaw) > MaxSpeed)
+                {
+                    // Ограничение скорости с сохранением знака
+                    lNewSpeed.Yaw = MaxSpeed * (lNewSpeed.Yaw > 0 ? 1 : -1);
+                }
+                else
+                {
+                    lNewSpeed.Yaw *= DecelerationCoefficient;
+                }
+
+                // Отдаление от предыдущей Цели
+                if (bControlSpeedAtStart)
+                {
+                    // Пройденный поворот
+                    lChecker.Yaw = (lCurrentRotation - StartRotation).Yaw;
+
+                    // Корректировка направления
+                    if (int(lChecker.Yaw / 180))
+                    {
+                        lChecker.Yaw -= 360 * (lChecker.Yaw > 0 ? 1 : -1);
+                    }
+
+                    lChecker.Yaw *= AccelerationCoefficient;
+
+                    if (lNewSpeed.Yaw > lChecker.Yaw)
+                    {
+                        lNewSpeed.Yaw = (abs(lChecker.Yaw) + MinStep) * (lNewSpeed.Yaw > 0 ? 1 : -1);
+                    }
+                }
+            }
+
+            if (!CheckRotationLock(ERotationVariations::Roll))
+            {
+                // Корректировка направления
                 if (int(lNewSpeed.Roll / 180))
                 {
                     lNewSpeed.Roll -= 360 * (lNewSpeed.Roll > 0 ? 1 : -1);
                 }
-            }
 
-
-            /* ---   Приближение к Цели   --- */
-
-            FRotator lChecker = lNewSpeed * DecelerationCoefficient;
-
-            if (abs(lChecker.Pitch) > MaxSpeed)
-            {
-                // Ограничение скорости с сохранением знака
-                lNewSpeed.Pitch = MaxSpeed * (lNewSpeed.Pitch > 0 ? 1 : -1);
-            }
-            else
-            {
-                lNewSpeed.Pitch *= DecelerationCoefficient;
-            }
-
-            if (abs(lChecker.Yaw) > MaxSpeed)
-            {
-                // Ограничение скорости с сохранением знака
-                lNewSpeed.Yaw = MaxSpeed * (lNewSpeed.Yaw > 0 ? 1 : -1);
-            }
-            else
-            {
-                lNewSpeed.Yaw *= DecelerationCoefficient;
-            }
-
-            if (abs(lChecker.Roll) > MaxSpeed)
-            {
-                // Ограничение скорости с сохранением знака
-                lNewSpeed.Roll = MaxSpeed * (lNewSpeed.Roll > 0 ? 1 : -1);
-            }
-            else
-            {
-                lNewSpeed.Roll *= DecelerationCoefficient;
-            }
-            //-------------------------------------------
-
-
-            /* ---   Отдаление от предыдущей Цели   --- */
-
-            if (bControlSpeedAtStart)
-            {
-                // Пройденный поворот
-                lChecker = lCurrentRotation - StartRotation;
-
-                // Корректировка направления
-                if (int(lChecker.Pitch / 180))
+                // Приближение к Цели
+                if (abs(lChecker.Roll) > MaxSpeed)
                 {
-                    lChecker.Pitch -= 360 * (lChecker.Pitch > 0 ? 1 : -1);
+                    // Ограничение скорости с сохранением знака
+                    lNewSpeed.Roll = MaxSpeed * (lNewSpeed.Roll > 0 ? 1 : -1);
+                }
+                else
+                {
+                    lNewSpeed.Roll *= DecelerationCoefficient;
                 }
 
-                if (int(lChecker.Yaw / 180))
+                // Отдаление от предыдущей Цели
+                if (bControlSpeedAtStart)
                 {
-                    lChecker.Yaw -= 360 * (lChecker.Yaw > 0 ? 1 : -1);
-                }
+                    // Пройденный поворот
+                    lChecker.Roll = (lCurrentRotation - StartRotation).Roll;
 
-                if (int(lChecker.Roll / 180))
-                {
-                    lChecker.Roll -= 360 * (lChecker.Roll > 0 ? 1 : -1);
-                }
+                    // Корректировка направления
+                    if (int(lChecker.Roll / 180))
+                    {
+                        lChecker.Roll -= 360 * (lChecker.Roll > 0 ? 1 : -1);
+                    }
 
-                lChecker *= AccelerationCoefficient;
+                    lChecker.Roll *= AccelerationCoefficient;
 
-                if (lNewSpeed.Pitch > lChecker.Pitch)
-                {
-                    lNewSpeed.Pitch = (abs(lChecker.Pitch) + MinStep) * (lNewSpeed.Pitch > 0 ? 1 : -1);
-                }
-
-                if (lNewSpeed.Yaw > lChecker.Yaw)
-                {
-                    lNewSpeed.Yaw = (abs(lChecker.Yaw) + MinStep) * (lNewSpeed.Yaw > 0 ? 1 : -1);
-                }
-
-                if (lNewSpeed.Roll > lChecker.Roll)
-                {
-                    lNewSpeed.Roll = (abs(lChecker.Roll) + MinStep) * (lNewSpeed.Roll > 0 ? 1 : -1);
+                    if (lNewSpeed.Roll > lChecker.Roll)
+                    {
+                        lNewSpeed.Roll = (abs(lChecker.Roll) + MinStep) * (lNewSpeed.Roll > 0 ? 1 : -1);
+                    }
                 }
             }
-            //-------------------------------------------
 
             lNewRotation = lNewSpeed * DeltaTime;
-            CurrentActor->AddActorLocalRotation(lNewRotation);
+
+            if (bUseRelativeRotation)
+            {
+                CurrentActor->GetRootComponent()->AddRelativeRotation(lNewRotation);
+            }
+            else
+            {
+                CurrentActor->AddActorLocalRotation(lNewRotation);
+            }
         }
     }
 }

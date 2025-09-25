@@ -2,6 +2,12 @@
 
 // Base:
 #include "WeaponFrame.h"
+
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
+// Interaction:
+#include "FirstPersonWeaponFrame.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -56,21 +62,25 @@ void AWeaponFrame::BeginPlay()
 
 void AWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iData)
 {
-    if (iData)
+    if (iData && iData->WeaponTemplate)
     {
-        // Меш:
-        if (iData->SkeletalMesh)
-        {
-            WeaponSkeletalMesh->SetSkeletalMesh(iData->SkeletalMesh);
-            WeaponSkeletalMesh->SetRelativeTransform(iData->MeshTransform);
-            WeaponStaticMesh->SetStaticMesh(nullptr);
-        }
-        else if (iData->StaticMesh)
-        {
-            WeaponStaticMesh->SetStaticMesh(iData->StaticMesh);
-            WeaponStaticMesh->SetRelativeTransform(iData->MeshTransform);
-            WeaponSkeletalMesh->SetSkeletalMesh(nullptr);
-        }
+        const AFirstPersonWeaponFrame* lTemplate = iData->WeaponTemplate.GetDefaultObject();
+
+        // Skeletal Mesh:
+        WeaponSkeletalMesh->SetSkeletalMesh(lTemplate->WeaponSkeletalMesh->SkeletalMesh);
+        WeaponSkeletalMesh->SetRelativeTransform(lTemplate->WeaponSkeletalMesh->GetRelativeTransform());
+
+        // Static Mesh:
+        WeaponStaticMesh->SetStaticMesh(lTemplate->WeaponStaticMesh->GetStaticMesh());
+        WeaponStaticMesh->SetRelativeTransform(lTemplate->WeaponStaticMesh->GetRelativeTransform());
+    }
+    else if (!iData)
+    {
+        FPS_LOG(Error, "iData is NOT");
+    }
+    else if (!iData->WeaponTemplate)
+    {
+        FPS_LOG(Error, "WeaponTemplate is NOT");
     }
 }
 //--------------------------------------------------------------------------------------

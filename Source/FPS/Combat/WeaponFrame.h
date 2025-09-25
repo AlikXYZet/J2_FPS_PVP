@@ -25,7 +25,7 @@ class UWeaponNetworkController;
 
 
 
-UCLASS()
+UCLASS(Abstract)
 class FPS_API AWeaponFrame : public AActor
 {
     GENERATED_BODY()

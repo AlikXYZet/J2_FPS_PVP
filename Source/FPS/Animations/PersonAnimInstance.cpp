@@ -8,8 +8,6 @@
 
 // UE:
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 // Interaction:
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
@@ -23,8 +21,6 @@
 void UPersonAnimInstance::NativeInitializeAnimation()
 {
     Super::NativeInitializeAnimation();
-
-    InitSounds();
 }
 
 void UPersonAnimInstance::NativeUninitializeAnimation()
@@ -97,7 +93,7 @@ void UPersonAnimInstance::SetTimeForUpdateAnimation(const float& iTime)
 
 void UPersonAnimInstance::BaseInit()
 {
-    PlayerOwner = Cast<APlayerCharacter>(TryGetPawnOwner());
+    PlayerOwner = Cast<APlayerCharacter>(GetOwningActor());
 
     if (PlayerOwner)
     {
@@ -146,80 +142,26 @@ bool UPersonAnimInstance::CheckAction(const EActionVariations& InAction) const
         && WeaponControlNetComp->CheckAction(InAction);
 }
 
+bool UPersonAnimInstance::CheckAllActions(const EActionVariations A, const EActionVariations B) const
+{
+    return WeaponControlNetComp
+        && !(~(WeaponControlNetComp->CurrentActions) & uint8(A | B));
+}
+
+bool UPersonAnimInstance::CheckOneOfActions(const EActionVariations A, const EActionVariations B) const
+{
+    return WeaponControlNetComp
+        && WeaponControlNetComp->CurrentActions & uint8(A | B);
+}
+
+bool UPersonAnimInstance::CheckExceptActions(const EActionVariations A, const EActionVariations B) const
+{
+    return WeaponControlNetComp
+        && WeaponControlNetComp->CurrentActions & ~uint8(A | B);
+}
+
 void UPersonAnimInstance::UpdateBasicData(const FWeaponData& CurrentNewWeaponData)
 {
     PersonAnimations = CurrentNewWeaponData.PersonAnimations;
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Sounds   --- */
-
-void UPersonAnimInstance::PlaySurfaceSound(const TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>& iSoundsMap)
-{
-    if (PlayerOwner && iSoundsMap.Num())
-    {
-        FVector lLocation = PlayerOwner->GetActorLocation();
-        FHitResult lHitResult;
-
-        // Трассировка поверхности
-        if (UKismetSystemLibrary::LineTraceSingle(
-            GetWorld(),
-            lLocation,
-            lLocation - FVector(0.f, 0.f, 200.f),
-            ETraceTypeQuery::TraceTypeQuery1,
-            false,
-            TArray<AActor*>{PlayerOwner},
-            EDrawDebugTrace::Type::None,
-            lHitResult,
-            true))
-        {
-            // Поиск Звука из TMap
-            USoundBase* lSound = *iSoundsMap.Find(UGameplayStatics::GetSurfaceType(lHitResult));
-
-            if (!lSound)
-            {
-                // Поиск "резервного" Звука из TMap
-                lSound = *iSoundsMap.Find(EPhysicalSurface::SurfaceType_Default);
-            }
-
-            if (lSound)
-            {
-                // Воспроизвести звук
-                UGameplayStatics::PlaySoundAtLocation(GetWorld(), lSound, lHitResult.Location);
-            }
-        }
-    }
-}
-
-TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> UPersonAnimInstance::GetMapForSound(const UDataTable* SoundTable)
-{
-    if (SoundTable)
-    {
-        TArray<FSoundBySurfaceType*> lAllRows;
-
-        SoundTable->GetAllRows<FSoundBySurfaceType>("UPersonAnimInstance::GetMapForSound", lAllRows);
-
-        if (lAllRows.Num())
-        {
-            TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> lResult;
-
-            for (const FSoundBySurfaceType* lRow : lAllRows)
-            {
-                lResult.Add(EPhysicalSurface(lRow->SurfaceType), lRow->Sound);
-            }
-
-            return lResult;
-        }
-    }
-
-    return TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*>();
-}
-
-void UPersonAnimInstance::InitSounds()
-{
-    MapOfSurfaceSoundsWhenStep = GetMapForSound(SurfaceSoundsWhenStep);
-    MapOfSurfaceSoundsWhenLanding = GetMapForSound(SurfaceSoundsWhenLanding);
 }
 //--------------------------------------------------------------------------------------

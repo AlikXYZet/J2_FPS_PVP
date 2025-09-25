@@ -122,7 +122,6 @@ void APlayerCharacter::CleaningForLocally()
 {
     GetMesh()->SetVisibility(false);
     GetMesh()->SetCastHiddenShadow(true);
-    GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
 
     FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
 
@@ -358,7 +357,7 @@ TArray<FName> APlayerCharacter::GetBoneNamesInFPMesh() const
     if (FPMesh)
     {
         TArray<FName> lResult;
-        GetMesh()->GetBoneNames(lResult);
+        FPMesh->GetBoneNames(lResult);
         return lResult;
     }
 
