@@ -322,11 +322,11 @@ void UWeaponLocalController::UpdateCurrentActions()
         SettingActions & (uint8)EActionVariations::Block
         ? (uint8)EActionVariations::Block
 
-        // 0b 0000 100|
+        // 0b 0000 100~
         : SettingActions & (uint8)EActionVariations::Changing
         ? SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Changing)
 
-        // 0b 0000 010|
+        // 0b 0000 010~
         : SettingActions & (uint8)EActionVariations::Reloading
         ? SettingActions & uint8(EActionVariations::Aiming | EActionVariations::Reloading)
 
@@ -335,13 +335,17 @@ void UWeaponLocalController::UpdateCurrentActions()
 
     // PS: CurrentActions ограничен следующими значениями по порядку приоритета от наибольшего к меньшему:
     // 0b 1000 0000 - Блокировка Действий
-    // 0b 0000 100| - Действие "Смена" с отслеживанием "Прицеливания"
-    // 0b 0000 010| - Действие "Перезарядка" с отслеживанием "Прицеливания"
+    // 0b 0000 100~ - Действие "Смена" с отслеживанием "Прицеливания"
+    // 0b 0000 010~ - Действие "Перезарядка" с отслеживанием "Прицеливания"
     // 0b 0000 00~~ - Любые свободные действия ("Стрельба" и/или "Прицеливание")
 
     if (OldActions != GetCurrentActions())
     {
         WeaponControlNetComp->Server_SetCurrentActions(GetCurrentActions());
+
+        // FP: Вызов действия 'Block' может отключить несколько бит за раз, что приведёт к ошибке
+        // завершения других действий -- НЕ запустится вызов соответствующих методов 'Stop####()'.
+        // Однако, 'Block' мы пока НЕ используем (на данный момент).
 
         // Отключённый бит
         EActionVariations bDisabledBit = EActionVariations(OldActions & ~GetCurrentActions());
