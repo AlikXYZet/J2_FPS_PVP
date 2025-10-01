@@ -13,9 +13,6 @@
 #include "GameFramework/InputSettings.h"
 #include "Kismet/KismetMathLibrary.h"
 
-// Net:
-#include "Net/UnrealNetwork.h"
-
 // Interaction:
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Control/SmoothMovementComponent.h"
@@ -85,8 +82,6 @@ void UWeaponLocalController::BaseInit()
 
     if (PlayerOwner)
     {
-        CollisionParamsForTrace.AddIgnoredActor(PlayerOwner);
-
         WeaponControlNetComp = PlayerOwner->WeaponControlNetComp;
 
         if (!WeaponControlNetComp)
@@ -537,7 +532,7 @@ void UWeaponLocalController::StartShooting()
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
         this,
-        &UWeaponLocalController::ShootingWeapon,
+        &UWeaponLocalController::ShootingWeapons,
         GetCurrentWeaponData()->ShootingWeapon_Time,
         true,
         0.f); // Реагировать сразу
@@ -570,50 +565,53 @@ void UWeaponLocalController::StartChangeWeaponSlot()
 
 /* ---   Actions | Reaction   --- */
 
-void UWeaponLocalController::ShootingWeapon()
+void UWeaponLocalController::ShootingWeapons()
 {
-    if (GetCurrentWeaponData()->ProjectileType)
+    // Флаг проверки условий стрельбы
+    bool bChecker = false;
+
+    // Проверка
+    if (CurrentSlot->NumPreparedCartridges)
     {
-        // Флаг проверки условий стрельбы
-        bool bChecker = false;
+        // Уменьшение количества подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
+        --(CurrentSlot->NumPreparedCartridges);
+        bChecker = true;
+    }
+    else if (CurrentSlot->bIsWeaponLoaded)
+    {
+        // "Использование" заряженного Патрона
+        CurrentSlot->bIsWeaponLoaded = false;
+        bChecker = true;
+    }
 
-        // Проверка
-        if (CurrentSlot->NumPreparedCartridges)
-        {
-            // Уменьшение количества подготовленных Патронов в чём-либо (в магазине, обойме и т.п.)
-            --(CurrentSlot->NumPreparedCartridges);
-            bChecker = true;
-        }
-        else if (CurrentSlot->bIsWeaponLoaded)
-        {
-            // "Использование" заряженного Патрона
-            CurrentSlot->bIsWeaponLoaded = false;
-            bChecker = true;
-        }
+    // Результат
+    if (bChecker)
+    {
+        // Указатель на трансформацию какой-либо Направляющей
+        const FTransform* lGuidanceTransform = &CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
 
-        // Результат
-        if (bChecker)
-        {
-            const FTransform* lTransform = &CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
+        const FVector lStartLocation = lGuidanceTransform->GetLocation();
+        
+        const FVector lEndTraceLocation =
+            PlayerOwner->FPCamera->GetComponentTransform()
+            .TransformPosition(FVector(10000.f, 0.f, 0.f));
 
-            FVector lStartLocation = lTransform->GetLocation();
+        if (!GetCurrentWeaponData()->bUseHitscanMethod
+            && GetCurrentWeaponData()->ProjectileType)
+        {
             FRotator lRotator;
 
             if (bUseTracingToGuideShooting)
             {
                 FHitResult lHitResult;
 
-                FVector lEndTraceLocation =
-                    PlayerOwner->FPCamera->GetComponentTransform()
-                    .TransformPosition(FVector(10000.f, 0.f, 0.f));
-
                 bool bCheckTraceResult =
                     GetWorld()->LineTraceSingleByChannel(
                         lHitResult,
                         PlayerOwner->FPCamera->GetComponentLocation(),
                         lEndTraceLocation,
-                        ECollisionChannel::ECC_Visibility,
-                        CollisionParamsForTrace);
+                        ECC_Projectiles,
+                        PlayerOwner->CollisionParamsForTrace);
 
                 lRotator = UKismetMathLibrary::FindLookAtRotation(
                     lStartLocation,
@@ -623,23 +621,25 @@ void UWeaponLocalController::ShootingWeapon()
             }
             else
             {
-                lRotator = lTransform->Rotator();
+                lRotator = lGuidanceTransform->Rotator();
             }
 
-            WeaponControlNetComp->DropProjectile(
-                lStartLocation,
-                lRotator);
-
-            lTransform = &CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
-
-            WeaponControlNetComp->DropSleeve(
-                lTransform->GetLocation(),
-                lTransform->Rotator());
+            WeaponControlNetComp->DropProjectile(lStartLocation, lRotator);
         }
         else
         {
-            SetReloading();
+            WeaponControlNetComp->TraceProjectile(lStartLocation, lEndTraceLocation);
         }
+
+        lGuidanceTransform = &CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
+
+        WeaponControlNetComp->DropSleeve(
+            lGuidanceTransform->GetLocation(),
+            lGuidanceTransform->Rotator());
+    }
+    else
+    {
+        SetReloading();
     }
 }
 

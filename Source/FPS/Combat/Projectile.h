@@ -71,6 +71,11 @@ public:
         Category = "Components",
         meta = (AllowPrivateAccess = "true"))
     UNiagaraComponent* NiagaraFXComponent = nullptr;
+    //-------------------------------------------
+
+
+
+    /* ---   Non-scene Components   --- */
 
     // Компонент перемещения Снаряда
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -93,40 +98,6 @@ protected:
 
 public:
 
-    /* ---   Base   --- */
-
-    /** Событие, когда этот актер натыкается на блокирующий объект или блокирует другого актера, который натыкается на него */
-    virtual void NotifyHit(
-        class UPrimitiveComponent* MyComp,
-        AActor* Other,
-        class UPrimitiveComponent* OtherComp,
-        bool bSelfMoved,
-        FVector HitLocation,
-        FVector HitNormal,
-        FVector NormalImpulse,
-        const FHitResult& Hit) override;
-    //-------------------------------------------
-
-
-
-    /* ---   GAS   --- */
-
-    // Эффект поражения данным снарядом
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Projectile|GAS")
-    TSubclassOf<UGameplayEffect> DamageEffect;
-
-    //
-
-    /** Сохранить указатель на Компонент-подстрекатель, что вызывает эффект поражения данным снарядом */
-    FORCEINLINE void SetInstigator(UAbilitySystemComponent* iInstigatorASC)
-    {
-        InstigatorASC = iInstigatorASC;
-    };
-    //-------------------------------------------
-
-
-
 private:
 
     /* ---   Base   --- */
@@ -143,13 +114,5 @@ private:
         if (NiagaraFXComponent && !NiagaraFXComponent->GetAsset())
             NiagaraFXComponent->DestroyComponent();
     };
-    //-------------------------------------------
-
-
-
-    /* ---   GAS   --- */
-
-    // Компонент-подстрекатель, что вызывает эффект поражения данным снарядом
-    UAbilitySystemComponent* InstigatorASC;
     //-------------------------------------------
 };

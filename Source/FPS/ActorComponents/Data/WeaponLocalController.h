@@ -54,7 +54,6 @@ class UDataTable;
 // Interaction:
 class APlayerCharacter;
 class AFirstPersonWeaponFrame;
-class AProjectile;
 class AWeaponFrame;
 //--------------------------------------------------------------------------------------
 
@@ -336,14 +335,6 @@ private:
 
     /* ---   Direction Fire   --- */
 
-    // Флаг: Использовать трассировку для направления стрельбы
-    bool bUseTracingToGuideShooting = true;
-
-    // Параметры Коллизии для Трассировки
-    FCollisionQueryParams CollisionParamsForTrace;
-
-    //
-
     /** Перекрепить оружие для положения Прицеливания */
     void ReAttachWeaponForAiming();
 
@@ -369,9 +360,6 @@ private:
 
     /* ---   Actions | Data   --- */
 
-    // Отслеживание задания Действий Игрока
-    uint8 SettingActions = 0;
-
     // Таймер для контроля Действий
     FTimerHandle Timer_ActionControl;
 
@@ -384,11 +372,6 @@ private:
 
 
     /* ---   Actions | Set   --- */
-
-    // Номер нового выбранного слота
-    uint8 NewSlotNum = 0;
-
-    //
 
     /** Управление Оружием: Прицеливаться */
     SET_ACTION(Aiming);
@@ -485,8 +468,8 @@ private:
 
     /* ---   Actions | Reaction   --- */
 
-    /** Запуск Действия: Стрелять */
-    void ShootingWeapon();
+    /** Запуск Действия: Стрельба */
+    void ShootingWeapons();
 
     /** Запуск Действия: Сменить Слот Оружия */
     void ChangeWeaponSlot();
@@ -509,6 +492,20 @@ private:
 
     /** Инициализация контроля Скорости */
     void InitSpeedControl() override;
+    //-------------------------------------------
+
+
+
+    /* ---   Booleanas   --- */
+
+    // Отслеживание задания Действий Игрока
+    uint8 SettingActions = 0;
+
+    // Номер нового выбранного слота
+    uint8 NewSlotNum = 0;
+
+    // Флаг: Использовать трассировку для направления стрельбы
+    bool bUseTracingToGuideShooting = true;
     //-------------------------------------------
 
 
@@ -573,10 +570,12 @@ private:
 #endif // WITH_EDITOR
     //===========================================
 };
+//--------------------------------------------------------------------------------------
 
 
 
 /* ---   undef   --- */
 
-#undef DELEGATE_METHOD_Broadcast_h
+#undef SET_ACTION
+#undef RESET_ACTION
 //--------------------------------------------------------------------------------------

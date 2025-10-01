@@ -16,6 +16,13 @@
 
 
 
+/* ---   Constructors   --- */
+
+UFPS_GameInstance* UFPS_GameInstance::CurrentGameInstance = nullptr;
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Base   --- */
 
 void UFPS_GameInstance::Init()

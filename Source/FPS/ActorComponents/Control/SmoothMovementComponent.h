@@ -98,12 +98,6 @@ public:
 
     /* ---   Actor Movement   --- */
 
-    /* Флаг использования Относительной Локации, а не Мировой
-    @note   НЕ корректно работает, если у компонента-владельца изменена Ротация */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Settings|Movement")
-    bool bUseRelativeLocation = false;
-
     // Максимальная скорость перемещения
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings|Movement|Speed")
@@ -114,11 +108,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings|Movement|Speed")
     float MinStep = 0.5f;
-
-    // Флаг контроля плавности скорости на старте движения
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Settings|Movement|Acceleration")
-    bool bControlSpeedAtStart = false;
 
     // Коэффициент ускорения скорости перемещения в начале пути
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -169,24 +158,47 @@ private:
 
     /* ---   Actor Movement   --- */
 
-    // Флаг контроля перемещения
-    bool bIsMovingToNewLocation = false;
-
     // Стартовая локация (начало) перемещения
     FVector StartLocation;
 
     // Конечная локация перемещения
     FVector EndLocation;
 
-    // Флаг срабатывания Делегата OnApproach (На Приближении)
-    bool bApproachWork = false;
-
-    // Флаг срабатывания Делегата OnSeparation (На Отдалении)
-    bool bSeparationWork = false;
-
     //
 
     /** Расчёт передвижения на каждый кадр */
     void MovementForTick(const float& DeltaTime);
+    //-------------------------------------------
+
+
+
+    /* ---   Booleanas   --- */
+
+public:
+
+    /* Флаг использования Относительной Локации, а не Мировой
+    @note   НЕ корректно работает, если у компонента-владельца изменена Ротация */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Movement")
+    uint8 bUseRelativeLocation : 1;
+
+    // Флаг контроля плавности скорости на старте движения
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Movement|Acceleration",
+        meta = (DisplayPriority = -1))
+    uint8 bControlSpeedAtStart : 1;
+
+
+
+private:
+
+    // Флаг контроля перемещения
+    uint8 bIsMovingToNewLocation : 1;
+
+    // Флаг срабатывания Делегата OnApproach (На Приближении)
+    uint8 bApproachWork : 1;
+
+    // Флаг срабатывания Делегата OnSeparation (На Отдалении)
+    uint8 bSeparationWork : 1;
     //-------------------------------------------
 };

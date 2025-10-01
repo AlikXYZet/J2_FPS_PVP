@@ -102,17 +102,6 @@ public:
 
     /* ---   Actor Rotate   --- */
 
-    /* Флаг использования Относительной Ротации, а не Мировой
-    @note   НЕ корректно работает, если у компонента-владельца изменена Ротация */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Settings|Rotation")
-    bool bUseRelativeRotation = false;
-
-    // Блокировка направления ротации
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Settings|Rotation")
-    ERotationVariations LockRotation = ERotationVariations::NotLock;
-
     // Максимальная скорость вращения
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings|Rotation|Speed")
@@ -123,11 +112,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings|Rotation|Speed")
     float MinStep = 0.5f;
-
-    // Флаг контроля плавности скорости на старте вращения
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Settings|Rotation|Acceleration")
-    bool bControlSpeedAtStart = false;
 
     // Коэффициент ускорения скорости вращения в начале пути
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -181,9 +165,6 @@ private:
 
     /* ---   Actor Rotate   --- */
 
-    // Флаг контроля вращения
-    bool bIsRotatedToNewRotation = false;
-
     // Стартовая ротация (начало) вращения
     FRotator StartRotation;
 
@@ -194,5 +175,37 @@ private:
 
     /** Расчёт вращения на каждый кадр */
     void RotationForTick(const float& DeltaTime);
+    //-------------------------------------------
+
+
+
+    /* ---   Booleanas   --- */
+
+public:
+
+    // Блокировка направления ротации
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Rotation")
+    ERotationVariations LockRotation = ERotationVariations::NotLock;
+
+    /* Флаг использования Относительной Ротации, а не Мировой
+    @note   НЕ корректно работает, если у компонента-владельца изменена Ротация */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Rotation",
+        meta = (DisplayPriority = -1))
+    uint8 bUseRelativeRotation : 1;
+
+    // Флаг контроля плавности скорости на старте вращения
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Settings|Rotation|Acceleration",
+        meta = (DisplayPriority = -1))
+    uint8 bControlSpeedAtStart : 1;
+
+
+
+private:
+
+    // Флаг контроля вращения
+    uint8 bIsRotatedToNewRotation : 1;
     //-------------------------------------------
 };

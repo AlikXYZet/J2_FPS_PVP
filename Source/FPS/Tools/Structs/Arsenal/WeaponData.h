@@ -20,9 +20,14 @@
 
 /* ---   Pre-declaration of classes   --- */
 
+// GAS:
+class UGameplayEffect;
+
 // Interaction:
 class AProjectile;
 class AFirstPersonWeaponFrame;
+class UParticleSystem;
+class UNiagaraSystem;
 //--------------------------------------------------------------------------------------
 
 
@@ -73,12 +78,6 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Dropping   --- */
 
-    // Тип используемого Снаряда
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
-        Category = "Dropping",
-        meta = (BlueprintBaseOnly))
-    TSubclassOf<AProjectile> ProjectileType;
-
     // Тип выпадающей Гильзы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
@@ -90,6 +89,28 @@ struct FWeaponData : public FTableRowBase
         Category = "Dropping",
         meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable))
     TSubclassOf<AActor> StorageType;
+    //-------------------------------------------
+
+
+
+    /* ---   Dropping   --- */
+
+    // Эффект поражения данным снарядом
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
+        Category = "Dropping: Projectile")
+    TSubclassOf<UGameplayEffect> DamageEffect;
+
+    // Тип используемого Снаряда
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
+        Category = "Dropping: Projectile",
+        meta = (BlueprintBaseOnly, EditCondition = "!bUseHitscanMethod"))
+    TSubclassOf<AProjectile> ProjectileType;
+
+    // FX Трассировки снаряда
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Dropping: Projectile",
+        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable, EditCondition = "bUseHitscanMethod"))
+    TSubclassOf<AActor> FXTracer = nullptr;
     //-------------------------------------------
 
 
@@ -126,6 +147,17 @@ struct FWeaponData : public FTableRowBase
         Category = "Weapon Animations",
         meta = (ShowOnlyInnerProperties))
     FWeaponAnimData WeaponAnimations;
+    //-------------------------------------------
+
+
+
+    /* ---   Booleanas   --- */
+
+    // Флаг: Использовать ли Hitscan-метод расчёта попадания
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Dropping: Projectile",
+        meta = (DisplayAfter = "DamageEffect"))
+    uint8 bUseHitscanMethod : 1;
     //-------------------------------------------
 };
 //--------------------------------------------------------------------------------------

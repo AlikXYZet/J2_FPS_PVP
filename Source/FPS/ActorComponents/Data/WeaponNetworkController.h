@@ -251,11 +251,6 @@ private:
 
     /* ---   Actions | Data   --- */
 
-    // Параметр создания выбрасываемых Акторов посредством метода DropActor()
-    FActorSpawnParameters SpawnParameters;
-
-    //
-
     /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
         void Server_SetCurrentActions(const uint8& Value);
@@ -301,12 +296,37 @@ private:
     void DropProjectile(const FVector& Location, const FRotator& Rotation);
 
     /** Server: Выбросить Снаряд с указанными Локацией и Ротацией */
-    UFUNCTION(Server, Reliable) // Принудительно Надёжный
-        void Server_DropProjectile(const FVector& Location, const FRotator& Rotation);
+    UFUNCTION(Server, Reliable)
+    void Server_DropProjectile(const FVector& Location, const FRotator& Rotation);
 
     /** Multicast: Выбросить Снаряд с указанными Локацией и Ротацией */
-    UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
-        void Multicast_DropProjectile(const FVector& Location, const FRotator& Rotation);
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_DropProjectile(const FVector& Location, const FRotator& Rotation);
+
+
+    /** Провести Трассировку Снаряда с указанными Локациями и Визуализацией */
+    void TraceProjectile(const FVector& StartLocation, const FVector& EndLocation);
+
+    /** Провести Трассировку Снаряда с указанными Локациями и Визуализацией */
+    UFUNCTION(Server, Reliable)
+    void Server_TraceProjectile(const FVector& StartLocation, const FVector& EndLocation);
+
+    /** Провести Трассировку Снаряда с указанными Локациями и Визуализацией */
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_TraceProjectile(const FVector& Location, const FRotator& Rotation);
+
+
+    /** Метод Реакции на прикосновение снаряда */
+    UFUNCTION()
+    void OnProjectileHitForServer(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+
+    /** Метод Реакции на прикосновение снаряда */
+    UFUNCTION()
+    void OnProjectileHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+
+    /** Передача урона объекту по результатам касания (посредством коллизии или трейсов) */
+    void ProjectileDamage(const FHitResult& Hit);
+
 
     /** Выбросить Гильзу с указанными Локацией и Ротацией */
     void DropSleeve(const FVector& Location, const FRotator& Rotation);
@@ -334,6 +354,17 @@ private:
     /** Multicast: Выбросить Накопителя с указанными Локацией и Ротацией */
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_DropStorage(const FVector& Location, const FRotator& Rotation);
+    //-------------------------------------------
+
+
+
+    /* ---   Statics   --- */
+
+    // Параметр Принудительного создания выбрасываемых Акторов посредством метода DropActor()
+    static FActorSpawnParameters SpawnParameters;
+
+    // Массив Типов Объектов, что отслеживаются Hitscan-методом
+    static TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypesForHitscan;
     //-------------------------------------------
 
 

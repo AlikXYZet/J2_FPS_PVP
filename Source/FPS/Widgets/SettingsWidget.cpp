@@ -114,30 +114,28 @@ void USettingsWidget::InitWidgetData()
 
 void USettingsWidget::UpdateSounds()
 {
-    UFPS_GameInstance* lGameInstance = Cast<UFPS_GameInstance>(GetGameInstance());
-
-    if (lGameInstance
-        && lGameInstance->SoundMix)
+    if (UFPS_GameInstance::CurrentGameInstance
+        && UFPS_GameInstance::CurrentGameInstance->SoundMix)
     {
-        UGameplayStatics::PushSoundMixModifier(GetWorld(), lGameInstance->SoundMix);
+        UGameplayStatics::PushSoundMixModifier(GetWorld(), UFPS_GameInstance::CurrentGameInstance->SoundMix);
 
-        if (lGameInstance->MusicSoundClass)
+        if (UFPS_GameInstance::CurrentGameInstance->MusicSoundClass)
         {
             UGameplayStatics::SetSoundMixClassOverride(
                 GetWorld(),
-                lGameInstance->SoundMix,
-                lGameInstance->MusicSoundClass,
+                UFPS_GameInstance::CurrentGameInstance->SoundMix,
+                UFPS_GameInstance::CurrentGameInstance->MusicSoundClass,
                 SaveSettings->SettingsData.OverallSoundsVolume * SaveSettings->SettingsData.MusicSoundsVolume,
                 1.f,
                 0.f);
         }
 
-        if (lGameInstance->EffectsSoundClass)
+        if (UFPS_GameInstance::CurrentGameInstance->EffectsSoundClass)
         {
             UGameplayStatics::SetSoundMixClassOverride(
                 GetWorld(),
-                lGameInstance->SoundMix,
-                lGameInstance->MusicSoundClass,
+                UFPS_GameInstance::CurrentGameInstance->SoundMix,
+                UFPS_GameInstance::CurrentGameInstance->MusicSoundClass,
                 SaveSettings->SettingsData.OverallSoundsVolume * SaveSettings->SettingsData.EffectSoundsVolume,
                 1.f,
                 0.f);

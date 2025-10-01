@@ -20,6 +20,13 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 
 
 
+/* ---   Collision Channels   --- */
+
+#define ECC_Projectiles ECC_GameTraceChannel1
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   UE_LOG   --- */
 
 /** Макрос, который выводит отформатированное сообщение в журнал под категорией 'LogFPS'

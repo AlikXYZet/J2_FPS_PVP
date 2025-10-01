@@ -26,7 +26,6 @@ class USmoothRotationComponent;
 
 // Interaction:
 class UWeaponLocalController;
-class AProjectile;
 class APlayerCharacter;
 class AFPS_PlayerController;
 //--------------------------------------------------------------------------------------
@@ -159,9 +158,6 @@ private:
 
     // Контроллер Игрока-Владельца данного Оружия
     AFPS_PlayerController* ParentPlayerController = nullptr;
-
-    // Параметры Коллизии для Трассировки
-    FCollisionQueryParams CollisionParamsForTrace;
 
     //
 

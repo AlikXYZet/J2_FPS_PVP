@@ -6,10 +6,6 @@
 // UE:
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-
-// GAS:
-#include "AbilitySystemComponent.h"
-#include "AbilitySystemInterface.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -73,36 +69,5 @@ void AProjectile::BeginPlay()
     Super::BeginPlay();
 
     Cleaning();
-}
-
-void AProjectile::NotifyHit(
-    UPrimitiveComponent* MyComp,
-    AActor* Other,
-    UPrimitiveComponent* OtherComp,
-    bool bSelfMoved,
-    FVector HitLocation,
-    FVector HitNormal,
-    FVector NormalImpulse,
-    const FHitResult& Hit)
-{
-    Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
-
-    if (HasAuthority()
-        && Other
-        && DamageEffect
-        && InstigatorASC)
-    {
-        IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Other);
-        if (TargetInterface)
-        {
-            InstigatorASC->ApplyGameplayEffectToTarget(
-                DamageEffect.GetDefaultObject(),
-                TargetInterface->GetAbilitySystemComponent(),
-                0,
-                FGameplayEffectContextHandle());
-        }
-    }
-
-    Destroy();
 }
 //--------------------------------------------------------------------------------------

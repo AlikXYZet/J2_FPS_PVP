@@ -29,6 +29,25 @@ class FPS_API UFPS_GameInstance : public UGameInstance
 
 public:
 
+    /* ---   Constructors   --- */
+
+    // Общедоступный указатель на текущий экземпляр GameInstance
+    // @note    Предположительно, существует всегда (Не меняется на другой Тип в настройках Проекта)
+    static UFPS_GameInstance* CurrentGameInstance;
+
+    //
+
+    // Sets default values for this component's properties
+    UFPS_GameInstance()
+    {
+        CurrentGameInstance = this;
+    };
+    //-------------------------------------------
+
+
+
+public:
+
     /* ---   Base   --- */
 
     /** Инициализация данных GameInstance */
@@ -47,12 +66,12 @@ public:
     // Микшер громкости для Музыки
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings System: Sounds")
-    USoundClass*  MusicSoundClass = nullptr;
+    USoundClass* MusicSoundClass = nullptr;
 
     // Микшер громкости для Эффектов
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Settings System: Sounds")
-    USoundClass*  EffectsSoundClass = nullptr;
+    USoundClass* EffectsSoundClass = nullptr;
     //-------------------------------------------
 
 

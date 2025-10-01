@@ -195,8 +195,6 @@ void AFirstPersonWeaponFrame::InitDirectionFireData()
         ParentPlayerCharacter = Cast<APlayerCharacter>(GetAttachParentActor());
         if (ParentPlayerCharacter)
         {
-            CollisionParamsForTrace.AddIgnoredActor(ParentPlayerCharacter);
-
             ParentPlayerController = ParentPlayerCharacter->GetController<AFPS_PlayerController>();
             if (!ParentPlayerController)
             {

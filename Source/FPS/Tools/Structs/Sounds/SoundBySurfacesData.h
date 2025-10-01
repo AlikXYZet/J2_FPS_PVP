@@ -17,7 +17,7 @@
 /* ---   Pre-declaration of classes   --- */
 
 // Interaction:
-class AProjectile;
+//class ;
 //--------------------------------------------------------------------------------------
 
 

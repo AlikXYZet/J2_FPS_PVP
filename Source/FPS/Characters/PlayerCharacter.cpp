@@ -50,6 +50,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
     /* ---   Components   --- */
 
+    // Root Capsule Component
+    GetCapsuleComponent()->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
+
     // Главный Мешь образа
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
@@ -103,6 +106,8 @@ void APlayerCharacter::BeginPlay()
     if (IsLocallyControlled())
     {
         CleaningForLocally();
+
+        CollisionParamsForTrace.AddIgnoredActor(this);
 
         InitAbilitySystemComp();
         InitSpeedControl();

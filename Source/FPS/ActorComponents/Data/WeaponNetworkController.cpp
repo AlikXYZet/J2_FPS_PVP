@@ -6,8 +6,16 @@
 // Macros:
 #include "FPS/Tools/GlobalMacros.h"
 
+// UE:
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+
 // Net:
 #include "Net/UnrealNetwork.h"
+
+// GAS:
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 
 // Interaction:
 #include "FPS/Characters/PlayerCharacter.h"
@@ -33,6 +41,33 @@ void UWeaponNetworkController::Multicast_##PropertyName##_Implementation() \
 
 
 
+/* ---   Statics   --- */
+
+// Замена конструктора с требуемым параметром для переменной 'UWeaponNetworkController::SpawnParameters'
+static FActorSpawnParameters GetSpawnParameters()
+{
+    FActorSpawnParameters lResult;
+    lResult.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    return lResult;
+
+    // PS: У 'FActorSpawnParameters' нет перегруженных конструкторов, поэтому используется данный метод
+};
+
+// Параметр создания выбрасываемых Акторов посредством метода DropActor()
+FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawnParameters();
+
+// Массив Типов Объектов, что отслеживаются Hitscan-методом
+TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan =
+TArray<TEnumAsByte<EObjectTypeQuery>>
+{
+    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn),
+    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Vehicle),
+    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Destructible)
+};
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Constructors   --- */
 
 UWeaponNetworkController::UWeaponNetworkController()
@@ -46,13 +81,6 @@ UWeaponNetworkController::UWeaponNetworkController()
 
     // Компонент реплицируем по умолчанию
     SetIsReplicatedByDefault(true);
-    //-------------------------------------------
-
-
-    /* ---   Actions | Data   --- */
-
-    // Параметр создания: Всегда появляется
-    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -270,15 +298,112 @@ void UWeaponNetworkController::Server_DropProjectile_Implementation(const FVecto
 
 void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    AProjectile* Projectile = DropActor<AProjectile>(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
+    AProjectile* lProjectile = DropActor<AProjectile>(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
 
-    if (Projectile)
+    if (lProjectile)
     {
-        Projectile->SetInstigator(PlayerOwner->GetAbilitySystemComponent());
+        if (PlayerOwner->HasAuthority())
+        {
+            if (GetCurrentWeaponData()->DamageEffect)
+            {
+                lProjectile->OnActorHit.AddDynamic(this, &UWeaponNetworkController::OnProjectileHitForServer);
+            }
+            else
+            {
+                FPS_LOG(Error, "'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
+            }
+        }
+        else
+        {
+            lProjectile->OnActorHit.AddDynamic(this, &UWeaponNetworkController::OnProjectileHit);
+        }
     }
 
     OnShootingWeapon.Broadcast(*CurrentWeaponData);
 }
+
+
+void UWeaponNetworkController::TraceProjectile(const FVector& StartLocation, const FVector& EndLocation)
+{
+    Server_TraceProjectile(StartLocation, EndLocation);
+}
+
+void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVector& StartLocation, const FVector& EndLocation)
+{
+    if (GetCurrentWeaponData()->DamageEffect)
+    {
+        TArray<FHitResult> lHitResult;
+
+        UKismetSystemLibrary::LineTraceMultiForObjects(
+            GetWorld(),
+            StartLocation,
+            EndLocation,
+            ObjectTypesForHitscan,
+            false,
+            TArray<AActor*>{PlayerOwner},
+            EDrawDebugTrace::None,
+            lHitResult,
+            true);
+
+        for (FHitResult& lHit : lHitResult)
+        {
+            ProjectileDamage(lHit);
+        }
+    }
+    else
+    {
+        FPS_LOG(Error, "'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
+    }
+
+    FRotator lRotator = UKismetMathLibrary::FindLookAtRotation(StartLocation, EndLocation);
+
+    Multicast_TraceProjectile(StartLocation, lRotator);
+}
+
+void UWeaponNetworkController::Multicast_TraceProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
+{
+    if (GetCurrentWeaponData()->FXTracer)
+    {
+        DropActor(GetCurrentWeaponData()->FXTracer.Get(), Location, Rotation);
+    }
+
+    OnShootingWeapon.Broadcast(*CurrentWeaponData);
+}
+
+
+void UWeaponNetworkController::OnProjectileHitForServer(
+    AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
+{
+    ProjectileDamage(Hit);
+
+    OnProjectileHit(SelfActor, OtherActor, NormalImpulse, Hit);
+}
+
+void UWeaponNetworkController::OnProjectileHit(
+    AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
+{
+    if (SelfActor)
+    {
+        SelfActor->Destroy();
+    }
+}
+
+void UWeaponNetworkController::ProjectileDamage(const FHitResult& Hit)
+{
+    if (Hit.Actor.IsValid())
+    {
+        IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Hit.Actor);
+        if (TargetInterface)
+        {
+            PlayerOwner->AbilitySystemComp->ApplyGameplayEffectToTarget(
+                GetCurrentWeaponData()->DamageEffect.GetDefaultObject(),
+                TargetInterface->GetAbilitySystemComponent(),
+                0,
+                FGameplayEffectContextHandle());
+        }
+    }
+}
+
 
 void UWeaponNetworkController::DropSleeve(const FVector& Location, const FRotator& Rotation)
 {

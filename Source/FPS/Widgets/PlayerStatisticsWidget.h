@@ -113,12 +113,12 @@ private:
     // Сортированный массив указателей на Статистики Игроков
     TArray<const FPlayerStatisticsData*> SortedPlayerStatistics;
 
-    // Переменная типа сортировки
-    EPlayerStatisticsSortingType SortType = EPlayerStatisticsSortingType::NameUp;
-
     // Предикат сортировки по указателю
     // @note    Переменная-Предикат создан для уменьшения времени сортировки
     TSortingPredicate SortingPredicate = GetSortingPredicate(SortType);
+
+    // Переменная типа сортировки
+    EPlayerStatisticsSortingType SortType = EPlayerStatisticsSortingType::NameUp;
 
     //
 
