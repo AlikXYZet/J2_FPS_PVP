@@ -8,6 +8,9 @@
 // Base:
 #include "GameFramework/GameState.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // Structs:
 #include "FPS/Tools/Structs/Statistics/PlayerStatisticsData.h"
 
@@ -20,8 +23,7 @@
 /* ---   Pre-declaration of classes   --- */
 
 // Interaction:
-class AFPS_GameMode;
-class APlayerCharacter;
+//class ;
 //--------------------------------------------------------------------------------------
 
 
@@ -36,6 +38,38 @@ public:
     /* ---   Constructors   --- */
 
     AFPS_GameState();
+
+    ~AFPS_GameState()
+    {
+        CurrentGameState = nullptr;
+    };
+    //-------------------------------------------
+
+
+
+public:
+
+    /* ---   Statics   --- */
+
+    // Общедоступный указатель на текущий экземпляр класса 'AFPS_GameState'
+    // @note    Используется для уменьшения зависимостей и использования излишних функций
+    //          Например, функций 'Cast<>' и методов Инициализации в других классах
+    static AFPS_GameState* CurrentGameState;
+
+    //
+
+    /** Метод проверки валидности статического указателя 'Current Game State' */
+    FORCEINLINE static bool IsValidStaticPointer()
+    {
+        if (!CurrentGameState)
+        {
+            FPS_LOG_Empty(Error,
+                "Current GameState is NOT 'AFPS_GameState' class. "
+                "See Settings of current 'Game Mode'");
+        }
+
+        return bool(CurrentGameState);
+    };
     //-------------------------------------------
 
 
@@ -61,7 +95,7 @@ private:
 
     /* ---   friends   --- */
 
-    friend AFPS_GameMode;
+    friend class AFPS_GameMode;
     friend class UPlayerStatisticsWidget;
     //-------------------------------------------
 };

@@ -8,6 +8,9 @@
 // Base:
 #include "Engine/GameInstance.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // Generated:
 #include "FPS_GameInstance.generated.h"
 //--------------------------------------------------------------------------------------
@@ -31,12 +34,6 @@ public:
 
     /* ---   Constructors   --- */
 
-    // Общедоступный указатель на текущий экземпляр GameInstance
-    // @note    Предположительно, существует всегда (Не меняется на другой Тип в настройках Проекта)
-    static UFPS_GameInstance* CurrentGameInstance;
-
-    //
-
     // Sets default values for this component's properties
     UFPS_GameInstance()
     {
@@ -52,6 +49,31 @@ public:
 
     /** Инициализация данных GameInstance */
     virtual void Init() override;
+    //-------------------------------------------
+
+
+
+    /* ---   Statics   --- */
+
+    // Общедоступный указатель на текущий экземпляр класса 'UFPS_GameInstance'
+    // @note    Используется для уменьшения зависимостей и использования излишних функций
+    //          Например, функций 'Cast<>' и методов Инициализации в других классах
+    static UFPS_GameInstance* CurrentGameInstance;
+
+    //
+
+    /** Метод проверки валидности статического указателя 'Current Game Instance' */
+    FORCEINLINE static bool IsValidStaticPointer()
+    {
+        if (!CurrentGameInstance)
+        {
+            FPS_LOG_Empty(Error,
+                "Current GameInstance is NOT 'UFPS_GameInstance' class. "
+                "See 'Project Settings'/'Maps & Modes'/'Game Instance Class'");
+        }
+
+        return bool(CurrentGameInstance);
+    };
     //-------------------------------------------
 
 

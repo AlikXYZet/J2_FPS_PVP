@@ -29,6 +29,8 @@ void USettingsWidget::NativeOnInitialized()
 {
     InitWidgetData();
 
+    UFPS_GameInstance::IsValidStaticPointer();
+
     Super::NativeOnInitialized();
 }
 
@@ -114,8 +116,7 @@ void USettingsWidget::InitWidgetData()
 
 void USettingsWidget::UpdateSounds()
 {
-    if (UFPS_GameInstance::CurrentGameInstance
-        && UFPS_GameInstance::CurrentGameInstance->SoundMix)
+    if (UFPS_GameInstance::CurrentGameInstance->SoundMix)
     {
         UGameplayStatics::PushSoundMixModifier(GetWorld(), UFPS_GameInstance::CurrentGameInstance->SoundMix);
 

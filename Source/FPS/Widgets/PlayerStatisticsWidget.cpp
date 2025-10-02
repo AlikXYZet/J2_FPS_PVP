@@ -59,22 +59,21 @@ const FPlayerStatisticsData UPlayerStatisticsWidget::GetIndexData(const int32& I
 
 void UPlayerStatisticsWidget::InitStatisticsData()
 {
-    AFPS_GameState* lGS = GetWorld()->GetGameState<AFPS_GameState>();
-    if (lGS)
+    if (AFPS_GameState::CurrentGameState)
     {
-        FPlayerStatisticsArray* lPSA = &lGS->PlayersStatistics;
-        lPSA->OnChangingNumbers.AddDynamic(this, &UPlayerStatisticsWidget::RefreshStatisticsData);
-        lPSA->OnChangingArrayData.AddDynamic(this, &UPlayerStatisticsWidget::SortStatisticsData);
+        FPlayerStatisticsArray* lPSArray = &AFPS_GameState::CurrentGameState->PlayersStatistics;
+        lPSArray->OnChangingNumbers.AddDynamic(this, &UPlayerStatisticsWidget::RefreshStatisticsData);
+        lPSArray->OnChangingArrayData.AddDynamic(this, &UPlayerStatisticsWidget::SortStatisticsData);
 
-        CurrentPlayerStatistics = &lPSA->Items;
+        CurrentPlayerStatistics = &lPSArray->Items;
 
         RefreshStatisticsData(CurrentPlayerStatistics->Num());
     }
     else
     {
         FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),
-            GetWorld()->GetGameState<AGameStateBase>()
-            ? *GetWorld()->GetGameState<AGameStateBase>()->GetFName().ToString()
+            GetWorld()->GetGameState()
+            ? *GetWorld()->GetGameState()->GetFName().ToString()
             : *FString("None"));
     }
 }

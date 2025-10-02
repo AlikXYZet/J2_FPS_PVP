@@ -50,9 +50,9 @@ bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData&
 
             OnZeroHealth.Broadcast();
 
-            if (AFPS_GameMode* lGameMode = GetWorld()->GetAuthGameMode<AFPS_GameMode>())
+            if (AFPS_GameMode::CurrentGameMode)
             {
-                lGameMode->DestructionRegistration(Data.Target, Data.EffectSpec);
+                AFPS_GameMode::CurrentGameMode->DestructionRegistration(Data.Target, Data.EffectSpec);
             }
         }
     }

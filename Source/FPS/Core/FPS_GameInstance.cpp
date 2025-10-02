@@ -3,9 +3,6 @@
 // Base:
 #include "FPS_GameInstance.h"
 
-// Macros:
-#include "FPS/Tools/GlobalMacros.h"
-
 // UE:
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/GameUserSettings.h"
@@ -16,8 +13,9 @@
 
 
 
-/* ---   Constructors   --- */
+/* ---   Statics   --- */
 
+// Общедоступный указатель на текущий экземпляр GameInstance
 UFPS_GameInstance* UFPS_GameInstance::CurrentGameInstance = nullptr;
 //--------------------------------------------------------------------------------------
 

@@ -3,15 +3,20 @@
 // Base:
 #include "FPS_GameMode.h"
 
-// Macros:
-#include "FPS/Tools/GlobalMacros.h"
-
 // UE:
 #include "Kismet/GameplayStatics.h"
 
 // Interaction:
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Interactive/AttributedActor.h"
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Statics   --- */
+
+// Общедоступный указатель на текущий экземпляр класса 'AFPS_GameMode'
+AFPS_GameMode* AFPS_GameMode::CurrentGameMode = nullptr;
 //--------------------------------------------------------------------------------------
 
 
@@ -35,16 +40,16 @@ void AFPS_GameMode::BeginPlay()
 
 const AFPS_GameState* AFPS_GameMode::BP_GetFPSGameState() const
 {
-    return GetFPSGameState();
+    return AFPS_GameState::CurrentGameState;
 }
 
 void AFPS_GameMode::BaseInit()
 {
-    if (!GetGameState<AFPS_GameState>())
+    if (!AFPS_GameState::IsValidStaticPointer())
     {
-        FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),   
-            GetGameState<AGameStateBase>()
-            ? *GetGameState<AGameStateBase>()->GetFName().ToString()
+        FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),
+            GameState
+            ? *GameState->GetFName().ToString()
             : *FString("None"));
     }
 }

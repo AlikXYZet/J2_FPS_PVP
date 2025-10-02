@@ -32,7 +32,7 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 /** Макрос, который выводит отформатированное сообщение в журнал под категорией 'LogFPS'
 @param  Verbosity - Уровень информации (Error, Warning и др.)
 @param  Format - Формат текста */
-#define FPS_LOG_Empty(Verbosity, Format, ...) UE_LOG(LogFPS, Verbosity, Format, ##__VA_ARGS__)
+#define FPS_LOG_Empty(Verbosity, Format, ...) UE_LOG(LogFPS, Verbosity, TEXT("" Format), ##__VA_ARGS__)
 
 /** Макрос, который выводит отформатированное сообщение в журнал под категорией 'LogFPS'
     и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
@@ -82,19 +82,19 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 
 /** Примеры использования:
 
-FPS_LOG_Empty(Warning, TEXT("CurrentWeaponData is NOT"));
+FPS_LOG_Empty(Warning, "CurrentWeaponData is NOT");
 
-FPS_LOG(Error, TEXT("CurrentWeaponData is NOT"));
+FPS_LOG(Error, "CurrentWeaponData is NOT");
 
-FPS_LOG(Error, TEXT("lNewSpeed == %s"),
-                *lNewSpeed.ToString());
+FPS_LOG(Error, "lNewSpeed == %s",
+    *lNewSpeed.ToString());
 
-FPS_LOG(Warning, TEXT("'%s' is NOT 'AFPS_GameState'"),
+FPS_LOG(Warning, "'%s' is NOT 'AFPS_GameState'",
     GetWorld()->GetGameState<AGameStateBase>()
     ? *GetWorld()->GetGameState<AGameStateBase>()->GetFName().ToString()
     : *FString("None"));
 
-FPS_LOG_Struct(Error, TEXT("lInputComponent is NOT"));
+FPS_LOG_Struct(Error, "lInputComponent is NOT");
 
 */
 

@@ -8,6 +8,9 @@
 // Base:
 #include "GameFramework/GameMode.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // GAS:
 #include "GameplayEffect.h"
 
@@ -35,6 +38,23 @@ class FPS_API AFPS_GameMode : public AGameMode
 {
     GENERATED_BODY()
 
+public:
+
+    /* ---   Constructors   --- */
+
+    AFPS_GameMode()
+    {
+        CurrentGameMode = this;
+    }
+
+    ~AFPS_GameMode()
+    {
+        CurrentGameMode = nullptr;
+    }
+    //-------------------------------------------
+
+
+
 protected:
 
     /* ---   Base   --- */
@@ -53,19 +73,31 @@ public:
         Category = "FPS Game Mode",
         meta = (DisplayName = "Get FPS Game State"))
     const AFPS_GameState* BP_GetFPSGameState() const;
-
-    /** Получить текущий 'Game State', приведённый к типу "AFPS_GameState" */
-    FORCEINLINE const AFPS_GameState* GetFPSGameState() const
-    {
-        return (AFPS_GameState*)GameState;
-    };
     //-------------------------------------------
 
 
 
-    /* ---   Game Control   --- */
+    /* ---   Statics   --- */
 
+    // Общедоступный указатель на текущий экземпляр класса 'AFPS_GameMode'
+    // @note    Используется для уменьшения зависимостей и использования излишних функций
+    //          Например, функций 'Cast<>' и методов Инициализации в других классах
+    static AFPS_GameMode* CurrentGameMode;
 
+    //
+
+    /** Метод проверки валидности статического указателя 'Current Game Mode' */
+    FORCEINLINE static bool IsValidStaticPointer()
+    {
+        if (!CurrentGameMode)
+        {
+            FPS_LOG_Empty(Error,
+                "Current GameMode is NOT 'AFPS_GameMode' class. "
+                "See 'World Settings'");
+        }
+
+        return bool(CurrentGameMode);
+    };
     //-------------------------------------------
 
 
@@ -126,7 +158,7 @@ private:
     /** Получить контейнер со Статистиками всех активных Игроков */
     FORCEINLINE FPlayerStatisticsArray& GetPlayerStatistics() const
     {
-        return ((AFPS_GameState*)GameState)->PlayersStatistics;
+        return AFPS_GameState::CurrentGameState->PlayersStatistics;
     };
     //-------------------------------------------
 };
