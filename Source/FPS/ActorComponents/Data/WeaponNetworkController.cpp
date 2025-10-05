@@ -56,13 +56,17 @@ static FActorSpawnParameters GetSpawnParameters()
 // Параметр создания выбрасываемых Акторов посредством метода DropActor()
 FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawnParameters();
 
-// Массив Типов Объектов, что отслеживаются Hitscan-методом
-TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan =
-TArray<TEnumAsByte<EObjectTypeQuery>>
+TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan
 {
-    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn),
-    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Vehicle),
-    UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Destructible)
+    // Соответствие проверено опытным путём:
+    EObjectTypeQuery::ObjectTypeQuery3, // [2]: for ECollisionChannel::ECC_Pawn, [2]
+    EObjectTypeQuery::ObjectTypeQuery5, // [4]: for ECollisionChannel::ECC_Vehicle, [6]
+    EObjectTypeQuery::ObjectTypeQuery6, // [5]: for ECollisionChannel::ECC_Destructible, [7]
+
+    // Следующий метод инициализации данных вызывает блокировку запуска любого билда без какого-либо уведомления:
+    //UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn),
+    //UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Vehicle),
+    //UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Destructible)
 };
 //--------------------------------------------------------------------------------------
 
