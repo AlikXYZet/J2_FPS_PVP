@@ -11,6 +11,9 @@
 // Macros:
 #include "FPS/Tools/GlobalMacros.h"
 
+// Structs:
+#include "FPS/Tools/Structs/GameData/RoundStatusData.h"
+
 // GAS:
 #include "GameplayEffect.h"
 
@@ -42,10 +45,7 @@ public:
 
     /* ---   Constructors   --- */
 
-    AFPS_GameMode()
-    {
-        CurrentGameMode = this;
-    }
+    AFPS_GameMode();
 
     ~AFPS_GameMode()
     {
@@ -60,6 +60,8 @@ protected:
     /* ---   Base   --- */
 
     virtual void BeginPlay() override;
+
+    virtual void Tick(float DeltaSeconds) override;
     //-------------------------------------------
 
 
@@ -102,12 +104,38 @@ public:
 
 
 
-    /* --- Destruction Accounting --- */
+    /* ---   Destruction Accounting   --- */
 
     /** Регистрация уничтожения Актора, имеющего Атрибут количества жизней
     @param  TargetASC - Компонент 'AbilitySystem' цели, что был уничтожен
     @param  Spec - Спецификация игрового Эффекта */
     void DestructionRegistration(const UAbilitySystemComponent& TargetASC, const FGameplayEffectSpec& Spec);
+    //-------------------------------------------
+
+
+
+    /* ---   Round Control   --- */
+
+    /* Время длительности периода Выбора перед Раундом */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "FPS Game Mode|Round Control",
+        meta = (ForceUnits = Seconds/*,
+            ClampMin = "5", UIMin = "5"*/))
+    uint8 SelectionPeriodTime = 30;
+
+    /* Время длительности самого Раунда */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "FPS Game Mode|Round Control",
+        meta = (ForceUnits = Seconds/*,
+            ClampMin = "30", ClampMax = "1800", UIMin = "30", UIMax = "1800", Delta = "10", Multiple = "10"*/))
+    int32 RoundPeriodTime = 600;
+
+    /* Время длительности периода Результатов после Раунда */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "FPS Game Mode|Round Control",
+        meta = (ForceUnits = Seconds/*,
+            ClampMin = "5", UIMin = "5"*/))
+    uint8 ResultsPeriodTime = 10;
     //-------------------------------------------
 
 
@@ -123,9 +151,6 @@ private:
 
 
     /* --- Destruction Accounting --- */
-
-    // Таймер: Test
-    FTimerHandle Timer_DestructionAccounting_Test;
 
     /* Контейнер всех Уничтожаемых объектов с указателями на Игроков, что их уничтожил ("Разрушители")
     @note   Указатели на Атр.Актор и на Игрока может быть НЕ Валиден.
@@ -160,5 +185,47 @@ private:
     {
         return AFPS_GameState::CurrentGameState->PlayersStatistics;
     };
+    //-------------------------------------------
+
+
+
+    /* ---   Round Control   --- */
+
+    // Счётчик Остаточного Времени
+    int32 RemainingTimeCounter = 0;
+
+    //
+
+    /** Счётчик таймера Раунда */
+    void RoundTimerCounter();
+
+    /** Получить текущее состояние Раунда */
+    FORCEINLINE const ERoundStatus& GetRoundStatus()
+    {
+        return AFPS_GameState::CurrentGameState->CurrentRoundStatus;
+    };
+
+    /** Установить текущее состояние Раунда */
+    FORCEINLINE void SetRoundStatus(const ERoundStatus& Value)
+    {
+        AFPS_GameState::CurrentGameState->SetCurrentRoundStatus(Value);
+    }
+
+    /** Установить текущее состояние Раунда */
+    FORCEINLINE void SetRoundStatus(const uint8& Value)
+    {
+        SetRoundStatus(
+            Value >= (uint8)ERoundStatus::MAX
+            ? ERoundStatus::Selection
+            : ERoundStatus(Value));
+    }
+
+    /** Установить следующее состояние Раунда */
+    FORCEINLINE const ERoundStatus& NextRoundStatus()
+    {
+        SetRoundStatus(uint8(AFPS_GameState::CurrentGameState->CurrentRoundStatus) + 1);
+
+        return AFPS_GameState::CurrentGameState->CurrentRoundStatus;
+    }
     //-------------------------------------------
 };

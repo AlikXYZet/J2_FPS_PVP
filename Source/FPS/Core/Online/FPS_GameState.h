@@ -12,7 +12,8 @@
 #include "FPS/Tools/GlobalMacros.h"
 
 // Structs:
-#include "FPS/Tools/Structs/Statistics/PlayerStatisticsData.h"
+#include "FPS/Tools/Structs/GameData/PlayerStatisticsData.h"
+#include "FPS/Tools/Structs/GameData/RoundStatusData.h"
 
 // Generated:
 #include "FPS_GameState.generated.h"
@@ -82,13 +83,64 @@ public:
 
 
 
+    /* ---   Round Control   --- */
+
+    /** Получить текущее состояние Раунда */
+    FORCEINLINE const ERoundStatus& GetCurrentRoundStatus()
+    {
+        return CurrentRoundStatus;
+    };
+    //-------------------------------------------
+
+
+
+    /* ---   Events   --- */
+
+    /** Событие BP: Изменение состояния Раунда */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "On Changing Round Status"))
+    void Event_OnChangingRoundStatus(const ERoundStatus& Status);
+    //-------------------------------------------
+
+
+
 private:
 
     /* ---   Statistics   --- */
 
-    /** Быстро реплицируемый Контейнер о Статистиках всех активных Игроков */
+    // Быстро реплицируемый Контейнер о Статистиках всех активных Игроков
     UPROPERTY(Replicated)
     FPlayerStatisticsArray PlayersStatistics;
+    //-------------------------------------------
+
+
+
+    /* ---   Net   --- */
+
+    /** Событие Репликации: Изменение состояния Раунда */
+    UFUNCTION()
+    void OnRep_CurrentRoundStatus(const ERoundStatus& OldStatus)
+    {
+        Event_OnChangingRoundStatus(CurrentRoundStatus);
+    };
+    //-------------------------------------------
+
+
+
+    /* ---   Round Control   --- */
+
+    // Текущее состояние Раунда
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentRoundStatus)
+    ERoundStatus CurrentRoundStatus = ERoundStatus::Results;
+
+    //
+
+    void SetCurrentRoundStatus(const ERoundStatus& Value)
+    {
+        CurrentRoundStatus = Value;
+        Event_OnChangingRoundStatus(CurrentRoundStatus);
+    };
     //-------------------------------------------
 
 

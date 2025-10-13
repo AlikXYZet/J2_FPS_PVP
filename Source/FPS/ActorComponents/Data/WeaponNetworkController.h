@@ -361,10 +361,10 @@ private:
     /* ---   Statics   --- */
 
     // Параметр Принудительного создания выбрасываемых Акторов посредством метода DropActor()
-    static FActorSpawnParameters SpawnParameters;
+    static const FActorSpawnParameters SpawnParameters;
 
     // Массив Типов Объектов, что отслеживаются Hitscan-методом
-    static TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypesForHitscan;
+    static const TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypesForHitscan;
     //-------------------------------------------
 
 

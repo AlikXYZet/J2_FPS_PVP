@@ -3,8 +3,12 @@
 // Base:
 #include "FPS_GameMode.h"
 
+// Global:
+#include "FPS/Tools/GlobalFunctions.h"
+
 // UE:
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/GameSession.h"
 
 // Interaction:
 #include "FPS/Characters/PlayerCharacter.h"
@@ -21,6 +25,42 @@ AFPS_GameMode* AFPS_GameMode::CurrentGameMode = nullptr;
 
 
 
+/* ---   Constructors   --- */
+
+AFPS_GameMode::AFPS_GameMode()
+{
+    // Set this pawn to call Tick() every frame.
+    // You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true; // Принудительно
+    SetActorTickInterval(1.f); // 1 раз/сек.
+    /* @note    Если требуется использовать 'Tick()' для чего-то ещё, то следует заменить данный способ на Циклический Таймер.
+    Например:
+    // Таймер: Контроль состояния Раунда
+    // @note    Таймер с тактом раз в секунду для отслеживания времени
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_RoundStatusControl,
+        this,
+        &AFPS_GameMode::RoundTimerCounter,
+        1.f,
+        true);
+    */
+
+    // Настройка репликации
+    bReplicates = false;
+    SetReplicateMovement(false);
+    //-------------------------------------------
+
+
+    /* ---   Statics   --- */
+
+    // Общедоступный указатель на текущий экземпляр класса 'AFPS_GameMode'
+    CurrentGameMode = this;
+    //-------------------------------------------
+}
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Base   --- */
 
 void AFPS_GameMode::BeginPlay()
@@ -28,14 +68,13 @@ void AFPS_GameMode::BeginPlay()
     Super::BeginPlay();
 
     BaseInit();
+}
 
-    // Test: Имитация процесса запуска игровой сессии
-    GetWorld()->GetTimerManager().SetTimer(
-        Timer_DestructionAccounting_Test,
-        this,
-        &AFPS_GameMode::InitDestructionAccounting,
-        3.f,
-        false);
+void AFPS_GameMode::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    RoundTimerCounter();
 }
 
 const AFPS_GameState* AFPS_GameMode::BP_GetFPSGameState() const
@@ -127,7 +166,7 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                 }
             }
 
-            GetPlayerStatistics().OnChangingArrayData.Broadcast();
+            GetPlayerStatistics().OnPostChangingArrayData.Broadcast();
         }
     }
 }
@@ -140,22 +179,68 @@ void AFPS_GameMode::InitDestructionAccounting()
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerCharacter::StaticClass(), lActors);
     if (lActors.Num())
     {
-        PlayersStatisticsMap.Reserve(lActors.Num());
-        GetPlayerStatistics().Items.Empty(lActors.Num());
-        // @note    Предварительный резерв необходим для сохранения
-        //          валидности указателей при заполнении контейнеров
+        int32 lOldNum = GetPlayerStatistics().Items.Num();
+        int32 lNewNum = lActors.Num();
 
-        for (int32 lIndex = 0; lIndex < lActors.Num(); ++lIndex)
+        // Резервирование и чистка памяти
         {
-            // Создание данных с указателем на 'Player State'
-            GetPlayerStatistics().Add(
-                FPlayerStatisticsData(
-                    ((APlayerCharacter*)lActors[lIndex])->GetPlayerState()));
+            PlayersStatisticsMap.Empty(lActors.Num());
 
-            // Создание взаимосвязи между Игроком и его Статистикой
-            PlayersStatisticsMap.Add(
-                (APlayerCharacter*)lActors[lIndex],
-                &GetPlayerStatistics().Items[lIndex]);
+            if (GameSession
+                && GameSession->MaxPlayers != GetPlayerStatistics().Items.Max())
+            {
+                GetPlayerStatistics().Items.Reserve(GameSession->MaxPlayers);
+            }
+
+            // Убрать лишние и добавить недостающие
+            GetPlayerStatistics().Items.SetNum(lNewNum, false);
+        }
+
+        // Заполнение данных
+        {
+            FPlayerStatisticsData* lPSD = nullptr;
+            APlayerCharacter* lPC = nullptr;
+
+            int32 lIndex = lNewNum;
+            while (lIndex)
+            {
+                --lIndex;
+
+                lPC = (APlayerCharacter*)lActors[lIndex];
+                lPSD = &GetPlayerStatistics().Items[lIndex];
+
+                // Заменить в Элементе массива указатель на 'Player State'
+                GetPlayerStatistics().SetPlayerState(*lPSD, lPC->GetPlayerState());
+
+                // Создание взаимосвязи между Игроком и его Статистикой (Элемент массива)
+                PlayersStatisticsMap.Add(lPC, lPSD);
+            }
+        }
+
+        // Информирование о изменении на стороне Сервера
+        {
+            if (lOldNum < lNewNum)
+            {
+                GetPlayerStatistics().OnPostAddingItems.Broadcast(
+                    GetNumbersSeries(lOldNum, lNewNum),
+                    lNewNum);
+
+                // Пометить Массив как "изменённый"
+                GetPlayerStatistics().MarkArrayDirty();
+            }
+            else if (lOldNum > lNewNum)
+            {
+                GetPlayerStatistics().OnPreRemovingItems.Broadcast(
+                    GetNumbersSeries(lNewNum, lOldNum),
+                    lNewNum);
+
+                // Пометить Массив как "изменённый"
+                GetPlayerStatistics().MarkArrayDirty();
+            }
+            else
+            {
+                GetPlayerStatistics().OnPostChangingArrayData.Broadcast();
+            }
         }
     }
 
@@ -163,7 +248,7 @@ void AFPS_GameMode::InitDestructionAccounting()
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAttributedActor::StaticClass(), lActors);
     if (lActors.Num())
     {
-        AllAttributedActor.Reserve(lActors.Num());
+        AllAttributedActor.Empty(lActors.Num());
         for (AActor* Actor : lActors)
         {
             TSet<APlayerCharacter*> lResult = AllAttributedActor.Add(
@@ -202,6 +287,41 @@ void AFPS_GameMode::GetAllInstigatorPlayers(const FGameplayEffectSpec& iSpec, TS
         // Если данный "Разрушитель" был Атрибутированным Актором,
         // то скопировать его список
         oPlayers.Append(*lOriginalWreckers);
+    }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Round Control   --- */
+
+void AFPS_GameMode::RoundTimerCounter()
+{
+    --RemainingTimeCounter;
+
+    if (RemainingTimeCounter <= 0)
+    {
+        switch (NextRoundStatus())
+        {
+        case ERoundStatus::Selection:
+            RemainingTimeCounter = SelectionPeriodTime;
+            break;
+
+        case ERoundStatus::Round:
+            InitDestructionAccounting();
+            RemainingTimeCounter = RoundPeriodTime;
+            break;
+
+        case ERoundStatus::Results:
+            RemainingTimeCounter = ResultsPeriodTime;
+            break;
+
+        default:
+            break;
+        }
+
+        FPS_LOG(Warning, "New Status == %d",
+            GetRoundStatus());
     }
 }
 //--------------------------------------------------------------------------------------

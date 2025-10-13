@@ -54,9 +54,9 @@ static FActorSpawnParameters GetSpawnParameters()
 };
 
 // Параметр создания выбрасываемых Акторов посредством метода DropActor()
-FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawnParameters();
+const FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawnParameters();
 
-TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan
+const TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan
 {
     // Соответствие проверено опытным путём:
     EObjectTypeQuery::ObjectTypeQuery3, // [2]: for ECollisionChannel::ECC_Pawn, [2]

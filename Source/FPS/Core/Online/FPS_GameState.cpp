@@ -21,15 +21,20 @@ AFPS_GameState* AFPS_GameState::CurrentGameState = nullptr;
 
 AFPS_GameState::AFPS_GameState()
 {
-    CurrentGameState = this;
-
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false; // Предварительно
 
     // Настройка репликации
     bReplicates = true;
-    SetReplicateMovement(true);
+    SetReplicateMovement(false);
+    //-------------------------------------------
+
+
+    /* ---   Statics   --- */
+
+    // Общедоступный указатель на текущий экземпляр класса 'AFPS_GameState'
+    CurrentGameState = this;
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -47,6 +52,13 @@ void AFPS_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     /* ---   Statistics   --- */
 
     DOREPLIFETIME(AFPS_GameState, PlayersStatistics);
+    DOREPLIFETIME(AFPS_GameState, CurrentRoundStatus);
     //-------------------------------------------
 }
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Round Control   --- */
+
 //--------------------------------------------------------------------------------------

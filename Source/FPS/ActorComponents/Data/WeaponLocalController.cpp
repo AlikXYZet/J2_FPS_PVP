@@ -664,11 +664,6 @@ void UWeaponLocalController::ChangeWeaponSlot()
 
 /* ---   Character Movement Speed   --- */
 
-void UWeaponLocalController::BP_SetSpeedControl(const ESpeedVariations& Mode)
-{
-    SetSpeedControl(Mode);
-};
-
 void UWeaponLocalController::SetSpeedControl(const ESpeedVariations& Mode)
 {
     if (SpeedControl != Mode)

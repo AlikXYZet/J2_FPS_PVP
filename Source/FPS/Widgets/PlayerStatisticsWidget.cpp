@@ -3,30 +3,29 @@
 // Base:
 #include "PlayerStatisticsWidget.h"
 
-// Macros:
+// Global:
 #include "FPS/Tools/GlobalMacros.h"
 
 // UE:
 #include "GameFramework/PlayerState.h"
-
-// Interaction:
-#include "FPS/Core/Online/FPS_GameState.h"
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Base   --- */
 
-void UPlayerStatisticsWidget::NativeOnInitialized()
+void UPlayerStatisticsWidget::NativeConstruct()
 {
-    Super::NativeOnInitialized();
+    Super::NativeConstruct();
 
     InitStatisticsData();
 }
 
-void UPlayerStatisticsWidget::NativeConstruct()
+void UPlayerStatisticsWidget::SetVisibility(ESlateVisibility InVisibility)
 {
-    Super::NativeConstruct();
+    Super::SetVisibility(InVisibility);
+
+    ReInitOnVisibilityChanges(InVisibility);
 }
 //--------------------------------------------------------------------------------------
 
@@ -45,15 +44,16 @@ void UPlayerStatisticsWidget::SetSortType(const EPlayerStatisticsSortingType InT
 
     SortingPredicate = GetSortingPredicate(SortType);
 
-    SortStatisticsData();
+    SortPostStatisticsData();
 }
 
 const FPlayerStatisticsData UPlayerStatisticsWidget::GetIndexData(const int32& Index)
 {
-    if (0 <= Index && Index < SortedPlayerStatistics.Num())
+    if (SortedPlayerStatistics.IsValidIndex(Index))
     {
         return *SortedPlayerStatistics[Index];
     }
+
     return FPlayerStatisticsData();
 }
 
@@ -61,13 +61,8 @@ void UPlayerStatisticsWidget::InitStatisticsData()
 {
     if (AFPS_GameState::CurrentGameState)
     {
-        FPlayerStatisticsArray* lPSArray = &AFPS_GameState::CurrentGameState->PlayersStatistics;
-        lPSArray->OnChangingNumbers.AddDynamic(this, &UPlayerStatisticsWidget::RefreshStatisticsData);
-        lPSArray->OnChangingArrayData.AddDynamic(this, &UPlayerStatisticsWidget::SortStatisticsData);
-
-        CurrentPlayerStatistics = &lPSArray->Items;
-
-        RefreshStatisticsData(CurrentPlayerStatistics->Num());
+        GetPlayerStatisticsArray().OnPreRemovingItems.AddDynamic(this, &UPlayerStatisticsWidget::OnPreRemovingStatisticsDataItems);
+        GetPlayerStatisticsArray().OnPostAddingItems.AddDynamic(this, &UPlayerStatisticsWidget::OnPostAddingStatisticsDataItems);
     }
     else
     {
@@ -78,32 +73,56 @@ void UPlayerStatisticsWidget::InitStatisticsData()
     }
 }
 
-void UPlayerStatisticsWidget::RefreshStatisticsData(int32 Size)
+void UPlayerStatisticsWidget::RefreshStatisticsData(const int32& Size)
 {
-    if (Size != SortedPlayerStatistics.Num())
+    SortedPlayerStatistics.Empty(Size);
+
+    for (const FPlayerStatisticsData& Item : GetPlayerStatistics())
     {
-        int32 lPreviousNum = SortedPlayerStatistics.Num();
-
-        SortedPlayerStatistics.Empty(Size);
-        for (const FPlayerStatisticsData& Item : *CurrentPlayerStatistics)
-        {
-            SortedPlayerStatistics.Add(&Item);
-        }
-
-        Event_OnRefreshing(Size);
-
-        SortStatisticsData();
+        SortedPlayerStatistics.Add(&Item);
     }
+
+    SortPostStatisticsData();
 }
 
-void UPlayerStatisticsWidget::SortStatisticsData()
+void UPlayerStatisticsWidget::SortPostStatisticsData()
 {
     if (SortedPlayerStatistics.Num() > 1)
     {
         SortedPlayerStatistics.Sort(SortingPredicate);
-
-        Event_OnEndSorting();
     }
+
+    Event_OnEndSorting();
+}
+
+void UPlayerStatisticsWidget::OnPreRemovingStatisticsDataItems(const TArray<int32>& RemovedIndices, const int32& FinalSize)
+{
+    Event_OnRemovingItems(RemovedIndices, FinalSize);
+    SortedPlayerStatistics.Empty(FinalSize);
+
+    auto lDeletedIndexesIterator = RemovedIndices.CreateConstIterator();
+
+    for (int32 i = 0; i < GetPlayerStatistics().Num(); ++i)
+    {
+        if (!lDeletedIndexesIterator
+            || i != *lDeletedIndexesIterator)
+        {
+            SortedPlayerStatistics.Add(&GetPlayerStatistics()[i]);
+        }
+        else
+        {
+            // Сортированы по порядку возрастания
+            ++lDeletedIndexesIterator;
+        }
+    }
+
+    SortPostStatisticsData();
+}
+
+void UPlayerStatisticsWidget::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedIndices, const int32& FinalSize)
+{
+    Event_OnAddingItems(AddedIndices, FinalSize);
+    RefreshStatisticsData(FinalSize);
 }
 
 TSortingPredicate UPlayerStatisticsWidget::GetSortingPredicate(const EPlayerStatisticsSortingType& InType)
@@ -114,7 +133,7 @@ TSortingPredicate UPlayerStatisticsWidget::GetSortingPredicate(const EPlayerStat
         /* ---   Up   --- */
 
     case EPlayerStatisticsSortingType::NameUp:
-        return SORTING_PREDICATE_ByPtr(PlayerState, GetPlayerName(), FString("NONE"), < );
+        return SORTING_PREDICATE(PlayerName, < );
         break;
 
     case EPlayerStatisticsSortingType::PingUp:
@@ -141,7 +160,7 @@ TSortingPredicate UPlayerStatisticsWidget::GetSortingPredicate(const EPlayerStat
         /* ---   Down   --- */
 
     case EPlayerStatisticsSortingType::NameDown:
-        return SORTING_PREDICATE_ByPtr(PlayerState, GetPlayerName(), FString("NONE"), > );
+        return SORTING_PREDICATE(PlayerName, > );
         break;
 
     case EPlayerStatisticsSortingType::PingDown:

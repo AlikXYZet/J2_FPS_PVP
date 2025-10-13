@@ -102,6 +102,23 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 
 
 
+/* ---   GEngine Message   --- */
+
+/** Макрос, который выводит на экран сообщение (красным цветом)
+@param  Format - Формат текста */
+#define FPS_Message(Format, ...) FPS_ColorMessage(FColor::Red, Format, ##__VA_ARGS__)
+
+/** Макрос, который выводит на экран сообщение с указанным цветом
+@param  Color - Цвет текста
+@param  Format - Формат текста */
+#define FPS_ColorMessage(Color, Format, ...) \
+{ \
+    GEngine->AddOnScreenDebugMessage(-1, 60.f, Color, FString::Printf(TEXT("" Format), ##__VA_ARGS__)); \
+}
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Sorting Predicate   --- */
 
 /** Макрос: Предикат сортировки
@@ -124,8 +141,8 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
     [](const auto& first, const auto& second) \
     { \
         return \
-            (first.##Ptr ? first.##Ptr->##Value : ##NoneValue) \
+            (IsValid(first.##Ptr) ? first.##Ptr->##Value : ##NoneValue) \
             ##Operator## \
-            (second.##Ptr ? second.##Ptr->##Value : ##NoneValue); \
+            (IsValid(second.##Ptr) ? second.##Ptr->##Value : ##NoneValue); \
     };
 //--------------------------------------------------------------------------------------

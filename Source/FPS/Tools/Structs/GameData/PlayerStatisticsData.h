@@ -5,6 +5,13 @@
 // Core:
 #include "CoreMinimal.h"
 
+// Global:
+#include "FPS/Tools/GlobalMacros.h"
+
+// UE:
+#include "GameFramework/PlayerState.h"
+#include "GameFramework/GameState.h"
+
 // Generated:
 #include "PlayerStatisticsData.generated.h"
 //--------------------------------------------------------------------------------------
@@ -13,12 +20,36 @@
 
 /* ---   Delegates   --- */
 
-// Делегат: Изменено количество элементов Массива
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChangingNumbers, int32, Size);
+// Делегат: Перед Удалением элементов Массива
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreRemovingItems, const TArray<int32>&, RemovedIndices, const int32&, FinalSize);
+
+// Делегат: Добавлены элементы Массива
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostAddingItems, const TArray<int32>&, AddedIndices, const int32&, FinalSize);
 
 // Делегат: Изменены элементы Массива
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChangingArrayData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPostChangingArrayData);
 // ----------------------------------------------------------------------------------------------------
+
+
+
+/* ---   ENums   --- */
+
+// Сетевой Статус Игрока
+UENUM(BlueprintType)
+enum struct EPlayerNetworkStatus : uint8
+{
+    // Игрок НЕ Валиден
+    PNS_NONE    UMETA(DisplayName = "NONE"),
+    // Локальный контроллер
+    PNS_Local   UMETA(DisplayName = "Local"),
+    // Игрок-Сервер (локальный Контроллер для Сервера)
+    PNS_ListenServer    UMETA(DisplayName = "Listen Server"),
+    // Игрок с сетевым (отдалённым) контроллером
+    PNS_Client UMETA(DisplayName = "Client"),
+
+    PNS_Max UMETA(Hidden)
+};
+//----------------------------------------------------------------------------------------
 
 
 
@@ -31,7 +62,6 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     /* ---   Constructors   --- */
 
     FPlayerStatisticsData() {};
-    FPlayerStatisticsData(APlayerState* InPlayerState) : PlayerState(InPlayerState) {};
     //-------------------------------------------
 
 
@@ -42,6 +72,17 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
     APlayerState* PlayerState = nullptr;
+
+    // Имя текущего игрока (NotReplicated)
+    // @note    Необходим, так как 'PlayerState' может быть не валиден (теряются данные о Имени игрока)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
+        Category = "Statistics")
+    FString PlayerName = FString("NONE");
+
+    // Локальный сетевой статус Игрока (NotReplicated)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
+        Category = "Statistics")
+    EPlayerNetworkStatus PlayerNetStatus = EPlayerNetworkStatus::PNS_NONE;
 
     // Количество Убийств (+3 Points)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -58,7 +99,7 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
         Category = "Statistics")
     uint8 Deaths = 0;
 
-    // Количество Очков
+    // Количество Очков (NotReplicated)
     // @note    На стороне Клиента вычисляется при изменении реплицируемых данных
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
         Category = "Statistics")
@@ -78,6 +119,7 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     /** Вызывается после изменения Реплицируемых Данных текущего элемента */
     void PostReplicatedChange(const struct FFastArraySerializer& InArraySerializer)
     {
+        UpdateDataOnPlayerState();
         PointsCalculation();
     }
     //-------------------------------------------
@@ -90,7 +132,7 @@ private:
 
     FORCEINLINE void AddKills()
     {
-        Kills += 3;
+        ++Kills;
         PointsCalculation();
     };
 
@@ -108,7 +150,65 @@ private:
 
     FORCEINLINE void PointsCalculation()
     {
-        Points = Kills + Assists - Deaths;
+        Points = (Kills * 2) + Assists - Deaths;
+    };
+
+    FORCEINLINE void EmptyData()
+    {
+        Kills = 0;
+        Assists = 0;
+        Deaths = 0;
+        Points = 0;
+    };
+    //-------------------------------------------
+
+
+
+    /* ---   Data Methods: Player State   --- */
+
+    FORCEINLINE void SetPlayerState(APlayerState* const State)
+    {
+        if (PlayerState != State)
+        {
+            PlayerState = State;
+            UpdateDataOnPlayerState();
+        }
+
+        EmptyData();
+    };
+
+    /** Обновить данные, зависимые от PlayerState  */
+    FORCEINLINE void UpdateDataOnPlayerState()
+    {
+        if (IsValid(PlayerState))
+        {
+            // Обновить Имя на актуальный
+            if (PlayerName != PlayerState->GetPlayerName())
+            {
+                PlayerName = PlayerState->GetPlayerName();
+            }
+
+            // Обновить Сетевой Статус на актуальный
+            if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
+            {
+                PlayerNetStatus = EPlayerNetworkStatus::PNS_Local;
+            }
+            else
+            {
+                if (PlayerState->GetPing())
+                {
+                    PlayerNetStatus = EPlayerNetworkStatus::PNS_Client;
+                }
+                else
+                {
+                    PlayerNetStatus = EPlayerNetworkStatus::PNS_ListenServer;
+                }
+            }
+        }
+        else
+        {
+            PlayerNetStatus = EPlayerNetworkStatus::PNS_NONE;
+        }
     };
     //-------------------------------------------
 
@@ -131,11 +231,14 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Delegates   --- */
 
-    // Делегат: Изменён сам Массив
-    FOnChangingNumbers OnChangingNumbers;
+    // Делегат: Перед Удалением элементов Массива
+    FOnPreRemovingItems OnPreRemovingItems;
+
+    // Делегат: Добавлены элементы Массива
+    FOnPostAddingItems OnPostAddingItems;
 
     // Делегат: Изменены данные Массива
-    FOnChangingArrayData OnChangingArrayData;
+    FOnPostChangingArrayData OnPostChangingArrayData;
     //-------------------------------------------
 
 
@@ -150,6 +253,12 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
 
     /* ---   Data Methods   --- */
+
+    FORCEINLINE void SetPlayerState(FPlayerStatisticsData& Item, APlayerState* const State)
+    {
+        Item.SetPlayerState(State);
+        MarkItemDirty(Item);
+    };
 
     FORCEINLINE void AddKills(FPlayerStatisticsData& Item)
     {
@@ -174,20 +283,6 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Array Methods   --- */
 
-    FORCEINLINE void Init(const FPlayerStatisticsData& Element, const int32& Number)
-    {
-        Items.Init(Element, Number);
-        MarkArrayDirty();
-        OnChangingNumbers.Broadcast(Number);
-    }
-
-    FORCEINLINE int32 Add(FPlayerStatisticsData&& Item)
-    {
-        int32 lIndex = Items.Add(Item);
-        MarkArrayDirty();
-        OnChangingNumbers.Broadcast(Items.Num());
-        return lIndex;
-    }
     //-------------------------------------------
 
 
@@ -205,7 +300,13 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
     {
         if (RemovedIndices.Num())
         {
-            OnChangingNumbers.Broadcast(FinalSize);
+            OnPreRemovingItems.Broadcast(TArray<int32>(RemovedIndices), FinalSize);
+
+            FPS_Message("Pre Remove: %d, FS = %d", RemovedIndices.Num(), FinalSize);
+        }
+        else
+        {
+            FPS_ColorMessage(FColor::Orange, "Pre Remove");
         }
     }
 
@@ -216,17 +317,34 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
     {
         if (AddedIndices.Num())
         {
-            OnChangingNumbers.Broadcast(FinalSize);
+            for (const int32& Index : AddedIndices)
+            {
+                Items[Index].UpdateDataOnPlayerState();
+            }
+
+            OnPostAddingItems.Broadcast(TArray<int32>(AddedIndices), FinalSize);
+
+            FPS_Message("Post Add: %d, FS = %d", AddedIndices.Num(), FinalSize);
+        }
+        else
+        {
+            FPS_ColorMessage(FColor::Orange, "Post Add");
         }
     }
 
     /** Предполагалось, что вызывается После Изменении Реплицируемых Данных элементов,
-        однако вызывается Последним После любого изменением массива и его элементов */
+        однако вызывается Последним После любого изменения массива и его элементов */
     void PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize)
     {
         if (ChangedIndices.Num())
         {
-            OnChangingArrayData.Broadcast();
+            OnPostChangingArrayData.Broadcast();
+
+            FPS_Message("Post Change: %d, FS = %d", ChangedIndices.Num(), FinalSize);
+        }
+        else
+        {
+            FPS_ColorMessage(FColor::Orange, "Post Change");
         }
     }
     //-------------------------------------------
