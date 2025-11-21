@@ -93,7 +93,7 @@ public:
     /** Установить Время срабатывания CustomUpdateAnimation() */
     UFUNCTION(BlueprintCallable,
         Category = "PersonAnim|Base")
-    void SetTimeForUpdateAnimation(const float& Time);
+    void SetTimeForUpdateAnimation(float Time);
     //-------------------------------------------
 
 
@@ -148,7 +148,7 @@ public:
         Category = "PersonAnim|Actions",
         meta = (CompactNodeTitle = "Check Action", AutoCreateRefTerm = "InAction",
             BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
-    bool CheckAction(const EActionVariations& InAction) const;
+    bool CheckAction(EActionVariations InAction) const;
 
     /* Проверить на Все действия Игрока
     * @note   Быстрая потокобезопасная проверка */

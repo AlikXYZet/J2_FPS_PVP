@@ -5,59 +5,16 @@
 // Core:
 #include "CoreMinimal.h"
 
-// Global:
-#include "FPS/Tools/GlobalFunctions.h"
-
 // Base:
 #include "Blueprint/UserWidget.h"
 
 // Structs:
 #include "FPS/Tools/Structs/GameData/PlayerStatisticsData.h"
-
-// Interaction:
-#include "FPS/Core/Online/FPS_GameState.h"
+#include "FPS/Tools/Structs/GameData/MatchStateData.h"
 
 // Generated:
 #include "PlayerStatisticsWidget.generated.h"
 //--------------------------------------------------------------------------------------
-
-
-
-/* ---   typedef   --- */
-
-// Шаблонный Тип предиката сортировки
-typedef bool (*TSortingPredicate)(const FPlayerStatisticsData& first, const FPlayerStatisticsData& second);
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   ENums   --- */
-
-// Типы сортировки Статистики Игроков
-UENUM(BlueprintType)
-enum struct EPlayerStatisticsSortingType : uint8
-{
-    NONE,
-
-    // Возрастающий список:
-
-    NameUp     UMETA(DisplayName = "Name Up"),
-    PingUp     UMETA(DisplayName = "Ping Up"),
-    KillsUp    UMETA(DisplayName = "Kills Up"),
-    AssistsUp  UMETA(DisplayName = "Assists Up"),
-    DeathsUp   UMETA(DisplayName = "Deaths Up"),
-    PointsUp   UMETA(DisplayName = "Points Up"),
-
-    // Спадающий список:
-
-    NameDown = NameUp + 0x80 UMETA(DisplayName = "Name Down"),
-    PingDown    UMETA(DisplayName = "Ping Down"),
-    KillsDown   UMETA(DisplayName = "Kills Down"),
-    AssistsDown UMETA(DisplayName = "Assists Down"),
-    DeathsDown  UMETA(DisplayName = "Deaths Down"),
-    PointsDown  UMETA(DisplayName = "Points Down"),
-};
-//----------------------------------------------------------------------------------------
 
 
 
@@ -89,40 +46,52 @@ public:
 
 
 
-    /* ---   Events   --- */
+    /* ---   Players Statistics Data   --- */
 
-    /** Событие BP: При Завершении Сортировки данных Статистики */
-    UFUNCTION(BlueprintImplementableEvent,
+    /** Изменить Тип сортировки Данных Статистики Игроков */
+    UFUNCTION(BlueprintCallable,
         Category = "Players Statistics Data",
-        meta = (DisplayName = "On End Sorting"))
-    void Event_OnEndSorting();
+        meta = (DisplayName = "Set Data Sorting Type for Sorted Player Statistics", AutoCreateRefTerm = "InType",
+            DefaultToSelf, HideSelfPin = "true"))
+    void SetDataSortingTypeForSortedPlayerStatistics(EPlayerStatisticsSortingType InType);
 
-    /** Событие BP: При Удалении элементов данных статистики */
-    UFUNCTION(BlueprintImplementableEvent,
+    /** Получить Данные по Индексу из сортированного списка Статистики Игроков */
+    UFUNCTION(BlueprintPure,
         Category = "Players Statistics Data",
-        meta = (DisplayName = "On Removing Items"))
-    void Event_OnRemovingItems(const TArray<int32>& RemovedIndices, const int32& FinalSize);
-
-    /** Событие BP: При Добавлении элементов данных статистики */
-    UFUNCTION(BlueprintImplementableEvent,
-        Category = "Players Statistics Data",
-        meta = (DisplayName = "On Adding Items"))
-    void Event_OnAddingItems(const TArray<int32>& AddedIndices, const int32& FinalSize);
+        meta = (DisplayName = "Get Data by Index from Sorted Player Statistics", AutoCreateRefTerm = "Index",
+            DefaultToSelf, HideSelfPin = "true"))
+    const FPlayerStatisticsData& GetDataByIndexFromSortedPlayerStatistics(int32 Index) const;
     //--------------------------------------------
 
 
 
-    /* ---   Players Statistics Data   --- */
+    /* ---   Events   --- */
 
-    /** Функция изменения типа сортировки */
-    UFUNCTION(BlueprintCallable,
-        Category = "Players Statistics Data")
-    void SetSortType(const EPlayerStatisticsSortingType InType);
+    /** Событие BP: При изменении состояния Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Match Management",
+        meta = (DisplayName = "On Match State Change"))
+    void Event_OnMatchStateChange(EMatchState State);
 
-    /** Получить Данные по Индексу */
-    UFUNCTION(BlueprintCallable,
-        Category = "Players Statistics Data")
-    const FPlayerStatisticsData GetIndexData(const int32& Index);
+    /** Событие BP: При Завершении Сортировки данных Статистики Игроков */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Players Statistics Data",
+        meta = (DisplayName = "On End Sorting of Player Statistics"))
+    void Event_OnEndSortingOfPlayerStatistics();
+
+    /** Событие BP: При Удалении элементов данных Статистики Игроков
+    @note   НЕ Вызывается во время Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Players Statistics Data",
+        meta = (DisplayName = "On Removing Player Statistics Items"))
+    void Event_OnRemovingPlayerStatisticsItems(const TArray<int32>& RemovedIndices, int32 FinalSize);
+
+    /** Событие BP: При Добавлении элементов данных Статистики Игроков
+    @note   НЕ Вызывается во время Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Players Statistics Data",
+        meta = (DisplayName = "On Adding Player Statistics Items"))
+    void Event_OnAddingPlayerStatisticsItems(const TArray<int32>& AddedIndices, int32 FinalSize);
     //--------------------------------------------
 
 
@@ -131,75 +100,7 @@ private:
 
     /* ---   Players Statistics Data   --- */
 
-    // Сортированный массив указателей на Статистики Игроков
-    TArray<const FPlayerStatisticsData*> SortedPlayerStatistics;
-
-    // Предикат сортировки по указателю
-    // @note    Переменная-Предикат создан для уменьшения времени сортировки
-    TSortingPredicate SortingPredicate = GetSortingPredicate(SortType);
-
-    // Переменная типа сортировки
-    EPlayerStatisticsSortingType SortType = EPlayerStatisticsSortingType::NameUp;
-
-    //
-
-    /** Получить текущие данные Статистики Игроков */
-    FORCEINLINE const TArray<FPlayerStatisticsData>& GetPlayerStatistics()
-    {
-        return AFPS_GameState::CurrentGameState->PlayersStatistics.Items;
-    };
-
-    /** Получить текущие данные Статистики Игроков */
-    FORCEINLINE FPlayerStatisticsArray& GetPlayerStatisticsArray()
-    {
-        return AFPS_GameState::CurrentGameState->PlayersStatistics;
-    };
-
     /** Инициализация данных Статистики */
     void InitStatisticsData();
-
-    /** ПереИнициализация данных Статистики при изменении Видимости */
-    FORCEINLINE void ReInitOnVisibilityChanges(const ESlateVisibility& InVisibility)
-    {
-        // Is NOT Visible?
-        // @note    Метод 'IsVisible()' более тяжёлый
-        if (InVisibility != ESlateVisibility::Collapsed
-            && InVisibility != ESlateVisibility::Hidden)
-        {
-            GetPlayerStatisticsArray().OnPostChangingArrayData.AddDynamic(this, &UPlayerStatisticsWidget::SortPostStatisticsData);
-
-            if (!SortedPlayerStatistics.Num())
-            {
-                OnPostAddingStatisticsDataItems(GetNumbersSeries(0, GetPlayerStatistics().Num()), GetPlayerStatistics().Num());
-            }
-            else
-            {
-                SortPostStatisticsData();
-            }
-        }
-        else
-        {
-            GetPlayerStatisticsArray().OnPostChangingArrayData.RemoveAll(this);
-        }
-    };
-
-    /** Обновить данные Статистики */
-    UFUNCTION()
-    void RefreshStatisticsData(const int32& Size);
-
-    /** Пересортировать данные Статистики */
-    UFUNCTION()
-    void SortPostStatisticsData();
-
-    /** Событие Делегата: При Удалении элементов данных статистики */
-    UFUNCTION()
-    void OnPreRemovingStatisticsDataItems(const TArray<int32>& RemovedIndices, const int32& FinalSize);
-
-    /** Событие Делегата: При Добавлении элементов данных статистики */
-    UFUNCTION()
-    void OnPostAddingStatisticsDataItems(const TArray<int32>& AddedIndices, const int32& FinalSize);
-
-    /** Получение предиката согласно выбору типа сортировки */
-    TSortingPredicate GetSortingPredicate(const EPlayerStatisticsSortingType& InType);
     //--------------------------------------------
 };

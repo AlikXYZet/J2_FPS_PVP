@@ -2,6 +2,9 @@
 
 // Base:
 #include "FPS_PlayerController.h"
+
+// Interaction:
+#include "FPS/Core/Online/FPS_GameState.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -23,7 +26,7 @@ AFPS_PlayerController::AFPS_PlayerController()
 void AFPS_PlayerController::BeginPlay()
 {
     Super::BeginPlay();
-    
+
 }
 
 void AFPS_PlayerController::Tick(float DeltaSeconds)
@@ -63,5 +66,20 @@ void AFPS_PlayerController::SetMouseToCenter()
             bMouseToCenter = false;
         }
     }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Match Management   --- */
+
+const AFPS_GameState* AFPS_PlayerController::GetFPSGameState()
+{
+    return AFPS_GameState::CurrentGameState;
+}
+
+bool AFPS_PlayerController::IsMatchInProgress() const
+{
+    return AFPS_GameState::CurrentGameState->IsMatchInProgress();
 }
 //--------------------------------------------------------------------------------------

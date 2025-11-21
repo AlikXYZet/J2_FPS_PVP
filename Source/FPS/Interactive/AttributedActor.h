@@ -107,28 +107,28 @@ public:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
-    void Event_ChangingHealth(const float& Data);
+    void Event_ChangingHealth(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Health);
 
     /** Событие BP: Изменение максимального Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Health"))
-    void Event_ChangingMaxHealth(const float& Data);
+    void Event_ChangingMaxHealth(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxHealth);
 
     /** Событие BP: Изменение Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Armor"))
-    void Event_ChangingArmor(const float& Data);
+    void Event_ChangingArmor(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Armor);
 
     /** Событие BP: Изменение максимальной Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Armor"))
-    void Event_ChangingMaxArmor(const float& Data);
+    void Event_ChangingMaxArmor(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
 
     /** Событие BP: При Нулевом Здоровье */

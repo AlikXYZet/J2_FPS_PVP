@@ -117,7 +117,7 @@ public:
     * @param    Level - Уровень применяемого Эффекта
     * @return   Дескриптор спецификации Эффекта
     */
-    UFUNCTION(BlueprintCallable, BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "FPS_AbilitySystemComponent|Abilities")
     FGameplayEffectSpecHandle MakeEffectSpecWithParams(
         const TSubclassOf<UGameplayEffect> EffectClass,

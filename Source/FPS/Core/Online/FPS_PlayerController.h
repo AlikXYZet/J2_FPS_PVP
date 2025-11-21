@@ -14,6 +14,14 @@
 
 
 
+/* ---   Pre-declaration of classes   --- */
+
+// Interaction:
+class AFPS_GameState;
+//--------------------------------------------------------------------------------------
+
+
+
 UCLASS()
 class FPS_API AFPS_PlayerController : public APlayerController
 {
@@ -53,13 +61,27 @@ public:
 
     // Флаг контроля Мыши в центре Экрана
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "FPS_PlayerController|Mouse To Center",
+        Category = "FPS Player Controller|Mouse To Center",
         meta = (DisplayName = "Hold Mouse in Center?"))
     bool bMouseToCenter = true;
+    //-------------------------------------------
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-        Category = "FPS_PlayerController|Network|Animations")
-    FRotator RotationInput;
+
+
+    /* ---   Match Management   --- */
+
+    /** Получить текущий 'Game State', приведённый к типу "AFPS_GameState" */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Player Controller|Match Management",
+        meta = (DisplayName = "Get FPS Game State",
+            DefaultToSelf, HideSelfPin = "true"))
+    const AFPS_GameState* GetFPSGameState();
+
+    /** Возвращает значение true, если состояние матча находится "В Процессе" ('InProgress') */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Player Controller|Match Management",
+        meta = (DefaultToSelf, HideSelfPin = "true"))
+    bool IsMatchInProgress() const;
     //-------------------------------------------
 
 

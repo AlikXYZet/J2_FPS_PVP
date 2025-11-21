@@ -88,7 +88,7 @@ void USmoothRotationComponent::RotateToRotator(const FRotator& iRotator)
     }
 }
 
-void USmoothRotationComponent::RotationForTick(const float& DeltaTime)
+void USmoothRotationComponent::RotationForTick(float DeltaTime)
 {
     // Контроль вращения
     if (bIsRotatedToNewRotation

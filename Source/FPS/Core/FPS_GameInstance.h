@@ -32,6 +32,32 @@ class FPS_API UFPS_GameInstance : public UGameInstance
 
 public:
 
+    /* ---   Statics   --- */
+
+    // Общедоступный указатель на текущий экземпляр класса 'UFPS_GameInstance'
+    // @note    Используется для уменьшения зависимостей и использования излишних функций
+    //          Например, функций 'Cast<>' и методов Инициализации в других классах
+    static UFPS_GameInstance* CurrentGameInstance;
+
+    //
+
+    /** Метод проверки валидности статического указателя 'Current Game Instance' */
+    FORCEINLINE static bool IsValidStaticPointer()
+    {
+        if (!IsValid(CurrentGameInstance))
+        {
+            FPS_LOG_Empty(Error,
+                "Current GameInstance is NOT 'UFPS_GameInstance' class. "
+                "See 'Project Settings'/'Maps & Modes'/'Game Instance Class'");
+
+            return false;
+        }
+        return true;
+    };
+    //-------------------------------------------
+
+
+
     /* ---   Constructors   --- */
 
     // Sets default values for this component's properties
@@ -49,31 +75,6 @@ public:
 
     /** Инициализация данных GameInstance */
     virtual void Init() override;
-    //-------------------------------------------
-
-
-
-    /* ---   Statics   --- */
-
-    // Общедоступный указатель на текущий экземпляр класса 'UFPS_GameInstance'
-    // @note    Используется для уменьшения зависимостей и использования излишних функций
-    //          Например, функций 'Cast<>' и методов Инициализации в других классах
-    static UFPS_GameInstance* CurrentGameInstance;
-
-    //
-
-    /** Метод проверки валидности статического указателя 'Current Game Instance' */
-    FORCEINLINE static bool IsValidStaticPointer()
-    {
-        if (!CurrentGameInstance)
-        {
-            FPS_LOG_Empty(Error,
-                "Current GameInstance is NOT 'UFPS_GameInstance' class. "
-                "See 'Project Settings'/'Maps & Modes'/'Game Instance Class'");
-        }
-
-        return bool(CurrentGameInstance);
-    };
     //-------------------------------------------
 
 
@@ -106,3 +107,15 @@ private:
     void InitSettingsSaving();
     //-------------------------------------------
 };
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Statics   --- */
+
+/** Получить текущий экземпляр класса 'UFPS_GameInstance' */
+FORCEINLINE static UFPS_GameInstance* const GetFPSGameInstance()
+{
+    return UFPS_GameInstance::CurrentGameInstance;
+};
+//--------------------------------------------------------------------------------------

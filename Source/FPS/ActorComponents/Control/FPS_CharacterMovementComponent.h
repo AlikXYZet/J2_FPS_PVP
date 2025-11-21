@@ -49,7 +49,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "FPS Movement Component|Movement Mode",
         meta = (AutoCreateRefTerm = "Mode"))
-    virtual void SetCustomMovementMode(const ESpeedVariations& Mode);
+    virtual void SetCustomMovementMode(ESpeedVariations Mode);
     //-------------------------------------------
 
 
@@ -85,13 +85,13 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "FPS Movement Component|Speed Control",
         meta = (AutoCreateRefTerm = "Mode"))
-    void SetSpeedType(const ESpeedVariations& Type);
+    void SetSpeedType(ESpeedVariations Type);
 
     /** Изменить значение максимальной скорости */
     UFUNCTION(BlueprintCallable,
         Category = "FPS Movement Component|Speed Control",
         meta = (AutoCreateRefTerm = "Mode"))
-    void SetMaxWalkSpeed(const float& Value);
+    void SetMaxWalkSpeed(float Value);
     //-------------------------------------------
 
 
@@ -111,10 +111,10 @@ private:
 
     /** Server: Изменить значение максимальной скорости */
     UFUNCTION(Server, Reliable)
-    void Server_SetMaxWalkSpeed(const float& Value);
+    void Server_SetMaxWalkSpeed(float Value);
 
     /** Multicast: Изменить значение максимальной скорости */
     UFUNCTION(NetMulticast, Reliable)
-    void Multicast_SetMaxWalkSpeed(const float& Value);
+    void Multicast_SetMaxWalkSpeed(float Value);
     //-------------------------------------------
 };

@@ -271,7 +271,7 @@ void UWeaponLocalController::InitData()
 
 /* ---   Switching   --- */
 
-void UWeaponLocalController::SetCurrentSlotByNum(const uint8& iNum)
+void UWeaponLocalController::SetCurrentSlotByNum(uint8 iNum)
 {
     SetChanging(iNum);
 }
@@ -475,7 +475,7 @@ void UWeaponLocalController::SetReloading()
     }
 }
 
-void UWeaponLocalController::SetChanging(const uint8& iNum)
+void UWeaponLocalController::SetChanging(uint8 iNum)
 {
     if (WeaponSlots.IsValidIndex(iNum)
         && &WeaponSlots[iNum] != CurrentSlot)
@@ -664,7 +664,7 @@ void UWeaponLocalController::ChangeWeaponSlot()
 
 /* ---   Character Movement Speed   --- */
 
-void UWeaponLocalController::SetSpeedControl(const ESpeedVariations& Mode)
+void UWeaponLocalController::SetSpeedControl(ESpeedVariations Mode)
 {
     if (SpeedControl != Mode)
     {

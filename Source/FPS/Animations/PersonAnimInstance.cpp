@@ -74,7 +74,7 @@ void UPersonAnimInstance::CustomUpdateAnimation()
     Event_CustomUpdateAnimation();
 }
 
-void UPersonAnimInstance::SetTimeForUpdateAnimation(const float& iTime)
+void UPersonAnimInstance::SetTimeForUpdateAnimation(float iTime)
 {
     if (iTime > 0)
     {
@@ -136,7 +136,7 @@ void UPersonAnimInstance::UpdateMovementMode(ACharacter* Character, EMovementMod
 
 /* ---   Player Actions   --- */
 
-bool UPersonAnimInstance::CheckAction(const EActionVariations& InAction) const
+bool UPersonAnimInstance::CheckAction(EActionVariations InAction) const
 {
     return WeaponControlNetComp
         && WeaponControlNetComp->CheckAction(InAction);

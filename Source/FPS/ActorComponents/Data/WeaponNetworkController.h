@@ -186,14 +186,14 @@ public:
 
     /** Проверка действий Игрока
     @param  Action - Проверяемое действие */
-    FORCEINLINE bool CheckAction(const EActionVariations& Action) const
+    FORCEINLINE bool CheckAction(EActionVariations Action) const
     {
         return CheckActions((uint8)Action);
     };
 
     /** Проверка одного из действий Игрока
     @param  Action - Проверяемое действие */
-    bool CheckActions(const EActionVariations& Action, ...) const;
+    bool CheckActions(EActionVariations Action, ...) const;
     //-------------------------------------------
 
 
@@ -253,11 +253,11 @@ private:
 
     /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
-        void Server_SetCurrentActions(const uint8& Value);
+        void Server_SetCurrentActions(uint8 Value);
 
     /** Проверка действий Игрока
     @param  ActionsBits - Биты проверяемых действий */
-    FORCEINLINE bool CheckActions(const uint8& ActionsBits) const
+    FORCEINLINE bool CheckActions(uint8 ActionsBits) const
     {
         return CurrentActions & ActionsBits;
     };
@@ -277,15 +277,15 @@ private:
     /* ---   Actions | Switching   --- */
 
     /** Установить текущие данные оружия согласно Номеру */
-    void SetCurrentWeaponDataByNum(const uint8& Num);
+    void SetCurrentWeaponDataByNum(uint8 Num);
 
     /** Server: Установить текущие данные оружия согласно Номеру */
     UFUNCTION(Server, Reliable) // Принудительно Надёжный
-        void Server_SetCurrentWeaponDataByNum(const uint8& Num);
+        void Server_SetCurrentWeaponDataByNum(uint8 Num);
 
     /** Multicast: Установить текущие данные оружия согласно Номеру */
     UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
-        void Multicast_SetCurrentWeaponDataByNum(const uint8& Num);
+        void Multicast_SetCurrentWeaponDataByNum(uint8 Num);
     //-------------------------------------------
 
 

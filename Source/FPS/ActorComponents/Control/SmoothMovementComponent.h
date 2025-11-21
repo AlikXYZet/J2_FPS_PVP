@@ -167,7 +167,7 @@ private:
     //
 
     /** Расчёт передвижения на каждый кадр */
-    void MovementForTick(const float& DeltaTime);
+    void MovementForTick(float DeltaTime);
     //-------------------------------------------
 
 

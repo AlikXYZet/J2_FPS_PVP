@@ -104,17 +104,34 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 
 /* ---   GEngine Message   --- */
 
-/** Макрос, который выводит на экран сообщение (красным цветом)
-@param  Format - Формат текста */
-#define FPS_Message(Format, ...) FPS_ColorMessage(FColor::Red, Format, ##__VA_ARGS__)
-
 /** Макрос, который выводит на экран сообщение с указанным цветом
 @param  Color - Цвет текста
 @param  Format - Формат текста */
 #define FPS_ColorMessage(Color, Format, ...) \
 { \
-    GEngine->AddOnScreenDebugMessage(-1, 60.f, Color, FString::Printf(TEXT("" Format), ##__VA_ARGS__)); \
+    GEngine->AddOnScreenDebugMessage(-1, 600.f, Color, FString::Printf(TEXT("" Format), ##__VA_ARGS__)); \
 }
+
+/** Макрос, который выводит на экран сообщение (красным цветом)
+@param  Format - Формат текста */
+#define FPS_Message(Format, ...) FPS_ColorMessage(FColor::Red, Format, ##__VA_ARGS__)
+
+
+/** Макрос, который выводит на экран сообщение с указанным цветом
+и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
+@param  Color - Цвет текста
+@param  Format - Формат текста */
+#define FPS_ColorLOGMessage(Color, Format, ...) \
+    FPS_ColorMessage(\
+        Color,\
+        TEXT("'%s'::'%s': " Format), \
+        *GetNameSafe(this), *FString(__func__), \
+        ##__VA_ARGS__)
+
+/** Макрос, который выводит на экран сообщение (красным цветом)
+и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
+@param  Format - Формат текста */
+#define FPS_LOGMessage(Format, ...) FPS_ColorLOGMessage(FColor::Red, Format)
 //--------------------------------------------------------------------------------------
 
 
@@ -145,4 +162,12 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
             ##Operator## \
             (IsValid(second.##Ptr) ? second.##Ptr->##Value : ##NoneValue); \
     };
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Booleanas   --- */
+
+/** Макрос: Преобразование 'bool' в указатель 'FString' для использования в макросах 'LOG' и 'Message' */
+#define BoolToString(BOOL) *FString(BOOL ? "TRUE" : "FALSE")
 //--------------------------------------------------------------------------------------

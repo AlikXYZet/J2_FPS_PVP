@@ -1,0 +1,106 @@
+//
+
+#pragma once
+
+// Core:
+#include "CoreMinimal.h"
+
+// Base:
+#include "PlayerStatisticsWidget.h"
+
+// Generated:
+#include "RoleSelectionWidget.generated.h"
+//--------------------------------------------------------------------------------------
+
+
+
+UCLASS()
+class FPS_API URoleSelectionWidget : public UPlayerStatisticsWidget
+{
+    GENERATED_BODY()
+
+public:
+
+    /* ---   Base   --- */
+
+    /** Аналогичен OnInitialized() */
+    //virtual void NativeOnInitialized() override;
+
+    /** Аналогичен PreConstruct() */
+    //virtual void NativePreConstruct() override;
+
+    /** Аналогичен Construct() */
+    virtual void NativeConstruct() override;
+
+    /** Аналогичен Destruct() */
+    //virtual void NativeDestruct() override;
+
+    /** Установка видимости виджета */
+    virtual void SetVisibility(ESlateVisibility InVisibility) override;
+    //--------------------------------------------
+
+
+
+    /* ---   Spectators Data   --- */
+
+    /** Изменить Тип сортировки Данных Наблюдателей */
+    UFUNCTION(BlueprintCallable,
+        Category = "Spectators Data",
+        meta = (DisplayName = "Set Data Sorting Type for Sorted Spectators", AutoCreateRefTerm = "InType",
+            DefaultToSelf, HideSelfPin = "true"))
+    void SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType);
+
+    /** Получить Данные по Индексу из сортированного списка Наблюдателей */
+    UFUNCTION(BlueprintPure,
+        Category = "Spectators Data",
+        meta = (DisplayName = "Get Data by Index from Sorted Spectators", AutoCreateRefTerm = "Index",
+            DefaultToSelf, HideSelfPin = "true"))
+    const APlayerState* GetDataByIndexFromSortedSpectators(int32 Index) const;
+
+    /** Получить сортированный список Наблюдателей */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game State|Spectators Data",
+        meta = (DisplayName = "Get Sorted Spectators",
+            DefaultToSelf, HideSelfPin = "true"))
+    const TArray<APlayerState*>& GetSortedSpectators() const;
+    //--------------------------------------------
+
+
+
+    /* ---   Role Selection   --- */
+
+    /** Изменить Готовность Владельца */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DisplayName = "Set Owner Readiness"))
+    void SetOwnerReadiness(bool bReadiness = false);
+    //--------------------------------------------
+
+
+
+    /* ---   Events   --- */
+
+    /** Событие BP: При Завершении Сортировки данных Наблюдателей
+    @note   НЕ Вызывается во время Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Spectators Data",
+        meta = (DisplayName = "On End Sorting Of Spectators"))
+    void Event_OnEndSortingOfSpectators();
+
+    /** Событие BP: При изменении Готовности Владельца */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Role Selection",
+        meta = (DisplayName = "On Owner Readiness Change"))
+    void Event_OnOwnerReadinessChange(bool bReadiness);
+    //--------------------------------------------
+
+
+
+private:
+
+    /* ---   Role Selection   --- */
+
+    /** Инициализация данных Выбора Роли */
+    void InitRoleSelection();
+    //--------------------------------------------
+};

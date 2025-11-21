@@ -53,7 +53,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     // Root Capsule Component
     GetCapsuleComponent()->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
 
-    // Главный Мешь образа
+    // Главный Меш образа
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
     GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
@@ -64,7 +64,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     FPCamera->SetUsingAbsoluteRotation(true);
     FPCamera->bUsePawnControlRotation = true;
 
-    // Мешь визуализации от Первого лица
+    // Меш визуализации от Первого лица
     FPMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FP Mesh"));
     FPMesh->SetupAttachment(GetCapsuleComponent());
     FPMesh->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
@@ -118,11 +118,6 @@ void APlayerCharacter::BeginPlay()
     }
 }
 
-void APlayerCharacter::PossessedBy(AController* NewController)
-{
-    Super::PossessedBy(NewController);
-}
-
 void APlayerCharacter::CleaningForLocally()
 {
     GetMesh()->SetVisibility(false);
@@ -137,7 +132,7 @@ void APlayerCharacter::CleaningForNetwork()
 {
     WeaponControlLocComp->DestroyComponent();
     FPMesh->DestroyComponent();
-    FPCamera->DestroyComponent();
+    //FPCamera->DestroyComponent(); // Debug: Пропадает камера у Игрока Сервера
 }
 //--------------------------------------------------------------------------------------
 
@@ -299,12 +294,7 @@ void APlayerCharacter::StopSprint()
 
 /* ---   Movement Speed   --- */
 
-UFPS_CharacterMovementComponent* APlayerCharacter::BP_GetFPSCharacterMovement() const
-{
-    return GetFPSCharacterMovement();
-}
-
-void APlayerCharacter::SetSpeedControl(const ESpeedVariations& Mode)
+void APlayerCharacter::SetSpeedControl(ESpeedVariations Mode)
 {
     if (SpeedControl != Mode)
     {

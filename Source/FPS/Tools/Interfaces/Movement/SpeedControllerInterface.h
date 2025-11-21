@@ -18,7 +18,7 @@
 
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, Blueprintable)
 class USpeedControllerInterface : public UInterface
 {
     GENERATED_BODY()
@@ -39,7 +39,7 @@ public:
 
     /** Задать значение скорости */
     UFUNCTION()
-    virtual void SetSpeedControl(const ESpeedVariations& Mode) = 0;
+    virtual void SetSpeedControl(ESpeedVariations Mode) = 0;
     /*{
         // На примере "APlayerCharacter":
         if (SpeedControl != Mode)

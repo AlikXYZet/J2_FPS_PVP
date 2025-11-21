@@ -228,7 +228,7 @@ public:
     /** Установить текущий Слот по номеру */
     UFUNCTION(BlueprintCallable,
         Category = "Weapon Control|Switching")
-    void SetCurrentSlotByNum(const uint8& Num);
+    void SetCurrentSlotByNum(uint8 Num);
 
     /** Выбрать Слот под номером 1 */
     UFUNCTION(BlueprintCallable,
@@ -262,7 +262,7 @@ public:
     };
 
     /** Управление Оружием: Задать Действие */
-    FORCEINLINE void SetActionBit(const EActionVariations& InAction)
+    FORCEINLINE void SetActionBit(EActionVariations InAction)
     {
         if (SettingActions ^ (uint8)InAction)
         {
@@ -272,7 +272,7 @@ public:
     };
 
     /** Управление Оружием: Прекратить Действие */
-    FORCEINLINE void ResetActionBit(const EActionVariations& InAction)
+    FORCEINLINE void ResetActionBit(EActionVariations InAction)
     {
         if (SettingActions & (uint8)InAction)
         {
@@ -283,7 +283,7 @@ public:
 
     /** Проверка действий Игрока
     @param  Action - Проверяемое действие */
-    FORCEINLINE bool CheckAction(const EActionVariations& Action) const
+    FORCEINLINE bool CheckAction(EActionVariations Action) const
     {
         return WeaponControlNetComp->CheckAction(Action);
     };
@@ -297,7 +297,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Speed Control",
         meta = (DisplayName = "Set Speed Control", AutoCreateRefTerm = "Mode"))
-    void SetSpeedControl(const ESpeedVariations& Mode) override;
+    void SetSpeedControl(ESpeedVariations Mode) override;
     //-------------------------------------------
 
 
@@ -380,10 +380,10 @@ private:
     void SetReloading();
 
     /** Управление Оружием: Сменить Оружие */
-    void SetChanging(const uint8& Num);
+    void SetChanging(uint8 Num);
 
     /** Управление Оружием: Ограничивать Действия */
-    FORCEINLINE void SetBlockingActionBit(const EActionVariations& InAction)
+    FORCEINLINE void SetBlockingActionBit(EActionVariations InAction)
     {
         if (GetCurrentActions() < (uint8)EActionVariations::Reloading)
         {

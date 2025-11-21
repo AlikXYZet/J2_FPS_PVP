@@ -32,7 +32,7 @@ void UFPS_CharacterMovementComponent::OnMovementModeChanged(EMovementMode Previo
     }
 }
 
-void UFPS_CharacterMovementComponent::SetCustomMovementMode(const ESpeedVariations& Mode)
+void UFPS_CharacterMovementComponent::SetCustomMovementMode(ESpeedVariations Mode)
 {
     SetMovementMode(EMovementMode::MOVE_Custom, (uint8)Mode);
 }
@@ -90,7 +90,7 @@ void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
 
 /* ---   Speed Control | MaxWalkSpeed   --- */
 
-void UFPS_CharacterMovementComponent::SetSpeedType(const ESpeedVariations& Type)
+void UFPS_CharacterMovementComponent::SetSpeedType(ESpeedVariations Type)
 {
     if (Type < ESpeedVariations::COUNT
         && MaxWalkSpeed != BaseMovementSpeeds[(uint8)Type])
@@ -100,17 +100,17 @@ void UFPS_CharacterMovementComponent::SetSpeedType(const ESpeedVariations& Type)
     }
 }
 
-void UFPS_CharacterMovementComponent::SetMaxWalkSpeed(const float& Value)
+void UFPS_CharacterMovementComponent::SetMaxWalkSpeed(float Value)
 {
     Server_SetMaxWalkSpeed(Value);
 }
 
-void UFPS_CharacterMovementComponent::Server_SetMaxWalkSpeed_Implementation(const float& Value)
+void UFPS_CharacterMovementComponent::Server_SetMaxWalkSpeed_Implementation(float Value)
 {
     Multicast_SetMaxWalkSpeed(Value);
 }
 
-void UFPS_CharacterMovementComponent::Multicast_SetMaxWalkSpeed_Implementation(const float& Value)
+void UFPS_CharacterMovementComponent::Multicast_SetMaxWalkSpeed_Implementation(float Value)
 {
     MaxWalkSpeed = Value;
 }

@@ -121,9 +121,8 @@ public:
 
     /** Вызывается при подключения Контроллера
     @note   Вызывается только на сервере (или в автономном режиме)
-    @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой)
-    */
-    virtual void PossessedBy(AController* NewController) override;
+    @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой) */
+    //virtual void PossessedBy(AController* NewController) override;
     //-------------------------------------------
 
 
@@ -153,7 +152,7 @@ public:
 
     /* ---   Net | OnRep   --- */
 
-    /** Функция обратного вызова: PlayerState */
+    /** При Репликации: PlayerState */
     virtual void OnRep_PlayerState() override;
     //-------------------------------------------
 
@@ -237,10 +236,7 @@ public:
     UFUNCTION(BlueprintPure,
         Category = "Player Character|Movement Speed",
         meta = (DisplayName = "Get FPS Character Movement"))
-    virtual UFPS_CharacterMovementComponent* BP_GetFPSCharacterMovement() const;
-
-    /** Возвращает подобъект 'CharacterMovement', приведённый к типу "UFPS_CharacterMovementComponent" */
-    FORCEINLINE UFPS_CharacterMovementComponent* GetFPSCharacterMovement() const
+    virtual UFPS_CharacterMovementComponent* GetFPSCharacterMovement() const
     {
         // Текущий 'CharacterMovement' гарантированно является компонентом
         // типа "UFPS_CharacterMovementComponent" (см. конструктор класса)
@@ -251,7 +247,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Player Character|Movement Speed",
         meta = (AutoCreateRefTerm = "Mode"))
-    void SetSpeedControl(const ESpeedVariations& Mode) override;
+    void SetSpeedControl(ESpeedVariations Mode) override;
     //-------------------------------------------
 
 
@@ -273,28 +269,28 @@ public:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
-    void Event_ChangingHealth(const float& Data);
+    void Event_ChangingHealth(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Health);
 
     /** Событие BP: Изменение максимального Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Health"))
-    void Event_ChangingMaxHealth(const float& Data);
+    void Event_ChangingMaxHealth(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxHealth);
 
     /** Событие BP: Изменение Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Armor"))
-    void Event_ChangingArmor(const float& Data);
+    void Event_ChangingArmor(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(Armor);
 
     /** Событие BP: Изменение максимальной Брони */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Max Armor"))
-    void Event_ChangingMaxArmor(const float& Data);
+    void Event_ChangingMaxArmor(float Data);
     GAMEPLAYATTRIBUTE_VALUE_HandleChanged(MaxArmor);
 
     /** Событие BP: При Нулевом Здоровье */

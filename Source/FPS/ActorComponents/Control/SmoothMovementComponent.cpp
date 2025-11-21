@@ -87,7 +87,7 @@ void USmoothMovementComponent::MoveToLocation(const FVector& iPoint)
     }
 }
 
-void USmoothMovementComponent::MovementForTick(const float& DeltaTime)
+void USmoothMovementComponent::MovementForTick(float DeltaTime)
 {
     // Контроль перемещения
     if (bIsMovingToNewLocation)

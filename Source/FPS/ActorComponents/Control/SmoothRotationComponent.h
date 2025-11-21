@@ -8,8 +8,6 @@
 // Base:
 #include "Components/ActorComponent.h"
 
-#include "PhysicsEngine/BodyInstance.h"
-
 // Generated:
 #include "SmoothRotationComponent.generated.h"
 //--------------------------------------------------------------------------------------
@@ -137,7 +135,7 @@ public:
         bIsRotatedToNewRotation = false;
     };
 
-    FORCEINLINE bool CheckRotationLock(const ERotationVariations& Value)
+    FORCEINLINE bool CheckRotationLock(ERotationVariations Value)
     {
         return LockRotation == Value;
     };
@@ -174,7 +172,7 @@ private:
     //
 
     /** Расчёт вращения на каждый кадр */
-    void RotationForTick(const float& DeltaTime);
+    void RotationForTick(float DeltaTime);
     //-------------------------------------------
 
 

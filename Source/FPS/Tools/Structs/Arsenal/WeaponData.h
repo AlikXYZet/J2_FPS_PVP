@@ -60,7 +60,7 @@ struct FWeaponData : public FTableRowBase
     // Образец Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Visualization",
-        meta = (BlueprintBaseOnly))
+        meta = (BlueprintBaseOnly = ""))
     TSubclassOf<AFirstPersonWeaponFrame> WeaponTemplate;
 
     // Локация Оружия в положении от Бедра
@@ -81,13 +81,13 @@ struct FWeaponData : public FTableRowBase
     // Тип выпадающей Гильзы
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable))
+        meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable))
     TSubclassOf<AActor> SleeveType;
 
     // Тип выпадающего Накопителя
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
-        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable))
+        meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable))
     TSubclassOf<AActor> StorageType;
     //-------------------------------------------
 
@@ -97,19 +97,20 @@ struct FWeaponData : public FTableRowBase
 
     // Эффект поражения данным снарядом
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
-        Category = "Dropping: Projectile")
+        Category = "Dropping: Projectile",
+        meta = (BlueprintBaseOnly = ""))
     TSubclassOf<UGameplayEffect> DamageEffect;
 
     // Тип используемого Снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Dropping: Projectile",
-        meta = (BlueprintBaseOnly, EditCondition = "!bUseHitscanMethod"))
+        meta = (BlueprintBaseOnly = "", EditCondition = "!bUseHitscanMethod"))
     TSubclassOf<AProjectile> ProjectileType;
 
     // FX Трассировки снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping: Projectile",
-        meta = (BlueprintBaseOnly, ShowTreeView, OnlyPlaceable, EditCondition = "bUseHitscanMethod"))
+        meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable, EditCondition = "bUseHitscanMethod"))
     TSubclassOf<AActor> FXTracer = nullptr;
     //-------------------------------------------
 

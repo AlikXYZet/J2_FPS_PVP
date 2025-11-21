@@ -15,7 +15,7 @@
 
 /* ---   Statics   --- */
 
-// Общедоступный указатель на текущий экземпляр GameInstance
+// Общедоступный указатель на текущий экземпляр 'UFPS_GameInstance'
 UFPS_GameInstance* UFPS_GameInstance::CurrentGameInstance = nullptr;
 //--------------------------------------------------------------------------------------
 
@@ -28,6 +28,8 @@ void UFPS_GameInstance::Init()
     InitSettingsSaving();
 
     Super::Init();
+
+    IsValidStaticPointer();
 }
 //--------------------------------------------------------------------------------------
 

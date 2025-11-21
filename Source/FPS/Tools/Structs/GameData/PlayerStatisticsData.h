@@ -21,10 +21,10 @@
 /* ---   Delegates   --- */
 
 // Делегат: Перед Удалением элементов Массива
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreRemovingItems, const TArray<int32>&, RemovedIndices, const int32&, FinalSize);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreRemovingItems, const TArray<int32>&, RemovedIndices, int32, FinalSize);
 
 // Делегат: Добавлены элементы Массива
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostAddingItems, const TArray<int32>&, AddedIndices, const int32&, FinalSize);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostAddingItems, const TArray<int32>&, AddedIndices, int32, FinalSize);
 
 // Делегат: Изменены элементы Массива
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPostChangingArrayData);
@@ -39,15 +39,15 @@ UENUM(BlueprintType)
 enum struct EPlayerNetworkStatus : uint8
 {
     // Игрок НЕ Валиден
-    PNS_NONE    UMETA(DisplayName = "NONE"),
+    NONE,
     // Локальный контроллер
-    PNS_Local   UMETA(DisplayName = "Local"),
+    Local,
     // Игрок-Сервер (локальный Контроллер для Сервера)
-    PNS_ListenServer    UMETA(DisplayName = "Listen Server"),
+    ListenServer    UMETA(DisplayName = "Listen Server"),
     // Игрок с сетевым (отдалённым) контроллером
-    PNS_Client UMETA(DisplayName = "Client"),
+    Client,
 
-    PNS_Max UMETA(Hidden)
+    MAX UMETA(Hidden)
 };
 //----------------------------------------------------------------------------------------
 
@@ -79,31 +79,39 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
         Category = "Statistics")
     FString PlayerName = FString("NONE");
 
-    // Локальный сетевой статус Игрока (NotReplicated)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
-        Category = "Statistics")
-    EPlayerNetworkStatus PlayerNetStatus = EPlayerNetworkStatus::PNS_NONE;
-
     // Количество Убийств (+3 Points)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    uint8 Kills = 0;
+    int32 Kills = 0;
 
     // Количество Передач (помощи в убийстве, +1 Point)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    uint8 Assists = 0;
+    int32 Assists = 0;
 
     // Количество Смертей (-1 Point)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    uint8 Deaths = 0;
+    int32 Deaths = 0;
 
     // Количество Очков (NotReplicated)
     // @note    На стороне Клиента вычисляется при изменении реплицируемых данных
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
         Category = "Statistics")
     int32 Points = 0;
+
+    // Локальный сетевой статус Игрока (NotReplicated)
+    // @note    На стороне Клиента определяется при изменении 'PlayerState'
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
+        Category = "Statistics")
+    EPlayerNetworkStatus PlayerNetStatus = EPlayerNetworkStatus::NONE;
+
+    // Готовность данного Игрока
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = "Statistics")
+    bool bPlayerReadiness = false;
+    /* PS: При расширении до Булеанов, заменить на:
+    uint8 bPlayerReadiness : 1; */
     //-------------------------------------------
 
 
@@ -114,7 +122,10 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     void PreReplicatedRemove(const struct FFastArraySerializer& InArraySerializer) {}
 
     /** Вызывается после добавления текущего элемента */
-    void PostReplicatedAdd(const struct FFastArraySerializer& InArraySerializer) {}
+    void PostReplicatedAdd(const struct FFastArraySerializer& InArraySerializer)
+    {
+        UpdateDataOnPlayerState();
+    }
 
     /** Вызывается после изменения Реплицируемых Данных текущего элемента */
     void PostReplicatedChange(const struct FFastArraySerializer& InArraySerializer)
@@ -122,6 +133,14 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
         UpdateDataOnPlayerState();
         PointsCalculation();
     }
+    //-------------------------------------------
+
+
+
+    /* ---   Statics   --- */
+
+    // Пустые данные Статистики
+    static const FPlayerStatisticsData Empty;
     //-------------------------------------------
 
 
@@ -191,23 +210,23 @@ private:
             // Обновить Сетевой Статус на актуальный
             if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
             {
-                PlayerNetStatus = EPlayerNetworkStatus::PNS_Local;
+                PlayerNetStatus = EPlayerNetworkStatus::Local;
             }
             else
             {
                 if (PlayerState->GetPing())
                 {
-                    PlayerNetStatus = EPlayerNetworkStatus::PNS_Client;
+                    PlayerNetStatus = EPlayerNetworkStatus::Client;
                 }
                 else
                 {
-                    PlayerNetStatus = EPlayerNetworkStatus::PNS_ListenServer;
+                    PlayerNetStatus = EPlayerNetworkStatus::ListenServer;
                 }
             }
         }
         else
         {
-            PlayerNetStatus = EPlayerNetworkStatus::PNS_NONE;
+            PlayerNetStatus = EPlayerNetworkStatus::NONE;
         }
     };
     //-------------------------------------------
@@ -224,7 +243,7 @@ private:
 
 
 /** Массива быстрой репликации для FPlayerStatisticsData */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FPlayerStatisticsArray : public FFastArraySerializer
 {
     GENERATED_BODY()
@@ -289,9 +308,9 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Serializer Methods   --- */
 
-    bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+    bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
     {
-        return FFastArraySerializer::FastArrayDeltaSerialize<FPlayerStatisticsData, FPlayerStatisticsArray>(Items, DeltaParms, *this);
+        return FFastArraySerializer::FastArrayDeltaSerialize<FPlayerStatisticsData, FPlayerStatisticsArray>(Items, DeltaParams, *this);
     }
 
     /** Предполагалось, что вызывается Перед Удалением элементов,
@@ -301,12 +320,6 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
         if (RemovedIndices.Num())
         {
             OnPreRemovingItems.Broadcast(TArray<int32>(RemovedIndices), FinalSize);
-
-            FPS_Message("Pre Remove: %d, FS = %d", RemovedIndices.Num(), FinalSize);
-        }
-        else
-        {
-            FPS_ColorMessage(FColor::Orange, "Pre Remove");
         }
     }
 
@@ -317,18 +330,12 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
     {
         if (AddedIndices.Num())
         {
-            for (const int32& Index : AddedIndices)
+            for (int32 Index : AddedIndices)
             {
                 Items[Index].UpdateDataOnPlayerState();
             }
 
             OnPostAddingItems.Broadcast(TArray<int32>(AddedIndices), FinalSize);
-
-            FPS_Message("Post Add: %d, FS = %d", AddedIndices.Num(), FinalSize);
-        }
-        else
-        {
-            FPS_ColorMessage(FColor::Orange, "Post Add");
         }
     }
 
@@ -339,12 +346,6 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
         if (ChangedIndices.Num())
         {
             OnPostChangingArrayData.Broadcast();
-
-            FPS_Message("Post Change: %d, FS = %d", ChangedIndices.Num(), FinalSize);
-        }
-        else
-        {
-            FPS_ColorMessage(FColor::Orange, "Post Change");
         }
     }
     //-------------------------------------------
@@ -358,3 +359,12 @@ struct TStructOpsTypeTraits<FPlayerStatisticsArray> : public TStructOpsTypeTrait
         WithNetDeltaSerializer = true,
     };
 };
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Statics   --- */
+
+// Пустые данные Статистики
+__declspec(selectany) const FPlayerStatisticsData FPlayerStatisticsData::Empty = FPlayerStatisticsData();
+//--------------------------------------------------------------------------------------

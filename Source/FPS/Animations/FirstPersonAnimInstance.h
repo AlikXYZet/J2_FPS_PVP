@@ -58,13 +58,13 @@ public:
     //
 
     /** Получить локацию для Правой руки */
-    UFUNCTION(BlueprintCallable, BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "IK Anim",
         meta = (BlueprintThreadSafe))
     const FTransform& GetRightHandTransform();
 
     /** Получить локацию для Левой руки */
-    UFUNCTION(BlueprintCallable, BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "IK Anim",
         meta = (BlueprintThreadSafe))
     const FTransform& GetLeftHandTransform();

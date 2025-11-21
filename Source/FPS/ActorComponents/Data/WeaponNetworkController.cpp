@@ -212,12 +212,12 @@ void UWeaponNetworkController::InitData()
 
 /* ---   Actions | Data   --- */
 
-void UWeaponNetworkController::Server_SetCurrentActions_Implementation(const uint8& Value)
+void UWeaponNetworkController::Server_SetCurrentActions_Implementation(uint8 Value)
 {
     CurrentActions = Value;
 }
 
-bool UWeaponNetworkController::CheckActions(const EActionVariations& Action, ...) const
+bool UWeaponNetworkController::CheckActions(EActionVariations Action, ...) const
 {
     uint8 bResult = 0;
     const EActionVariations* p = &Action;
@@ -265,7 +265,7 @@ T* UWeaponNetworkController::DropActor(const TSubclassOf<T>& iActorType, const F
 
 /* ---   Actions | Switching   --- */
 
-void UWeaponNetworkController::SetCurrentWeaponDataByNum(const uint8& iNum)
+void UWeaponNetworkController::SetCurrentWeaponDataByNum(uint8 iNum)
 {
     if (WeaponDataSlots.IsValidIndex(iNum))
     {
@@ -273,12 +273,12 @@ void UWeaponNetworkController::SetCurrentWeaponDataByNum(const uint8& iNum)
     }
 }
 
-void UWeaponNetworkController::Server_SetCurrentWeaponDataByNum_Implementation(const uint8& iNum)
+void UWeaponNetworkController::Server_SetCurrentWeaponDataByNum_Implementation(uint8 iNum)
 {
     Multicast_SetCurrentWeaponDataByNum(iNum);
 }
 
-void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementation(const uint8& iNum)
+void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementation(uint8 iNum)
 {
     CurrentWeaponData = WeaponDataSlots[iNum];
     CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
