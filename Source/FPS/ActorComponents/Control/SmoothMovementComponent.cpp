@@ -11,7 +11,6 @@
 //--------------------------------------------------------------------------------------
 
 
-
 /* ---   Constructors   --- */
 
 USmoothMovementComponent::USmoothMovementComponent()
@@ -20,6 +19,12 @@ USmoothMovementComponent::USmoothMovementComponent()
     // You can turn this off to improve performance if you don't need it.
     PrimaryComponentTick.bCanEverTick = true; // Warning: Принудительно
     //-------------------------------------------
+
+
+    /* ---   Booleanas   --- */
+
+    bControlSpeedAtStart = true;
+    //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
 
@@ -27,10 +32,10 @@ USmoothMovementComponent::USmoothMovementComponent()
 
 /* ---   Base   --- */
 
-void USmoothMovementComponent::BeginPlay()
-{
-    Super::BeginPlay();
-}
+//void USmoothMovementComponent::BeginPlay()
+//{
+//    Super::BeginPlay();
+//}
 
 void USmoothMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -39,32 +44,15 @@ void USmoothMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
     MovementForTick(DeltaTime);
 }
 
-void USmoothMovementComponent::OnComponentCreated()
-{
-    Super::OnComponentCreated();
+//void USmoothMovementComponent::OnComponentCreated()
+//{
+//    Super::OnComponentCreated();
+//}
 
-    InitCurrentComponent();
-}
-
-void USmoothMovementComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
-{
-    Super::OnComponentDestroyed(bDestroyingHierarchy);
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Init   --- */
-
-void USmoothMovementComponent::InitCurrentComponent()
-{
-    CurrentActor = GetOwner();
-
-    if (!CurrentActor)
-    {
-        FPS_LOG_Component(Error, TEXT("CurrentActor is NOT"));
-    }
-}
+//void USmoothMovementComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+//{
+//    Super::OnComponentDestroyed(bDestroyingHierarchy);
+//}
 //--------------------------------------------------------------------------------------
 
 
@@ -73,18 +61,15 @@ void USmoothMovementComponent::InitCurrentComponent()
 
 void USmoothMovementComponent::MoveToLocation(const FVector& iPoint)
 {
-    if (CurrentActor)
-    {
-        OnStartMove.Broadcast();
+    OnStartMove.Broadcast();
 
-        StartLocation = bUseRelativeLocation
-            ? CurrentActor->GetRootComponent()->GetRelativeLocation() : CurrentActor->GetActorLocation();
+    StartLocation = bUseRelativeLocation
+        ? GetOwner()->GetRootComponent()->GetRelativeLocation() : GetOwner()->GetActorLocation();
 
-        EndLocation = iPoint;
-        bIsMovingToNewLocation = true;
-        bApproachWork = false;
-        bSeparationWork = false;
-    }
+    EndLocation = iPoint;
+    bIsMovingToNewLocation = true;
+    bApproachWork = false;
+    bSeparationWork = false;
 }
 
 void USmoothMovementComponent::MovementForTick(float DeltaTime)
@@ -93,18 +78,18 @@ void USmoothMovementComponent::MovementForTick(float DeltaTime)
     if (bIsMovingToNewLocation)
     {
         FVector lCurrentLocation = bUseRelativeLocation
-            ? CurrentActor->GetRootComponent()->GetRelativeLocation() : CurrentActor->GetActorLocation();
+            ? GetOwner()->GetRootComponent()->GetRelativeLocation() : GetOwner()->GetActorLocation();
 
         // Контроль близости к новой локации
         if ((lCurrentLocation - EndLocation).Size() < MinStep)
         {
             if (bUseRelativeLocation)
             {
-                CurrentActor->SetActorRelativeLocation(EndLocation);
+                GetOwner()->SetActorRelativeLocation(EndLocation);
             }
             else
             {
-                CurrentActor->SetActorLocation(EndLocation);
+                GetOwner()->SetActorLocation(EndLocation);
             }
 
             bIsMovingToNewLocation = false;
@@ -162,11 +147,11 @@ void USmoothMovementComponent::MovementForTick(float DeltaTime)
             // Сделать шаг (Плавное перемещение)
             if (bUseRelativeLocation)
             {
-                CurrentActor->GetRootComponent()->AddRelativeLocation(lNewSpeed_Vector * DeltaTime);
+                GetOwner()->GetRootComponent()->AddRelativeLocation(lNewSpeed_Vector * DeltaTime);
             }
             else
             {
-                CurrentActor->AddActorWorldOffset(lNewSpeed_Vector * DeltaTime);
+                GetOwner()->AddActorWorldOffset(lNewSpeed_Vector * DeltaTime);
             }
         }
     }

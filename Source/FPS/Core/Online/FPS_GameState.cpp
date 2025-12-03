@@ -62,7 +62,7 @@ AFPS_GameState::AFPS_GameState()
 void AFPS_GameState::BeginPlay()
 {
     Super::BeginPlay();
-    FPS_LOGMessage("Test");
+    FPS_LOGMessage("");
 
     BaseInit();
     InitStatisticsData();
@@ -72,7 +72,7 @@ void AFPS_GameState::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    FPS_ColorLOGMessage(FColor::Cyan, " %d", ElapsedTime);
+    //FPS_ColorLOGMessage(FColor::Cyan, " %d", ElapsedTime);
 }
 
 void AFPS_GameState::OnConstruction(const FTransform& Transform)
@@ -214,7 +214,7 @@ void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& Remov
         {
             SortedPlayerStatistics.Remove(&PlayersStatistics.Items[i]);
 
-            lIsAddedSpectator |= AddSpectatorData(PlayersStatistics.Items[i].PlayerState);
+            lIsAddedSpectator |= AddSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
 
             // Нумерация в 'RemovedIndices' идёт по возрастанию
             ++lDeletedIndexesIterator;
@@ -225,7 +225,7 @@ void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& Remov
 
     if (lIsAddedSpectator)
     {
-        ReSortSpectatorsData();
+        Reaction_AddSpectatorData();
     }
 }
 
@@ -241,7 +241,7 @@ void AFPS_GameState::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedI
         {
             SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
 
-            lIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics.Items[i].PlayerState);
+            lIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
 
             // Нумерация в 'AddedIndices' идёт по возрастанию
             ++lDeletedIndexesIterator;
@@ -252,7 +252,7 @@ void AFPS_GameState::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedI
 
     if (lIsRemovedSpectator)
     {
-        ReSortSpectatorsData();
+        Reaction_RemoveSpectatorData();
     }
 }
 
@@ -264,11 +264,11 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
         /* ---   Up   --- */
 
     case EPlayerStatisticsSortingType::NameUp:
-        return SORTING_PREDICATE(PlayerName, < );
+        return SORTING_PREDICATE(PlayerData.PlayerName, < );
         break;
 
     case EPlayerStatisticsSortingType::PingUp:
-        return SORTING_PREDICATE_ByPtr(PlayerState, GetPing(), uint8(255), < );
+        return SORTING_PREDICATE_ByPtr(PlayerData.PlayerState, GetPing(), uint8(255), < );
         break;
 
     case EPlayerStatisticsSortingType::KillsUp:
@@ -291,11 +291,11 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
         /* ---   Down   --- */
 
     case EPlayerStatisticsSortingType::NameDown:
-        return SORTING_PREDICATE(PlayerName, > );
+        return SORTING_PREDICATE(PlayerData.PlayerName, > );
         break;
 
     case EPlayerStatisticsSortingType::PingDown:
-        return SORTING_PREDICATE_ByPtr(PlayerState, GetPing(), uint8(255), > );
+        return SORTING_PREDICATE_ByPtr(PlayerData.PlayerState, GetPing(), uint8(255), > );
         break;
 
     case EPlayerStatisticsSortingType::KillsDown:
@@ -318,7 +318,7 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
         /* ---   Default   --- */
 
     default:
-        return SORTING_PREDICATE(PlayerName, < );
+        return SORTING_PREDICATE(PlayerData.PlayerName, < );
         break;
     }
 }
@@ -330,48 +330,52 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
 
 void AFPS_GameState::ReInitSpectatorsData()
 {
-    int32 lReserved = (HasAuthority() && AFPS_GameMode::CurrentGameMode->GameSession)
-        ? AFPS_GameMode::CurrentGameMode->GameSession->MaxPlayers
+    int32 lReserved = (HasAuthority() && GetFPSGameMode()->GameSession)
+        ? GetFPSGameMode()->GameSession->MaxPlayers
         : 16;
 
-    SortedSpectators.Empty(lReserved);
+    SortedSpectators.Empty(16);
     SortedSpectators.Append(PlayerArray);
-    ReSortSpectatorsData();
+    Reaction_AddSpectatorData();
 }
 
 TSortingSpectatorsPredicate AFPS_GameState::GetSortingPredicateForSpectators(EPlayerStatisticsSortingType InType) const
 {
+    FPS_LOG(Warning, "Start: %d", (uint32)InType);
+
     switch (InType)
     {
 
         /* ---   Up   --- */
 
     case EPlayerStatisticsSortingType::NameUp:
-        return SORTING_PREDICATE(GetPlayerName(), < );
+        return SORTING_PREDICATE(PlayerName, < );
         break;
 
     case EPlayerStatisticsSortingType::PingUp:
-        return SORTING_PREDICATE(GetPing(), < );
+        return SORTING_PREDICATE_ByPtr(PlayerState, GetPing(), uint8(255), < );
         break;
 
 
         /* ---   Down   --- */
 
     case EPlayerStatisticsSortingType::NameDown:
-        return SORTING_PREDICATE(GetPlayerName(), > );
+        return SORTING_PREDICATE(PlayerName, > );
         break;
 
     case EPlayerStatisticsSortingType::PingDown:
-        return SORTING_PREDICATE(GetPing(), > );
+        return SORTING_PREDICATE_ByPtr(PlayerState, GetPing(), uint8(255), > );
         break;
 
 
         /* ---   Default   --- */
 
     default:
-        return SORTING_PREDICATE(GetPlayerName(), < );
+        return SORTING_PREDICATE(PlayerName, < );
         break;
     }
+
+    FPS_LOG(Warning, "End: %d", (uint32)InType);
 }
 //--------------------------------------------------------------------------------------
 
@@ -381,7 +385,7 @@ TSortingSpectatorsPredicate AFPS_GameState::GetSortingPredicateForSpectators(EPl
 
 void AFPS_GameState::Server_SetClientReadiness_Implementation(const APlayerController* Client, bool bReadiness)
 {
-    if (FPlayerStatisticsData** lData = AFPS_GameMode::CurrentGameMode->PlayersStatisticsMap.Find(Client))
+    if (FPlayerStatisticsData** lData = GetFPSGameMode()->PlayersStatisticsMap.Find(Client))
     {
         (*lData)->bPlayerReadiness = bReadiness;
         Client_SetClientReadiness(bReadiness);
@@ -398,23 +402,25 @@ void AFPS_GameState::AddPlayerState(APlayerState* PlayerState)
 {
     Super::AddPlayerState(PlayerState);
 
-    if (AddSpectatorData(PlayerState))
+    if (!IsMatchInProgress())
     {
-        ReSortSpectatorsData();
+        if (AddSpectatorData(PlayerState))
+        {
+            Reaction_AddSpectatorData();
+        }
     }
-
-    FPS_ColorLOGMessage(FColor::Green, "Test")
 }
 
 void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
 {
     Super::RemovePlayerState(PlayerState);
 
-    if (RemoveSpectatorData(PlayerState))
+    if (!IsMatchInProgress())
     {
-        ReSortSpectatorsData();
+        if (RemoveSpectatorData(PlayerState))
+        {
+            Reaction_RemoveSpectatorData();
+        }
     }
-
-    FPS_ColorLOGMessage(FColor::Green, "Test")
 }
 //--------------------------------------------------------------------------------------

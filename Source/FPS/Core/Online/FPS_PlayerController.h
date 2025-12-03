@@ -75,7 +75,7 @@ public:
         Category = "FPS Player Controller|Match Management",
         meta = (DisplayName = "Get FPS Game State",
             DefaultToSelf, HideSelfPin = "true"))
-    const AFPS_GameState* GetFPSGameState();
+    const AFPS_GameState* BP_GetFPSGameState();
 
     /** Возвращает значение true, если состояние матча находится "В Процессе" ('InProgress') */
     UFUNCTION(BlueprintPure,

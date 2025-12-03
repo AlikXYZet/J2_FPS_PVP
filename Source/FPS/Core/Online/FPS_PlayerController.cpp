@@ -73,13 +73,13 @@ void AFPS_PlayerController::SetMouseToCenter()
 
 /* ---   Match Management   --- */
 
-const AFPS_GameState* AFPS_PlayerController::GetFPSGameState()
+const AFPS_GameState* AFPS_PlayerController::BP_GetFPSGameState()
 {
-    return AFPS_GameState::CurrentGameState;
+    return GetFPSGameState();
 }
 
 bool AFPS_PlayerController::IsMatchInProgress() const
 {
-    return AFPS_GameState::CurrentGameState->IsMatchInProgress();
+    return GetFPSGameState()->IsMatchInProgress();
 }
 //--------------------------------------------------------------------------------------

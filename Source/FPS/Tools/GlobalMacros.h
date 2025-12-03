@@ -131,7 +131,29 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 /** Макрос, который выводит на экран сообщение (красным цветом)
 и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
 @param  Format - Формат текста */
-#define FPS_LOGMessage(Format, ...) FPS_ColorLOGMessage(FColor::Red, Format)
+#define FPS_LOGMessage(Format, ...) FPS_ColorLOGMessage(FColor::Red, Format, ##__VA_ARGS__)
+
+/** Макрос, который выводит на экран сообщение с указанным цветом
+и дополнительную информацию о классе и методе класса, где было вызвано сообщение
+
+@param  Color - Цвет текста
+@param  Format - Формат текста
+
+@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
+#define FPS_ColorStaticMessage(Color, Format, ...) \
+    FPS_ColorMessage(\
+        Color,\
+        TEXT("'%s': " Format), \
+        *FString(__FUNCTION__),\
+        ##__VA_ARGS__)
+
+/** Макрос, который выводит на экран сообщение (красным цветом)
+и дополнительную информацию о классе и методе класса, где было вызвано сообщение
+
+@param  Format - Формат текста
+
+@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
+#define FPS_StaticMessage(Format, ...) FPS_ColorStaticMessage(FColor::Red, Format, ##__VA_ARGS__)
 //--------------------------------------------------------------------------------------
 
 
@@ -170,4 +192,29 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 
 /** Макрос: Преобразование 'bool' в указатель 'FString' для использования в макросах 'LOG' и 'Message' */
 #define BoolToString(BOOL) *FString(BOOL ? "TRUE" : "FALSE")
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Примечание   --- */
+
+/** Используемые форматы:
+@see Engine/Source/Runtime/Core/Public/Templates/UnrealTypeTraits.h
+
+// Базовые:
+Expose_TFormatSpecifier(bool, "%i")     // Не работает для `bool`
+Expose_TFormatSpecifier(uint8, "%u")
+Expose_TFormatSpecifier(uint16, "%u")
+Expose_TFormatSpecifier(uint32, "%u")
+Expose_TFormatSpecifier(uint64, "%llu") // Подходит и для указателей
+Expose_TFormatSpecifier(int8, "%d")
+Expose_TFormatSpecifier(int16, "%d")
+Expose_TFormatSpecifier(int32, "%d")
+Expose_TFormatSpecifier(int64, "%lld")
+Expose_TFormatSpecifier(float, "%f")
+Expose_TFormatSpecifier(double, "%f")
+Expose_TFormatSpecifier(long double, "%f")
+Expose_TFormatSpecifier(long, "%ld")
+Expose_TFormatSpecifier(unsigned long, "%lu")
+*/
 //--------------------------------------------------------------------------------------

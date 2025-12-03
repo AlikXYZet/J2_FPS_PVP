@@ -27,10 +27,10 @@ USmoothRotationComponent::USmoothRotationComponent()
 
 /* ---   Base   --- */
 
-void USmoothRotationComponent::BeginPlay()
-{
-    Super::BeginPlay();
-}
+//void USmoothRotationComponent::BeginPlay()
+//{
+//    Super::BeginPlay();
+//}
 
 void USmoothRotationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -39,32 +39,15 @@ void USmoothRotationComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
     RotationForTick(DeltaTime);
 }
 
-void USmoothRotationComponent::OnComponentCreated()
-{
-    Super::OnComponentCreated();
+//void USmoothRotationComponent::OnComponentCreated()
+//{
+//    Super::OnComponentCreated();
+//}
 
-    InitCurrentComponent();
-}
-
-void USmoothRotationComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
-{
-    Super::OnComponentDestroyed(bDestroyingHierarchy);
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Init   --- */
-
-void USmoothRotationComponent::InitCurrentComponent()
-{
-    CurrentActor = GetOwner();
-
-    if (!CurrentActor)
-    {
-        FPS_LOG_Component(Error, TEXT("CurrentActor is NOT"));
-    }
-}
+//void USmoothRotationComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+//{
+//    Super::OnComponentDestroyed(bDestroyingHierarchy);
+//}
 //--------------------------------------------------------------------------------------
 
 
@@ -73,19 +56,16 @@ void USmoothRotationComponent::InitCurrentComponent()
 
 void USmoothRotationComponent::RotateToLocation(const FVector& iPoint)
 {
-    RotateToRotator(UKismetMathLibrary::FindLookAtRotation(CurrentActor->GetActorLocation(), iPoint));
+    RotateToRotator(UKismetMathLibrary::FindLookAtRotation(GetOwner()->GetActorLocation(), iPoint));
 }
 
 void USmoothRotationComponent::RotateToRotator(const FRotator& iRotator)
 {
-    if (CurrentActor)
-    {
-        StartRotation = bUseRelativeRotation
-            ? CurrentActor->GetRootComponent()->GetRelativeRotation() : CurrentActor->GetActorRotation();
+    StartRotation = bUseRelativeRotation
+        ? GetOwner()->GetRootComponent()->GetRelativeRotation() : GetOwner()->GetActorRotation();
 
-        EndRotation = iRotator;
-        bIsRotatedToNewRotation = true;
-    }
+    EndRotation = iRotator;
+    bIsRotatedToNewRotation = true;
 }
 
 void USmoothRotationComponent::RotationForTick(float DeltaTime)
@@ -95,7 +75,7 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
         && !CheckRotationLock(ERotationVariations::XYZ))
     {
         FRotator lNewRotation = bUseRelativeRotation
-            ? CurrentActor->GetRootComponent()->GetRelativeRotation() : CurrentActor->GetActorRotation();
+            ? GetOwner()->GetRootComponent()->GetRelativeRotation() : GetOwner()->GetActorRotation();
 
         FRotator lCurrentRotation = lNewRotation;
 
@@ -104,11 +84,11 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
         {
             if (bUseRelativeRotation)
             {
-                CurrentActor->SetActorRelativeRotation(EndRotation);
+                GetOwner()->SetActorRelativeRotation(EndRotation);
             }
             else
             {
-                CurrentActor->SetActorRotation(EndRotation);
+                GetOwner()->SetActorRotation(EndRotation);
             }
 
             bIsRotatedToNewRotation = false;
@@ -126,16 +106,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
             if (!CheckRotationLock(ERotationVariations::Pitch))
             {
                 // Корректировка направления
-                if (int(lNewSpeed.Pitch / 180))
+                if (-180 > lNewSpeed.Pitch || lNewSpeed.Pitch > 180)
                 {
-                    lNewSpeed.Pitch -= 360 * (lNewSpeed.Pitch > 0 ? 1 : -1);
+                    lNewSpeed.Pitch -= 360 * signed(lNewSpeed.Pitch);
                 }
 
                 // Приближение к Цели
                 if (abs(lChecker.Pitch) > MaxSpeed)
                 {
                     // Ограничение скорости с сохранением знака
-                    lNewSpeed.Pitch = MaxSpeed * (lNewSpeed.Pitch > 0 ? 1 : -1);
+                    lNewSpeed.Pitch = MaxSpeed * signed(lNewSpeed.Pitch);
                 }
                 else
                 {
@@ -149,16 +129,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
                     lChecker.Pitch = (lCurrentRotation - StartRotation).Pitch;
 
                     // Корректировка направления
-                    if (int(lChecker.Pitch / 180))
+                    if (-180 > lChecker.Pitch || lChecker.Pitch > 180)
                     {
-                        lChecker.Pitch -= 360 * (lChecker.Pitch > 0 ? 1 : -1);
+                        lChecker.Pitch -= 360 * signed(lChecker.Pitch);
                     }
 
                     lChecker.Pitch *= AccelerationCoefficient;
 
                     if (lNewSpeed.Pitch > lChecker.Pitch)
                     {
-                        lNewSpeed.Pitch = (abs(lChecker.Pitch) + MinStep) * (lNewSpeed.Pitch > 0 ? 1 : -1);
+                        lNewSpeed.Pitch = (abs(lChecker.Pitch) + MinStep) * signed(lNewSpeed.Pitch);
                     }
                 }
             }
@@ -166,16 +146,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
             if (!CheckRotationLock(ERotationVariations::Yaw))
             {
                 // Корректировка направления
-                if (int(lNewSpeed.Yaw / 180))
+                if (-180 > lNewSpeed.Yaw || lNewSpeed.Yaw > 180)
                 {
-                    lNewSpeed.Yaw -= 360 * (lNewSpeed.Yaw > 0 ? 1 : -1);
+                    lNewSpeed.Yaw -= 360 * signed(lNewSpeed.Yaw);
                 }
 
                 // Приближение к Цели
                 if (abs(lChecker.Yaw) > MaxSpeed)
                 {
                     // Ограничение скорости с сохранением знака
-                    lNewSpeed.Yaw = MaxSpeed * (lNewSpeed.Yaw > 0 ? 1 : -1);
+                    lNewSpeed.Yaw = MaxSpeed * signed(lNewSpeed.Yaw);
                 }
                 else
                 {
@@ -189,16 +169,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
                     lChecker.Yaw = (lCurrentRotation - StartRotation).Yaw;
 
                     // Корректировка направления
-                    if (int(lChecker.Yaw / 180))
+                    if (-180 > lChecker.Yaw || lChecker.Yaw > 180)
                     {
-                        lChecker.Yaw -= 360 * (lChecker.Yaw > 0 ? 1 : -1);
+                        lChecker.Yaw -= 360 * signed(lChecker.Yaw);
                     }
 
                     lChecker.Yaw *= AccelerationCoefficient;
 
                     if (lNewSpeed.Yaw > lChecker.Yaw)
                     {
-                        lNewSpeed.Yaw = (abs(lChecker.Yaw) + MinStep) * (lNewSpeed.Yaw > 0 ? 1 : -1);
+                        lNewSpeed.Yaw = (abs(lChecker.Yaw) + MinStep) * signed(lNewSpeed.Yaw);
                     }
                 }
             }
@@ -206,16 +186,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
             if (!CheckRotationLock(ERotationVariations::Roll))
             {
                 // Корректировка направления
-                if (int(lNewSpeed.Roll / 180))
+                if (-180 > lNewSpeed.Roll || lNewSpeed.Roll > 180)
                 {
-                    lNewSpeed.Roll -= 360 * (lNewSpeed.Roll > 0 ? 1 : -1);
+                    lNewSpeed.Roll -= 360 * signed(lNewSpeed.Roll);
                 }
 
                 // Приближение к Цели
                 if (abs(lChecker.Roll) > MaxSpeed)
                 {
                     // Ограничение скорости с сохранением знака
-                    lNewSpeed.Roll = MaxSpeed * (lNewSpeed.Roll > 0 ? 1 : -1);
+                    lNewSpeed.Roll = MaxSpeed * signed(lNewSpeed.Roll);
                 }
                 else
                 {
@@ -229,16 +209,16 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
                     lChecker.Roll = (lCurrentRotation - StartRotation).Roll;
 
                     // Корректировка направления
-                    if (int(lChecker.Roll / 180))
+                    if (-180 > lChecker.Roll || lChecker.Roll > 180)
                     {
-                        lChecker.Roll -= 360 * (lChecker.Roll > 0 ? 1 : -1);
+                        lChecker.Roll -= 360 * signed(lChecker.Roll);
                     }
 
                     lChecker.Roll *= AccelerationCoefficient;
 
                     if (lNewSpeed.Roll > lChecker.Roll)
                     {
-                        lNewSpeed.Roll = (abs(lChecker.Roll) + MinStep) * (lNewSpeed.Roll > 0 ? 1 : -1);
+                        lNewSpeed.Roll = (abs(lChecker.Roll) + MinStep) * signed(lNewSpeed.Roll);
                     }
                 }
             }
@@ -247,11 +227,11 @@ void USmoothRotationComponent::RotationForTick(float DeltaTime)
 
             if (bUseRelativeRotation)
             {
-                CurrentActor->GetRootComponent()->AddRelativeRotation(lNewRotation);
+                GetOwner()->GetRootComponent()->AddRelativeRotation(lNewRotation);
             }
             else
             {
-                CurrentActor->AddActorLocalRotation(lNewRotation);
+                GetOwner()->AddActorLocalRotation(lNewRotation);
             }
         }
     }

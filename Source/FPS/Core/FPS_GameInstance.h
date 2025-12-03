@@ -116,6 +116,19 @@ private:
 /** Получить текущий экземпляр класса 'UFPS_GameInstance' */
 FORCEINLINE static UFPS_GameInstance* const GetFPSGameInstance()
 {
-    return UFPS_GameInstance::CurrentGameInstance;
+#if WITH_EDITOR
+
+    if (!UFPS_GameInstance::CurrentGameInstance)
+    {
+        return UFPS_GameInstance::CurrentGameInstance = GEngine->GameViewport->GetWorld()->GetGameInstance<UFPS_GameInstance>();
+    }
+    else
+
+#endif // WITH_EDITOR
+
+    {
+        // В режиме "Play In Editor" данный указатель очищается, однако стабильно работает в готовой сборке
+        return UFPS_GameInstance::CurrentGameInstance;
+    }
 };
 //--------------------------------------------------------------------------------------

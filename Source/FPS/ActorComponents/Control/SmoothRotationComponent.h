@@ -74,7 +74,7 @@ protected:
     /* ---   Base   --- */
 
     // Called when the game starts
-    virtual void BeginPlay() override;
+    //virtual void BeginPlay() override;
     //-------------------------------------------
 
 
@@ -87,13 +87,13 @@ public:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
     /** Вызывается при создании компонента */
-    virtual void OnComponentCreated() override;
+    //virtual void OnComponentCreated() override;
 
     /** Вызывается при уничтожении компонента
     @param bDestroyingHierarchy - значение True, если разрушается вся иерархия компонентов.
     Позволяет избежать дорогостоящих операций
     */
-    virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+    //virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
     //-------------------------------------------
 
 
@@ -144,22 +144,6 @@ public:
 
 
 private:
-
-    /* ---   Init   --- */
-
-    // Текущий Актор-владелец
-    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly,
-        Category = "Settings|Check",
-        meta = (AllowPrivateAccess = true))
-    AActor* CurrentActor = nullptr;
-
-    //
-
-    /** Инициализация данных текущего компонента*/
-    void InitCurrentComponent();
-    //-------------------------------------------
-
-
 
     /* ---   Actor Rotate   --- */
 

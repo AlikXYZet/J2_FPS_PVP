@@ -10,7 +10,9 @@
 
 // UE:
 #include "GameFramework/PlayerState.h"
-#include "GameFramework/GameState.h"
+
+// Structs:
+#include "PlayerData.h"
 
 // Generated:
 #include "PlayerStatisticsData.generated.h"
@@ -32,27 +34,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPostChangingArrayData);
 
 
 
-/* ---   ENums   --- */
-
-// Сетевой Статус Игрока
-UENUM(BlueprintType)
-enum struct EPlayerNetworkStatus : uint8
-{
-    // Игрок НЕ Валиден
-    NONE,
-    // Локальный контроллер
-    Local,
-    // Игрок-Сервер (локальный Контроллер для Сервера)
-    ListenServer    UMETA(DisplayName = "Listen Server"),
-    // Игрок с сетевым (отдалённым) контроллером
-    Client,
-
-    MAX UMETA(Hidden)
-};
-//----------------------------------------------------------------------------------------
-
-
-
 /** Структура данных о Статистике Игрока */
 USTRUCT(BlueprintType)
 struct FPlayerStatisticsData : public FFastArraySerializerItem
@@ -62,22 +43,19 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     /* ---   Constructors   --- */
 
     FPlayerStatisticsData() {};
+
+    FPlayerStatisticsData(APlayerState* NewPlayer)
+        : PlayerData(NewPlayer) {};
     //-------------------------------------------
 
 
 
     /* ---   Data   --- */
 
-    // Указатель на 'Player State' Игрока, хранящий информацию о Имени и Пинге
+    // Данные игрока ('APlayerState', Имя и Сетевой статус)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    APlayerState* PlayerState = nullptr;
-
-    // Имя текущего игрока (NotReplicated)
-    // @note    Необходим, так как 'PlayerState' может быть не валиден (теряются данные о Имени игрока)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
-        Category = "Statistics")
-    FString PlayerName = FString("NONE");
+    FPlayerData PlayerData;
 
     // Количество Убийств (+3 Points)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -99,12 +77,6 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
         Category = "Statistics")
     int32 Points = 0;
-
-    // Локальный сетевой статус Игрока (NotReplicated)
-    // @note    На стороне Клиента определяется при изменении 'PlayerState'
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, NotReplicated,
-        Category = "Statistics")
-    EPlayerNetworkStatus PlayerNetStatus = EPlayerNetworkStatus::NONE;
 
     // Готовность данного Игрока
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -185,12 +157,11 @@ private:
 
     /* ---   Data Methods: Player State   --- */
 
-    FORCEINLINE void SetPlayerState(APlayerState* const State)
+    FORCEINLINE void SetPlayerState(APlayerState* const PlayerState)
     {
-        if (PlayerState != State)
+        if (PlayerData.PlayerState != PlayerState)
         {
-            PlayerState = State;
-            UpdateDataOnPlayerState();
+            PlayerData.SetPlayerState(PlayerState);
         }
 
         EmptyData();
@@ -199,35 +170,7 @@ private:
     /** Обновить данные, зависимые от PlayerState  */
     FORCEINLINE void UpdateDataOnPlayerState()
     {
-        if (IsValid(PlayerState))
-        {
-            // Обновить Имя на актуальный
-            if (PlayerName != PlayerState->GetPlayerName())
-            {
-                PlayerName = PlayerState->GetPlayerName();
-            }
-
-            // Обновить Сетевой Статус на актуальный
-            if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
-            {
-                PlayerNetStatus = EPlayerNetworkStatus::Local;
-            }
-            else
-            {
-                if (PlayerState->GetPing())
-                {
-                    PlayerNetStatus = EPlayerNetworkStatus::Client;
-                }
-                else
-                {
-                    PlayerNetStatus = EPlayerNetworkStatus::ListenServer;
-                }
-            }
-        }
-        else
-        {
-            PlayerNetStatus = EPlayerNetworkStatus::NONE;
-        }
+        PlayerData.UpdateDataOnPlayerState();
     };
     //-------------------------------------------
 
@@ -302,6 +245,34 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Array Methods   --- */
 
+    FORCEINLINE void AddPlayer(APlayerState* NewPlayer)
+    {
+        OnPostAddingItems.Broadcast(
+            TArray<int32>{Items.Add(FPlayerStatisticsData(NewPlayer))},
+            Items.Num());
+
+        MarkArrayDirty();
+    };
+
+    int32 RemovePlayer(APlayerState* OldPlayer)
+    {
+        int32 lIndex = Items.FindLastByPredicate(
+            [OldPlayer](const FPlayerStatisticsData& Item)
+            { return Item.PlayerData.PlayerState == OldPlayer; });
+
+        if (lIndex != INDEX_NONE)
+        {
+            Items.RemoveAtSwap(lIndex);
+
+            OnPostAddingItems.Broadcast(
+                TArray<int32>{lIndex},
+                Items.Num());
+
+            MarkArrayDirty();
+        }
+
+        return lIndex;
+    };
     //-------------------------------------------
 
 

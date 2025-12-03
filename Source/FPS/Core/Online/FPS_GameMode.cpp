@@ -76,7 +76,7 @@ AFPS_GameMode::AFPS_GameMode()
 void AFPS_GameMode::BeginPlay()
 {
     Super::BeginPlay();
-    FPS_LOGMessage("Test");
+    FPS_LOGMessage("");
 
     BaseInit();
 }
@@ -123,18 +123,21 @@ void AFPS_GameMode::BaseInit()
 //    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 //    FPS_LOGMessage("Test");
 //}
-//
-//void AFPS_GameMode::PostLogin(APlayerController* NewPlayer)
-//{
-//    Super::PostLogin(NewPlayer);
-//    FPS_LOGMessage("Test");
-//}
-//
-//void AFPS_GameMode::Logout(AController* Exiting)
-//{
-//    Super::Logout(Exiting);
-//    FPS_LOGMessage("Test");
-//}
+
+void AFPS_GameMode::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+    FPS_LOGMessage("");
+}
+
+void AFPS_GameMode::Logout(AController* Exiting)
+{
+    Super::Logout(Exiting);
+
+    GetPlayersStatistics().RemovePlayer(Exiting->PlayerState);
+
+    FPS_LOGMessage("");
+}
 
 
 
@@ -234,7 +237,7 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
             // Увеличить счётчик Смертей для Цели
             if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find((APlayerController*)lPlayer->GetController()))
             {
-                GetPlayerStatistics().AddDeaths(**lTargetStats);
+                GetPlayersStatistics().AddDeaths(**lTargetStats);
 
                 FPS_ColorMessage(FColor::Green, "Add Deaths");
             }
@@ -246,7 +249,7 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
             if (lWreckerStats
                 && *lIterator != lPlayer->GetController())
             {
-                GetPlayerStatistics().AddKills(**lWreckerStats);
+                GetPlayersStatistics().AddKills(**lWreckerStats);
 
                 FPS_ColorMessage(FColor::Green, "Add Kills");
             }
@@ -258,13 +261,13 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                 if (lWreckerStats
                     && *lIterator != lPlayer->GetController())
                 {
-                    GetPlayerStatistics().AddAssists(**lWreckerStats);
+                    GetPlayersStatistics().AddAssists(**lWreckerStats);
 
                     FPS_ColorMessage(FColor::Cyan, "Add Assists");
                 }
             }
 
-            GetPlayerStatistics().OnPostChangingArrayData.Broadcast();
+            GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
         }
     }
 }
@@ -277,7 +280,7 @@ void AFPS_GameMode::InitDestructionAccounting()
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerController::StaticClass(), lActors);
     if (lActors.Num())
     {
-        int32 lOldNum = GetPlayerStatistics().Items.Num();
+        int32 lOldNum = GetPlayersStatistics().Items.Num();
         int32 lNewNum = lActors.Num();
 
         // Резервирование и чистка памяти
@@ -285,13 +288,13 @@ void AFPS_GameMode::InitDestructionAccounting()
             PlayersStatisticsMap.Empty(lActors.Num());
 
             if (GameSession
-                && GameSession->MaxPlayers != GetPlayerStatistics().Items.Max())
+                && GameSession->MaxPlayers != GetPlayersStatistics().Items.Max())
             {
-                GetPlayerStatistics().Items.Reserve(GameSession->MaxPlayers);
+                GetPlayersStatistics().Items.Reserve(GameSession->MaxPlayers);
             }
 
             // Убрать лишние и добавить недостающие
-            GetPlayerStatistics().Items.SetNum(lNewNum, false);
+            GetPlayersStatistics().Items.SetNum(lNewNum, false);
         }
 
         // Заполнение данных
@@ -305,10 +308,10 @@ void AFPS_GameMode::InitDestructionAccounting()
                 --lIndex;
 
                 lPC = (APlayerController*)lActors[lIndex];
-                lPSD = &GetPlayerStatistics().Items[lIndex];
+                lPSD = &GetPlayersStatistics().Items[lIndex];
 
                 // Заменить в Элементе массива указатель на 'Player State'
-                GetPlayerStatistics().SetPlayerState(*lPSD, lPC->PlayerState);
+                GetPlayersStatistics().SetPlayerState(*lPSD, lPC->PlayerState);
 
                 // Создание взаимосвязи между Игроком и его Статистикой (Элемент массива)
                 PlayersStatisticsMap.Add(lPC, lPSD);
@@ -319,25 +322,25 @@ void AFPS_GameMode::InitDestructionAccounting()
         {
             if (lOldNum < lNewNum)
             {
-                GetPlayerStatistics().OnPostAddingItems.Broadcast(
+                GetPlayersStatistics().OnPostAddingItems.Broadcast(
                     GetNumbersSeries(lOldNum, lNewNum),
                     lNewNum);
 
                 // Пометить Массив как "изменённый"
-                GetPlayerStatistics().MarkArrayDirty();
+                GetPlayersStatistics().MarkArrayDirty();
             }
             else if (lOldNum > lNewNum)
             {
-                GetPlayerStatistics().OnPreRemovingItems.Broadcast(
+                GetPlayersStatistics().OnPreRemovingItems.Broadcast(
                     GetNumbersSeries(lNewNum, lOldNum),
                     lNewNum);
 
                 // Пометить Массив как "изменённый"
-                GetPlayerStatistics().MarkArrayDirty();
+                GetPlayersStatistics().MarkArrayDirty();
             }
             else
             {
-                GetPlayerStatistics().OnPostChangingArrayData.Broadcast();
+                GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
             }
         }
     }

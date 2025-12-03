@@ -39,12 +39,15 @@ void URoleSelectionWidget::SetVisibility(ESlateVisibility InVisibility)
     if (InVisibility != ESlateVisibility::Collapsed
         && InVisibility != ESlateVisibility::Hidden)
     {
-        AFPS_GameState::CurrentGameState->OnEndSortingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
-        AFPS_GameState::CurrentGameState->ReSortSpectatorsData();
+        //GetFPSGameState()->OnEndSortingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
+        //GetFPSGameState()->OnRemovingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnRemovingSpectatorsItems);
+        //GetFPSGameState()->OnAddingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnAddingSpectatorsItems);
+        Event_OnAddingSpectatorsItems(GetFPSGameState()->GetSortedSpectators().Num());
+        GetFPSGameState()->ReSortSpectatorsData();
     }
     else
     {
-        AFPS_GameState::CurrentGameState->OnEndSortingSpectators.RemoveDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
+        //GetFPSGameState()->OnEndSortingSpectators.RemoveAll(this);
     }
 }
 //--------------------------------------------------------------------------------------
@@ -55,17 +58,17 @@ void URoleSelectionWidget::SetVisibility(ESlateVisibility InVisibility)
 
 void URoleSelectionWidget::SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType)
 {
-    AFPS_GameState::CurrentGameState->SetDataSortingTypeForSortedSpectators(InType);
+    GetFPSGameState()->SetDataSortingTypeForSortedSpectators(InType);
 }
 
-const APlayerState* URoleSelectionWidget::GetDataByIndexFromSortedSpectators(int32 Index) const
+const FPlayerData& URoleSelectionWidget::GetDataByIndexFromSortedSpectators(int32 Index) const
 {
-    return AFPS_GameState::CurrentGameState->GetDataByIndexFromSortedSpectators(Index);
+    return GetFPSGameState()->GetDataByIndexFromSortedSpectators(Index);
 }
 
-const TArray<APlayerState*>& URoleSelectionWidget::GetSortedSpectators() const
+const TArray<FPlayerData>& URoleSelectionWidget::GetSortedSpectators() const
 {
-    return AFPS_GameState::CurrentGameState->GetSortedSpectators();
+    return GetFPSGameState()->GetSortedSpectators();
 }
 //--------------------------------------------------------------------------------------
 
@@ -75,11 +78,14 @@ const TArray<APlayerState*>& URoleSelectionWidget::GetSortedSpectators() const
 
 void URoleSelectionWidget::SetOwnerReadiness(bool bReadiness)
 {
-    AFPS_GameState::CurrentGameState->SetClientReadiness(bReadiness);
+    GetFPSGameState()->SetClientReadiness(bReadiness);
 }
 
 void URoleSelectionWidget::InitRoleSelection()
 {
-    AFPS_GameState::CurrentGameState->OnClientReadinessChange.AddDynamic(this, &URoleSelectionWidget::Event_OnOwnerReadinessChange);
+    GetFPSGameState()->OnClientReadinessChange.AddDynamic(this, &URoleSelectionWidget::Event_OnOwnerReadinessChange);
+    GetFPSGameState()->OnEndSortingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
+    GetFPSGameState()->OnRemovingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnRemovingSpectatorsItems);
+    GetFPSGameState()->OnAddingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnAddingSpectatorsItems);
 }
 //--------------------------------------------------------------------------------------

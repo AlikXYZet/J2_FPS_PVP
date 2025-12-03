@@ -55,14 +55,14 @@ public:
         Category = "Spectators Data",
         meta = (DisplayName = "Get Data by Index from Sorted Spectators", AutoCreateRefTerm = "Index",
             DefaultToSelf, HideSelfPin = "true"))
-    const APlayerState* GetDataByIndexFromSortedSpectators(int32 Index) const;
+    const FPlayerData& GetDataByIndexFromSortedSpectators(int32 Index) const;
 
     /** Получить сортированный список Наблюдателей */
     UFUNCTION(BlueprintPure,
         Category = "FPS Game State|Spectators Data",
         meta = (DisplayName = "Get Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
-    const TArray<APlayerState*>& GetSortedSpectators() const;
+    const TArray<FPlayerData>& GetSortedSpectators() const;
     //--------------------------------------------
 
 
@@ -86,6 +86,20 @@ public:
         Category = "Spectators Data",
         meta = (DisplayName = "On End Sorting Of Spectators"))
     void Event_OnEndSortingOfSpectators();
+
+    /** Событие BP: При Удалении элементов данных Наблюдателей
+    @note   НЕ Вызывается во время Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Spectators Data",
+        meta = (DisplayName = "On Removing Spectators Items"))
+    void Event_OnRemovingSpectatorsItems(int32 FinalSize);
+
+    /** Событие BP: При Добавлении элементов данных Наблюдателей
+    @note   НЕ Вызывается во время Матча */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Spectators Data",
+        meta = (DisplayName = "On Adding Spectators Items"))
+    void Event_OnAddingSpectatorsItems(int32 FinalSize);
 
     /** Событие BP: При изменении Готовности Владельца */
     UFUNCTION(BlueprintImplementableEvent,

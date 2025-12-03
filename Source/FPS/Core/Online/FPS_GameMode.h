@@ -110,14 +110,14 @@ public:
     //@param  NewPlayer - Контроллер Игрока, уведомляющий о готовности */
     //virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 
-    ///** Вызывается после успешного подключения нового Игрока.
-    //@note   Это первое безопасное место для вызова реплицированных функций в PlayerController.
-    //@param  NewPlayer - Контроллер подключившегося Игрока */
-    //virtual void PostLogin(APlayerController* NewPlayer) override;
+    /** Вызывается после успешного подключения нового Игрока.
+    @note   Это первое безопасное место для вызова реплицированных функций в PlayerController.
+    @param  NewPlayer - Контроллер подключившегося Игрока */
+    virtual void PostLogin(APlayerController* NewPlayer) override;
 
-    ///** Вызывается, когда Игрок (контроллер с 'PlayerState') покидает игру или уничтожается
-    //@param  Exiting - Контроллер ушедшего Игрока */
-    //virtual void Logout(AController* Exiting) override;
+    /** Вызывается, когда Игрок (контроллер с 'PlayerState') покидает игру или уничтожается
+    @param  Exiting - Контроллер ушедшего Игрока */
+    virtual void Logout(AController* Exiting) override;
 
 
 
@@ -206,9 +206,9 @@ private:
     void GetAllInstigatorPlayers(const FGameplayEffectSpec& Spec, TSet<APlayerController*>& OutPlayers);
 
     /** Получить контейнер со Статистиками всех активных Игроков */
-    FORCEINLINE FPlayerStatisticsArray& GetPlayerStatistics() const
+    FORCEINLINE FPlayerStatisticsArray& GetPlayersStatistics() const
     {
-        return AFPS_GameState::CurrentGameState->PlayersStatistics;
+        return GetFPSGameState()->PlayersStatistics;
     };
     //-------------------------------------------
 
@@ -228,6 +228,19 @@ private:
 /** Получить текущий экземпляр класса 'AFPS_GameMode' */
 FORCEINLINE static AFPS_GameMode* const GetFPSGameMode()
 {
-    return AFPS_GameMode::CurrentGameMode;
+#if WITH_EDITOR
+
+    if (!AFPS_GameMode::CurrentGameMode)
+    {
+        return AFPS_GameMode::CurrentGameMode = GEngine->GameViewport->GetWorld()->GetAuthGameMode<AFPS_GameMode>();
+    }
+    else
+
+#endif // WITH_EDITOR
+
+    {
+        // В режиме "Play In Editor" данный указатель очищается, однако стабильно работает в готовой сборке
+        return AFPS_GameMode::CurrentGameMode;
+    }
 };
 //--------------------------------------------------------------------------------------

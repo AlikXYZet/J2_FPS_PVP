@@ -12,8 +12,8 @@
 #include "FPS/Tools/GlobalMacros.h"
 
 // Structs:
-#include "FPS/Tools/Structs/GameData/PlayerStatisticsData.h"
 #include "FPS/Tools/Structs/GameData/MatchStateData.h"
+#include "FPS/Tools/Structs/GameData/PlayerStatisticsData.h"
 
 // Generated:
 #include "FPS_GameState.generated.h"
@@ -27,7 +27,7 @@
 typedef bool (*TSortingPredicate)(const FPlayerStatisticsData& first, const FPlayerStatisticsData& second);
 
 // Шаблонный Тип предиката сортировки Наблюдателей
-typedef bool (*TSortingSpectatorsPredicate)(const APlayerState& first, const APlayerState& second);
+typedef bool (*TSortingSpectatorsPredicate)(const FPlayerData& first, const FPlayerData& second);
 //--------------------------------------------------------------------------------------
 
 
@@ -39,6 +39,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchStateChange, EMatchState, Ne
 
 // Делегат: При Завершении сортировки Массива данных Статистики Игроков
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndSortingPlayerStatistics);
+
+// Делегат: При удалении Наблюдателей
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRemovingSpectators, int32, FinalSize);
+
+// Делегат: При добавлении Наблюдателей
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAddingSpectators, int32, FinalSize);
 
 // Делегат: При Завершении сортировки Массива данных Наблюдателей
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndSortingSpectators);
@@ -102,6 +108,12 @@ public:
 
     // Делегат: При Завершении сортировки Массива данных Статистики Игроков
     FOnEndSortingPlayerStatistics OnEndSortingPlayerStatistics;
+
+    // Делегат: Перед Удалением элементов Массива
+    FOnRemovingSpectators OnRemovingSpectators;
+
+    // Делегат: Добавлены элементы Массива
+    FOnAddingSpectators OnAddingSpectators;
 
     // Делегат: При Завершении сортировки Массива данных Наблюдателей
     FOnEndSortingSpectators OnEndSortingSpectators;
@@ -221,11 +233,11 @@ public:
 
     /* ---   Players Statistics Data   --- */
 
-    // Эффективно реплицируемый Контейнер о Статистиках всех активных Игроков
-    UPROPERTY(Replicated)
-    FPlayerStatisticsArray PlayersStatistics;
-
-    //
+    /** Получить контейнер со Статистиками всех активных Игроков */
+    FORCEINLINE const FPlayerStatisticsArray& GetPlayersStatistics() const
+    {
+        return PlayersStatistics;
+    };
 
     /** Изменить Тип сортировки Данных Статистики Игроков */
     UFUNCTION(BlueprintCallable,
@@ -301,14 +313,20 @@ public:
         Category = "FPS Game State|Spectators Data",
         meta = (DisplayName = "Get Data by Index from Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
-    const APlayerState* GetDataByIndexFromSortedSpectators(int32 Index) const
+    const FPlayerData& GetDataByIndexFromSortedSpectators(int32 Index)
     {
         if (SortedSpectators.IsValidIndex(Index))
         {
+            if (SortedSpectators[Index].PlayerName.IsEmpty())
+            {
+                SortedSpectators[Index].UpdateDataOnPlayerState();
+                // @note    Данные игрока могут быть всё ещё пусты, так как 'PlyerState' на момент 
+                //          вызова может быть ещё не полностью подгружен (длительность репликации)
+            }
             return SortedSpectators[Index];
         }
 
-        return nullptr;
+        return FPlayerData::Empty;
     };
 
     /** Получить сортированный список Наблюдателей */
@@ -316,9 +334,44 @@ public:
         Category = "FPS Game State|Spectators Data",
         meta = (DisplayName = "Get Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
-    const TArray<APlayerState*>& GetSortedSpectators() const
+    const TArray<FPlayerData>& GetSortedSpectators() const
     {
         return SortedSpectators;
+    };
+    //--------------------------------------------
+
+
+
+    /* ---   Player Data   --- */
+
+    /** Получить Сетевой Статус Игрока */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Game State|Player Data")
+    static EPlayerNetworkStatus GetPlayerNetStatus(const APlayerState* PlayerState)
+    {
+        if (IsValid(PlayerState))
+        {
+            if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
+            {
+                return EPlayerNetworkStatus::Local;
+            }
+            else
+            {
+                if (PlayerState->GetPlayerId() == MAX_uint8 + 2
+                    && PlayerState->GetPing() == 0)
+                {
+                    return EPlayerNetworkStatus::Client;
+                }
+                else
+                {
+                    return EPlayerNetworkStatus::ListenServer;
+                }
+            }
+        }
+        else
+        {
+            return EPlayerNetworkStatus::NONE;
+        }
     };
     //-------------------------------------------
 
@@ -378,6 +431,10 @@ private:
 
     /* ---   Players Statistics Data   --- */
 
+    // Эффективно реплицируемый Контейнер о Статистиках всех активных Игроков
+    UPROPERTY(Replicated)
+    FPlayerStatisticsArray PlayersStatistics;
+
     // Сортированный массив указателей на Статистики Игроков
     TArray<const FPlayerStatisticsData*> SortedPlayerStatistics;
 
@@ -410,11 +467,11 @@ private:
     /* ---   Spectators Data   --- */
 
     // Сортированный массив указателей на Данные Наблюдателей
-    TArray<APlayerState*> SortedSpectators;
+    TArray<FPlayerData> SortedSpectators;
 
     // Предикат сортировки Наблюдателей
     // @note    Переменная-Предикат создан для уменьшения времени сортировки
-    TSortingSpectatorsPredicate SortingSpectatorsPredicate = GetSortingPredicateForSpectators(SpectatorsSortingType);
+    TSortingSpectatorsPredicate SortingSpectatorsPredicate = SORTING_PREDICATE(PlayerName, < );
 
     // Переменная типа сортировки для массива Данных Наблюдателей
     EPlayerStatisticsSortingType SpectatorsSortingType = EPlayerStatisticsSortingType::NameUp;
@@ -424,6 +481,28 @@ private:
     /** Инициализация данных Наблюдателей */
     void ReInitSpectatorsData();
 
+    /** Удалить данные Наблюдателя из списка */
+    FORCEINLINE bool RemoveSpectatorData(APlayerState* PlayerState)
+    {
+        if (CurrentMatchState == EMatchState::WaitingToStart)
+        {
+            // Если был удалён хоть один элемент, то 'true'
+            return (bool)SortedSpectators.RemoveAllSwap(
+                [PlayerState](const FPlayerData& Item)
+                {
+                    return Item.PlayerState == PlayerState;
+                });
+        }
+        return false;
+    };
+
+    /** Реакция на удаление данных Наблюдателя из списка */
+    FORCEINLINE void Reaction_RemoveSpectatorData()
+    {
+        OnRemovingSpectators.Broadcast(SortedSpectators.Num());
+        ReSortSpectatorsData();
+    }
+
     /** Добавить данные Наблюдателя в список с предварительной проверкой на уничтожение */
     FORCEINLINE bool AddSpectatorData(APlayerState* PlayerState)
     {
@@ -431,22 +510,18 @@ private:
             && PlayerState
             && !PlayerState->IsInactive())
         {
-            SortedSpectators.Add(PlayerState);
-            return true;
+            // Если значение является новым, то 'true' (старый размер == новому индексу)
+            return SortedSpectators.Num() == SortedSpectators.AddUnique(FPlayerData(PlayerState));
         }
         return false;
     };
 
-    /** Удалить данные Наблюдателя из списка */
-    FORCEINLINE bool RemoveSpectatorData(APlayerState* PlayerState)
+    /** Реакция на добавление данных Наблюдателя из списка */
+    FORCEINLINE void Reaction_AddSpectatorData()
     {
-        if (CurrentMatchState == EMatchState::WaitingToStart)
-        {
-            SortedSpectators.Remove(PlayerState);
-            return true;
-        }
-        return false;
-    };
+        OnAddingSpectators.Broadcast(SortedSpectators.Num());
+        ReSortSpectatorsData();
+    }
 
     /** Получение предиката согласно выбору типа сортировки Наблюдателей */
     TSortingSpectatorsPredicate GetSortingPredicateForSpectators(EPlayerStatisticsSortingType InType) const;
@@ -469,6 +544,7 @@ private:
 
     /* ---   friends   --- */
 
+    friend class UPlayerStatisticsWidget;
     friend class AFPS_GameMode;
     //-------------------------------------------
 };
@@ -479,8 +555,21 @@ private:
 /* ---   Statics   --- */
 
 /** Получить текущий экземпляр класса 'AFPS_GameState' */
-FORCEINLINE static AFPS_GameState* const GetSKGameState()
+FORCEINLINE static AFPS_GameState* const GetFPSGameState()
 {
-    return AFPS_GameState::CurrentGameState;
+#if WITH_EDITOR
+
+    if (!AFPS_GameState::CurrentGameState)
+    {
+        return AFPS_GameState::CurrentGameState = GEngine->GameViewport->GetWorld()->GetGameState<AFPS_GameState>();
+    }
+    else
+
+#endif // WITH_EDITOR
+
+    {
+        // В режиме "Play In Editor" данный указатель очищается, однако стабильно работает в готовой сборке
+        return AFPS_GameState::CurrentGameState;
+    }
 };
 //--------------------------------------------------------------------------------------

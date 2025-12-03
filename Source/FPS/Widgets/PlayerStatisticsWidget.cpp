@@ -35,12 +35,12 @@ void UPlayerStatisticsWidget::SetVisibility(ESlateVisibility InVisibility)
     if (InVisibility != ESlateVisibility::Collapsed
         && InVisibility != ESlateVisibility::Hidden)
     {
-        AFPS_GameState::CurrentGameState->OnEndSortingPlayerStatistics.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnEndSortingOfPlayerStatistics);
-        AFPS_GameState::CurrentGameState->ReSortStatisticsData();
+        GetFPSGameState()->OnEndSortingPlayerStatistics.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnEndSortingOfPlayerStatistics);
+        GetFPSGameState()->ReSortStatisticsData();
     }
     else
     {
-        AFPS_GameState::CurrentGameState->OnEndSortingPlayerStatistics.RemoveDynamic(this, &UPlayerStatisticsWidget::Event_OnEndSortingOfPlayerStatistics);
+        GetFPSGameState()->OnEndSortingPlayerStatistics.RemoveDynamic(this, &UPlayerStatisticsWidget::Event_OnEndSortingOfPlayerStatistics);
     }
 }
 //--------------------------------------------------------------------------------------
@@ -51,21 +51,22 @@ void UPlayerStatisticsWidget::SetVisibility(ESlateVisibility InVisibility)
 
 void UPlayerStatisticsWidget::SetDataSortingTypeForSortedPlayerStatistics(EPlayerStatisticsSortingType InType)
 {
-    AFPS_GameState::CurrentGameState->SetDataSortingTypeForSortedPlayerStatistics(InType);
+    GetFPSGameState()->SetDataSortingTypeForSortedPlayerStatistics(InType);
 }
 
 const FPlayerStatisticsData& UPlayerStatisticsWidget::GetDataByIndexFromSortedPlayerStatistics(int32 Index) const
 {
-    return AFPS_GameState::CurrentGameState->GetDataByIndexFromSortedPlayerStatistics(Index);
+    FPS_LOG(Warning, "");
+    return GetFPSGameState()->GetDataByIndexFromSortedPlayerStatistics(Index);
 }
 
 void UPlayerStatisticsWidget::InitStatisticsData()
 {
-    if (AFPS_GameState::CurrentGameState)
+    if (GetFPSGameState())
     {
-        AFPS_GameState::CurrentGameState->OnMatchStateChange.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnMatchStateChange);
-        AFPS_GameState::CurrentGameState->PlayersStatistics.OnPreRemovingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnRemovingPlayerStatisticsItems);
-        AFPS_GameState::CurrentGameState->PlayersStatistics.OnPostAddingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnAddingPlayerStatisticsItems);
+        GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnMatchStateChange);
+        GetFPSGameState()->PlayersStatistics.OnPreRemovingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnRemovingPlayerStatisticsItems);
+        GetFPSGameState()->PlayersStatistics.OnPostAddingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnAddingPlayerStatisticsItems);
     }
     else
     {

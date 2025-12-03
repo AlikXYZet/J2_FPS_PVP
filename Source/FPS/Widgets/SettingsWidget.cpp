@@ -116,27 +116,27 @@ void USettingsWidget::InitWidgetData()
 
 void USettingsWidget::UpdateSounds()
 {
-    if (UFPS_GameInstance::CurrentGameInstance->SoundMix)
+    if (GetFPSGameInstance()->SoundMix)
     {
-        UGameplayStatics::PushSoundMixModifier(GetWorld(), UFPS_GameInstance::CurrentGameInstance->SoundMix);
+        UGameplayStatics::PushSoundMixModifier(GetWorld(), GetFPSGameInstance()->SoundMix);
 
-        if (UFPS_GameInstance::CurrentGameInstance->MusicSoundClass)
+        if (GetFPSGameInstance()->MusicSoundClass)
         {
             UGameplayStatics::SetSoundMixClassOverride(
                 GetWorld(),
-                UFPS_GameInstance::CurrentGameInstance->SoundMix,
-                UFPS_GameInstance::CurrentGameInstance->MusicSoundClass,
+                GetFPSGameInstance()->SoundMix,
+                GetFPSGameInstance()->MusicSoundClass,
                 SaveSettings->SettingsData.OverallSoundsVolume * SaveSettings->SettingsData.MusicSoundsVolume,
                 1.f,
                 0.f);
         }
 
-        if (UFPS_GameInstance::CurrentGameInstance->EffectsSoundClass)
+        if (GetFPSGameInstance()->EffectsSoundClass)
         {
             UGameplayStatics::SetSoundMixClassOverride(
                 GetWorld(),
-                UFPS_GameInstance::CurrentGameInstance->SoundMix,
-                UFPS_GameInstance::CurrentGameInstance->MusicSoundClass,
+                GetFPSGameInstance()->SoundMix,
+                GetFPSGameInstance()->MusicSoundClass,
                 SaveSettings->SettingsData.OverallSoundsVolume * SaveSettings->SettingsData.EffectSoundsVolume,
                 1.f,
                 0.f);
