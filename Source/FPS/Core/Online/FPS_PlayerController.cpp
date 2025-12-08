@@ -83,3 +83,28 @@ bool AFPS_PlayerController::IsMatchInProgress() const
     return GetFPSGameState()->IsMatchInProgress();
 }
 //--------------------------------------------------------------------------------------
+
+
+
+/* ---   Role Selection   --- */
+
+void AFPS_PlayerController::Server_GoToSpectators_Implementation() const
+{
+    GetFPSGameState()->ClientGoToSpectators(PlayerState);
+}
+
+void AFPS_PlayerController::Server_GoToPlayers_Implementation() const
+{
+    GetFPSGameState()->ClientGoToPlayers(PlayerState);
+}
+
+void AFPS_PlayerController::Server_SetMatchReadiness_Implementation(bool bReadiness) const
+{
+    GetFPSGameState()->SetPlayerReadiness(PlayerState, bReadiness);
+}
+
+void AFPS_PlayerController::Client_SetMatchReadiness_Implementation(bool bReadiness) const
+{
+    OnPlayerReadinessChange.Broadcast(bReadiness);
+}
+//--------------------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 
 // Interaction:
 #include "FPS/Core/Online/FPS_GameState.h"
+#include "FPS/Core/Online/FPS_PlayerController.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -19,14 +20,10 @@
 
 void URoleSelectionWidget::NativeConstruct()
 {
-    if (!AFPS_GameState::IsValidStaticPointer())
-    {
-        FPS_LOG(Error, TEXT("Current 'Game State' is NOT 'AFPS_GameState'"));
-    }
-
     Super::NativeConstruct();
 
-    InitRoleSelection();
+    InitWithGameState();
+    InitWithPlayerController();
 }
 
 void URoleSelectionWidget::SetVisibility(ESlateVisibility InVisibility)
@@ -56,7 +53,7 @@ void URoleSelectionWidget::SetVisibility(ESlateVisibility InVisibility)
 
 /* ---   Spectators Data   --- */
 
-void URoleSelectionWidget::SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType)
+void URoleSelectionWidget::SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType) const
 {
     GetFPSGameState()->SetDataSortingTypeForSortedSpectators(InType);
 }
@@ -76,16 +73,44 @@ const TArray<FPlayerData>& URoleSelectionWidget::GetSortedSpectators() const
 
 /* ---   Role Selection   --- */
 
-void URoleSelectionWidget::SetOwnerReadiness(bool bReadiness)
+void URoleSelectionWidget::GoToSpectators() const
 {
-    GetFPSGameState()->SetClientReadiness(bReadiness);
+    ((AFPS_PlayerController*)GetOwningPlayer())->GoToSpectators();
 }
 
-void URoleSelectionWidget::InitRoleSelection()
+void URoleSelectionWidget::GoToPlayers() const
 {
-    GetFPSGameState()->OnClientReadinessChange.AddDynamic(this, &URoleSelectionWidget::Event_OnOwnerReadinessChange);
-    GetFPSGameState()->OnEndSortingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
-    GetFPSGameState()->OnRemovingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnRemovingSpectatorsItems);
-    GetFPSGameState()->OnAddingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnAddingSpectatorsItems);
+    ((AFPS_PlayerController*)GetOwningPlayer())->GoToPlayers();
+}
+
+void URoleSelectionWidget::SetOwnerReadiness(bool bReadiness) const
+{
+    ((AFPS_PlayerController*)GetOwningPlayer())->SetMatchReadiness(bReadiness);
+}
+
+void URoleSelectionWidget::InitWithGameState()
+{
+    if (AFPS_GameState::IsValidStaticPointer())
+    {
+        GetFPSGameState()->OnEndSortingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnEndSortingOfSpectators);
+        GetFPSGameState()->OnRemovingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnRemovingSpectatorsItems);
+        GetFPSGameState()->OnAddingSpectators.AddDynamic(this, &URoleSelectionWidget::Event_OnAddingSpectatorsItems);
+    }
+    else
+    {
+        FPS_LOG(Error, TEXT("Current 'Game State' is NOT 'AFPS_GameState'"));
+    }
+}
+
+void URoleSelectionWidget::InitWithPlayerController()
+{
+    if (AFPS_PlayerController* PC = GetOwningPlayer<AFPS_PlayerController>())
+    {
+        PC->OnPlayerReadinessChange.AddDynamic(this, &URoleSelectionWidget::Event_OnOwnerReadinessChange);
+    }
+    else
+    {
+        FPS_LOG(Error, TEXT("Current 'Owning Player' is NOT 'AFPS_PlayerController'"));
+    }
 }
 //--------------------------------------------------------------------------------------

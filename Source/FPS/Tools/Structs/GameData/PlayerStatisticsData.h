@@ -44,7 +44,7 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
 
     FPlayerStatisticsData() {};
 
-    FPlayerStatisticsData(APlayerState* NewPlayer)
+    FPlayerStatisticsData(const APlayerState* NewPlayer)
         : PlayerData(NewPlayer) {};
     //-------------------------------------------
 
@@ -105,6 +105,21 @@ struct FPlayerStatisticsData : public FFastArraySerializerItem
         UpdateDataOnPlayerState();
         PointsCalculation();
     }
+    //-------------------------------------------
+
+
+
+    /* ---   Operators   --- */
+
+    FORCEINLINE bool operator == (const FPlayerStatisticsData& Other) const
+    {
+        return PlayerData == Other.PlayerData;
+    };
+
+    FORCEINLINE bool operator == (const APlayerState* OtherPlayerState) const
+    {
+        return PlayerData == OtherPlayerState;
+    };
     //-------------------------------------------
 
 
@@ -245,24 +260,15 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Array Methods   --- */
 
-    FORCEINLINE void AddPlayer(APlayerState* NewPlayer)
-    {
-        OnPostAddingItems.Broadcast(
-            TArray<int32>{Items.Add(FPlayerStatisticsData(NewPlayer))},
-            Items.Num());
-
-        MarkArrayDirty();
-    };
-
-    int32 RemovePlayer(APlayerState* OldPlayer)
+    void AddPlayer(const APlayerState* NewPlayer)
     {
         int32 lIndex = Items.FindLastByPredicate(
-            [OldPlayer](const FPlayerStatisticsData& Item)
-            { return Item.PlayerData.PlayerState == OldPlayer; });
+            [NewPlayer](const FPlayerStatisticsData& Item)
+            { return Item == NewPlayer; });
 
-        if (lIndex != INDEX_NONE)
+        if (lIndex == INDEX_NONE)
         {
-            Items.RemoveAtSwap(lIndex);
+            lIndex = Items.AddUnique(FPlayerStatisticsData(NewPlayer));
 
             OnPostAddingItems.Broadcast(
                 TArray<int32>{lIndex},
@@ -270,8 +276,24 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
             MarkArrayDirty();
         }
+    };
 
-        return lIndex;
+    void RemovePlayer(const APlayerState* OldPlayer)
+    {
+        int32 lIndex = Items.FindLastByPredicate(
+            [OldPlayer](const FPlayerStatisticsData& Item)
+            { return Item == OldPlayer; });
+
+        if (lIndex != INDEX_NONE)
+        {
+            OnPreRemovingItems.Broadcast(
+                TArray<int32>{lIndex},
+                Items.Num() - 1);
+
+            Items.RemoveAtSwap(lIndex);
+
+            MarkArrayDirty();
+        }
     };
     //-------------------------------------------
 

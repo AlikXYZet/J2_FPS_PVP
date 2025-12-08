@@ -46,20 +46,20 @@ public:
     /** Изменить Тип сортировки Данных Наблюдателей */
     UFUNCTION(BlueprintCallable,
         Category = "Spectators Data",
-        meta = (DisplayName = "Set Data Sorting Type for Sorted Spectators", AutoCreateRefTerm = "InType",
+        meta = (DisplayName = "Set Data Sorting Type for Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
-    void SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType);
+    void SetDataSortingTypeForSortedSpectators(EPlayerStatisticsSortingType InType) const;
 
     /** Получить Данные по Индексу из сортированного списка Наблюдателей */
     UFUNCTION(BlueprintPure,
         Category = "Spectators Data",
-        meta = (DisplayName = "Get Data by Index from Sorted Spectators", AutoCreateRefTerm = "Index",
+        meta = (DisplayName = "Get Data by Index from Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
     const FPlayerData& GetDataByIndexFromSortedSpectators(int32 Index) const;
 
     /** Получить сортированный список Наблюдателей */
     UFUNCTION(BlueprintPure,
-        Category = "FPS Game State|Spectators Data",
+        Category = "Spectators Data",
         meta = (DisplayName = "Get Sorted Spectators",
             DefaultToSelf, HideSelfPin = "true"))
     const TArray<FPlayerData>& GetSortedSpectators() const;
@@ -69,11 +69,25 @@ public:
 
     /* ---   Role Selection   --- */
 
+    /** Перейти к Наблюдателям */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DisplayName = "Go To Spectators",
+            DefaultToSelf, HideSelfPin = "true"))
+    void GoToSpectators() const;
+
+    /** Перейти к Игрокам */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DisplayName = "Go To Players",
+            DefaultToSelf, HideSelfPin = "true"))
+    void GoToPlayers() const;
+
     /** Изменить Готовность Владельца */
     UFUNCTION(BlueprintCallable,
         Category = "Role Selection",
         meta = (DisplayName = "Set Owner Readiness"))
-    void SetOwnerReadiness(bool bReadiness = false);
+    void SetOwnerReadiness(bool bReadiness = false) const;
     //--------------------------------------------
 
 
@@ -114,7 +128,10 @@ private:
 
     /* ---   Role Selection   --- */
 
-    /** Инициализация данных Выбора Роли */
-    void InitRoleSelection();
+    /** Инициализация данных с GameState */
+    void InitWithGameState();
+
+    /** Инициализация данных с PlayerController */
+    void InitWithPlayerController();
     //--------------------------------------------
 };

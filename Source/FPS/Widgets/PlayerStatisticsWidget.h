@@ -51,14 +51,14 @@ public:
     /** Изменить Тип сортировки Данных Статистики Игроков */
     UFUNCTION(BlueprintCallable,
         Category = "Players Statistics Data",
-        meta = (DisplayName = "Set Data Sorting Type for Sorted Player Statistics", AutoCreateRefTerm = "InType",
+        meta = (DisplayName = "Set Data Sorting Type for Sorted Player Statistics",
             DefaultToSelf, HideSelfPin = "true"))
     void SetDataSortingTypeForSortedPlayerStatistics(EPlayerStatisticsSortingType InType);
 
     /** Получить Данные по Индексу из сортированного списка Статистики Игроков */
     UFUNCTION(BlueprintPure,
         Category = "Players Statistics Data",
-        meta = (DisplayName = "Get Data by Index from Sorted Player Statistics", AutoCreateRefTerm = "Index",
+        meta = (DisplayName = "Get Data by Index from Sorted Player Statistics",
             DefaultToSelf, HideSelfPin = "true"))
     const FPlayerStatisticsData& GetDataByIndexFromSortedPlayerStatistics(int32 Index) const;
     //--------------------------------------------
@@ -84,14 +84,14 @@ public:
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Players Statistics Data",
         meta = (DisplayName = "On Removing Player Statistics Items"))
-    void Event_OnRemovingPlayerStatisticsItems(const TArray<int32>& RemovedIndices, int32 FinalSize);
+    void Event_OnRemovingPlayerStatisticsItems(int32 OldSize, int32 NewSize);
 
     /** Событие BP: При Добавлении элементов данных Статистики Игроков
     @note   НЕ Вызывается во время Матча */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Players Statistics Data",
         meta = (DisplayName = "On Adding Player Statistics Items"))
-    void Event_OnAddingPlayerStatisticsItems(const TArray<int32>& AddedIndices, int32 FinalSize);
+    void Event_OnAddingPlayerStatisticsItems(int32 OldSize, int32 NewSize);
     //--------------------------------------------
 
 

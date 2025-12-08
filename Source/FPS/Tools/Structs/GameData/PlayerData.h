@@ -49,7 +49,7 @@ struct FPlayerData
 
     FPlayerData() {};
 
-    FPlayerData(APlayerState* NewPlayer)
+    FPlayerData(const APlayerState* NewPlayer)
         : PlayerState(NewPlayer)
     {
         UpdateDataOnPlayerState();
@@ -63,7 +63,7 @@ struct FPlayerData
     // Указатель на 'Player State' Игрока, хранящий информацию о Имени и Пинге
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = "Statistics")
-    APlayerState* PlayerState = nullptr;
+    const APlayerState* PlayerState = nullptr;
 
     // Имя текущего игрока (NotReplicated)
     // @note    Необходим, так как 'PlayerState' может быть не валиден (теряются данные о Имени игрока)
@@ -134,6 +134,11 @@ struct FPlayerData
     FORCEINLINE bool operator == (const FPlayerData& Other) const
     {
         return PlayerState == Other.PlayerState;
+    };
+
+    FORCEINLINE bool operator == (const APlayerState* OtherPlayerState) const
+    {
+        return PlayerState == OtherPlayerState;
     };
     //-------------------------------------------
 

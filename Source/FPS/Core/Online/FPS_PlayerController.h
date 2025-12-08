@@ -14,6 +14,14 @@
 
 
 
+/* ---   Delegates   --- */
+
+// Делегат: При изменении Готовности текущего (локального) Игрока
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerReadinessChange, bool, bReadiness);
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Pre-declaration of classes   --- */
 
 // Interaction:
@@ -28,6 +36,14 @@ class FPS_API AFPS_PlayerController : public APlayerController
     GENERATED_BODY()
 
 public:
+
+    /* ---   Delegates   --- */
+
+    // Делегат: При изменении Готовности текущего (локального) Игрока
+    FOnPlayerReadinessChange OnPlayerReadinessChange;
+    //-------------------------------------------
+
+
 
     /* ---   Constructors   --- */
 
@@ -86,6 +102,41 @@ public:
 
 
 
+    /* ---   Role Selection   --- */
+
+    /** Перейти к Наблюдателям */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DefaultToSelf, HideSelfPin = "true"))
+    void GoToSpectators() const
+    {
+        Server_GoToSpectators();
+    };
+
+    /** Перейти к Игрокам */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DefaultToSelf, HideSelfPin = "true"))
+    void GoToPlayers() const
+    {
+        Server_GoToPlayers();
+    };
+
+    /** Изменить Готовность к Матчу */
+    UFUNCTION(BlueprintCallable,
+        Category = "Role Selection",
+        meta = (DefaultToSelf, HideSelfPin = "true"))
+    void SetMatchReadiness(bool bReadiness = false) const
+    {
+        Server_SetMatchReadiness(bReadiness);
+    };
+
+    UFUNCTION(Client, Reliable)
+    void Client_SetMatchReadiness(bool bReadiness = false) const;
+    //-------------------------------------------
+
+
+
 private:
 
     /* ---   Mouse To Center   --- */
@@ -106,5 +157,19 @@ private:
 
     /** Установить Мышь в центр экрана */
     void SetMouseToCenter();
+    //-------------------------------------------
+
+
+
+    /* ---   Role Selection   --- */
+
+    UFUNCTION(Server, Reliable)
+    void Server_GoToSpectators() const;
+
+    UFUNCTION(Server, Reliable)
+    void Server_GoToPlayers() const;
+
+    UFUNCTION(Server, Reliable)
+    void Server_SetMatchReadiness(bool bReadiness) const;
     //-------------------------------------------
 };

@@ -37,21 +37,24 @@ typedef bool (*TSortingSpectatorsPredicate)(const FPlayerData& first, const FPla
 // Делегат: При изменении состояния Матча
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchStateChange, EMatchState, NewMatchState);
 
+// Делегат: Перед Удалением элементов Массива данных Статистики Игроков
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreRemovingPlayerStatistics, int32, OldSize, int32, NewSize);
+
+// Делегат: Добавлены элементы Массива данных Статистики Игроков
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostAddingPlayerStatistics, int32, OldSize, int32, NewSize);
+
 // Делегат: При Завершении сортировки Массива данных Статистики Игроков
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndSortingPlayerStatistics);
 
-// Делегат: При удалении Наблюдателей
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRemovingSpectators, int32, FinalSize);
+// Делегат: Перед Удалением элементов Массива данных Наблюдателей
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPreRemovingSpectators, int32, FinalSize);
 
-// Делегат: При добавлении Наблюдателей
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAddingSpectators, int32, FinalSize);
+// Делегат: Добавлены элементы Массива данных Наблюдателей
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPostAddingSpectators, int32, FinalSize);
 
 // Делегат: При Завершении сортировки Массива данных Наблюдателей
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndSortingSpectators);
-
-// Делегат: При изменении Готовности текущего Клиента
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClientReadinessChange, bool, bReadiness);
-// ----------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 
 
 
@@ -106,20 +109,23 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnMatchStateChange OnMatchStateChange;
 
+    // Делегат: Перед Удалением элементов Массива данных Статистики Игроков
+    FOnPreRemovingPlayerStatistics OnPreRemovingPlayerStatistics;
+
+    // Делегат: Добавлены элементы Массива данных Статистики Игроков
+    FOnPostAddingPlayerStatistics OnPostAddingPlayerStatistics;
+
     // Делегат: При Завершении сортировки Массива данных Статистики Игроков
     FOnEndSortingPlayerStatistics OnEndSortingPlayerStatistics;
 
-    // Делегат: Перед Удалением элементов Массива
-    FOnRemovingSpectators OnRemovingSpectators;
+    // Делегат: Перед Удалением элементов Массива данных Наблюдателей
+    FOnPreRemovingSpectators OnRemovingSpectators;
 
-    // Делегат: Добавлены элементы Массива
-    FOnAddingSpectators OnAddingSpectators;
+    // Делегат: Добавлены элементы Массива данных Наблюдателей
+    FOnPostAddingSpectators OnAddingSpectators;
 
     // Делегат: При Завершении сортировки Массива данных Наблюдателей
     FOnEndSortingSpectators OnEndSortingSpectators;
-
-    // Делегат: При изменении Готовности текущего Клиента
-    FOnClientReadinessChange OnClientReadinessChange;
     //-------------------------------------------
 
 
@@ -214,7 +220,7 @@ public:
     virtual void HandleMatchIsWaitingToStart() override;
 
     /** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
-    //virtual void HandleMatchHasStarted() override;
+    virtual void HandleMatchHasStarted() override;
 
     /** Возвращает значение true, если состояние матча находится 'InProgress' ('В Процессе') */
     FORCEINLINE bool IsMatchInProgress() const
@@ -269,7 +275,6 @@ public:
         {
             return *SortedPlayerStatistics[Index];
         }
-
         return FPlayerStatisticsData::Empty;
     };
 
@@ -347,7 +352,7 @@ public:
     /** Получить Сетевой Статус Игрока */
     UFUNCTION(BlueprintCallable,
         Category = "FPS Game State|Player Data")
-    static EPlayerNetworkStatus GetPlayerNetStatus(const APlayerState* PlayerState)
+    static inline EPlayerNetworkStatus GetPlayerNetStatus(const APlayerState* PlayerState)
     {
         if (IsValid(PlayerState))
         {
@@ -360,11 +365,11 @@ public:
                 if (PlayerState->GetPlayerId() == MAX_uint8 + 2
                     && PlayerState->GetPing() == 0)
                 {
-                    return EPlayerNetworkStatus::Client;
+                    return EPlayerNetworkStatus::ListenServer;
                 }
                 else
                 {
-                    return EPlayerNetworkStatus::ListenServer;
+                    return EPlayerNetworkStatus::Client;
                 }
             }
         }
@@ -372,6 +377,24 @@ public:
         {
             return EPlayerNetworkStatus::NONE;
         }
+    };
+
+    /** Удалить из списка данные Статистики данного Игрока */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Game State|Role Selection",
+        meta = (DisplayName = "Remove Player Statistics Data"))
+    void RemovePlayerStatisticsData(const APlayerState* PlayerState)
+    {
+        PlayersStatistics.RemovePlayer(PlayerState);
+    };
+
+    /** Добавить в список данные Статистики для данного Игрока */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Game State|Role Selection",
+        meta = (DisplayName = "Add Player Statistics Data"))
+    void AddPlayerStatisticsData(const APlayerState* PlayerState)
+    {
+        PlayersStatistics.AddPlayer(PlayerState);
     };
     //-------------------------------------------
 
@@ -385,14 +408,29 @@ public:
     /** Remove PlayerState from the PlayerArray. */
     virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
+    /** Перевести Клиента к Наблюдателям */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Game State|Role Selection",
+        meta = (DisplayName = "Client Go To Spectators"))
+    void ClientGoToSpectators(const APlayerState* PlayerState)
+    {
+        RemovePlayerStatisticsData(PlayerState);
+    };
+
+    /** Перевести Клиента к Игрокам */
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Game State|Role Selection",
+        meta = (DisplayName = "Client Go To Players"))
+    void ClientGoToPlayers(const APlayerState* PlayerState)
+    {
+        AddPlayerStatisticsData(PlayerState);
+    };
+
     /** Изменить Готовность Первого (локально) Игрока */
     UFUNCTION(BlueprintCallable,
         Category = "FPS Game State|Role Selection",
-        meta = (DisplayName = "Set First Player Readiness"))
-    void SetClientReadiness(bool bReadiness = false)
-    {
-        Server_SetClientReadiness(GetWorld()->GetFirstPlayerController(), bReadiness);
-    };
+        meta = (DisplayName = "Set Player Readiness"))
+    void SetPlayerReadiness(const APlayerState* PlayerState, bool bReadiness = false);
     //-------------------------------------------
 
 
@@ -482,7 +520,7 @@ private:
     void ReInitSpectatorsData();
 
     /** Удалить данные Наблюдателя из списка */
-    FORCEINLINE bool RemoveSpectatorData(APlayerState* PlayerState)
+    FORCEINLINE bool RemoveSpectatorData(const APlayerState* PlayerState)
     {
         if (CurrentMatchState == EMatchState::WaitingToStart)
         {
@@ -504,7 +542,7 @@ private:
     }
 
     /** Добавить данные Наблюдателя в список с предварительной проверкой на уничтожение */
-    FORCEINLINE bool AddSpectatorData(APlayerState* PlayerState)
+    FORCEINLINE bool AddSpectatorData(const APlayerState* PlayerState)
     {
         if (CurrentMatchState == EMatchState::WaitingToStart
             && PlayerState
@@ -525,19 +563,6 @@ private:
 
     /** Получение предиката согласно выбору типа сортировки Наблюдателей */
     TSortingSpectatorsPredicate GetSortingPredicateForSpectators(EPlayerStatisticsSortingType InType) const;
-    //-------------------------------------------
-
-
-
-    /* ---   Role Selection   --- */
-
-    /** Изменить Готовность Первого (локально) Игрока */
-    UFUNCTION(Server, Reliable)
-    void Server_SetClientReadiness(const APlayerController* Client, bool bReadiness = false);
-
-    /** Изменить Готовность Первого (локально) Игрока на стороне вызываемого клиента */
-    UFUNCTION(Client, Reliable)
-    void Client_SetClientReadiness(bool bReadiness = false);
     //-------------------------------------------
 
 

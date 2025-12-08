@@ -181,14 +181,14 @@ private:
     @note   Указатели на Атр.Актор и на Контроллер Игрока может быть НЕ Валиден.
             Например, Арт.Актор: Уничтожение после взрыва.
             Например, Контроллер Игрока: После выхода из сервера */
-    TMap<AAttributedActor*, TSet<APlayerController*>> AllAttributedActor;
+    TMap<const AAttributedActor*, TSet<APlayerController*>> AllAttributedActor;
 
     /* Контейнер с указателями на данные Статистики всех активных Игроков
     @note   Указатель на Контроллер Игрока (Key) может быть НЕ Валиден.
             Например: После выхода из сервера
-    @note   Указатель на статистику (Value) будет Валиден в течении  (см. 'InitDestructionAccounting()'),
+    @note   Указатель на статистику (Value) будет Валиден в течении матча (см. 'InitDestructionAccounting()'),
             поэтому дополнительная проверка излишне */
-    TMap<APlayerController*, FPlayerStatisticsData*> PlayersStatisticsMap;
+    TMap<const APlayerState*, FPlayerStatisticsData*> PlayersStatisticsMap;
 
     //
 

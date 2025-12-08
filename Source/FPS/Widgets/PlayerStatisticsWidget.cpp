@@ -56,24 +56,13 @@ void UPlayerStatisticsWidget::SetDataSortingTypeForSortedPlayerStatistics(EPlaye
 
 const FPlayerStatisticsData& UPlayerStatisticsWidget::GetDataByIndexFromSortedPlayerStatistics(int32 Index) const
 {
-    FPS_LOG(Warning, "");
     return GetFPSGameState()->GetDataByIndexFromSortedPlayerStatistics(Index);
 }
 
 void UPlayerStatisticsWidget::InitStatisticsData()
 {
-    if (GetFPSGameState())
-    {
-        GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnMatchStateChange);
-        GetFPSGameState()->PlayersStatistics.OnPreRemovingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnRemovingPlayerStatisticsItems);
-        GetFPSGameState()->PlayersStatistics.OnPostAddingItems.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnAddingPlayerStatisticsItems);
-    }
-    else
-    {
-        FPS_LOG(Error, TEXT("'%s' is NOT 'AFPS_GameState'"),
-            GetWorld()->GetGameState()
-            ? *GetWorld()->GetGameState()->GetFName().ToString()
-            : *FString("None"));
-    }
+    GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnMatchStateChange);
+    GetFPSGameState()->OnPreRemovingPlayerStatistics.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnRemovingPlayerStatisticsItems);
+    GetFPSGameState()->OnPostAddingPlayerStatistics.AddDynamic(this, &UPlayerStatisticsWidget::Event_OnAddingPlayerStatisticsItems);
 }
 //--------------------------------------------------------------------------------------

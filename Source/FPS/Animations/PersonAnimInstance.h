@@ -146,7 +146,7 @@ public:
     * @note   Быстрая потокобезопасная проверка */
     UFUNCTION(BlueprintPure,
         Category = "PersonAnim|Actions",
-        meta = (CompactNodeTitle = "Check Action", AutoCreateRefTerm = "InAction",
+        meta = (CompactNodeTitle = "Check Action",
             BlueprintThreadSafe, DefaultToSelf, HideSelfPin = "true"))
     bool CheckAction(EActionVariations InAction) const;
 

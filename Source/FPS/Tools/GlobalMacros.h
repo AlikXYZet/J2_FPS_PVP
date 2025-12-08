@@ -55,8 +55,8 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 @param  Verbosity - Уровень информации (Error, Warning и др.)
 @param  Format - Формат текста
 
-@note   Можно было бы заменить на универсальный '*FString(__FUNCTION__)' */
-#define FPS_LOG_Struct(Verbosity, Format, ...) \
+@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
+#define FPS_LOG_Static(Verbosity, Format, ...) \
 { \
 	UE_LOG(LogFPS, Verbosity, \
         TEXT("'%s'::'%s': " Format), \
@@ -94,7 +94,7 @@ FPS_LOG(Warning, "'%s' is NOT 'AFPS_GameState'",
     ? *GetWorld()->GetGameState<AGameStateBase>()->GetFName().ToString()
     : *FString("None"));
 
-FPS_LOG_Struct(Error, "lInputComponent is NOT");
+FPS_LOG_Static(Error, "lInputComponent is NOT");
 
 */
 
@@ -107,22 +107,22 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 /** Макрос, который выводит на экран сообщение с указанным цветом
 @param  Color - Цвет текста
 @param  Format - Формат текста */
-#define FPS_ColorMessage(Color, Format, ...) \
+#define FPS_ColorMessage_Empty(Color, Format, ...) \
 { \
     GEngine->AddOnScreenDebugMessage(-1, 600.f, Color, FString::Printf(TEXT("" Format), ##__VA_ARGS__)); \
 }
 
 /** Макрос, который выводит на экран сообщение (красным цветом)
 @param  Format - Формат текста */
-#define FPS_Message(Format, ...) FPS_ColorMessage(FColor::Red, Format, ##__VA_ARGS__)
+#define FPS_Message_Empty(Format, ...) FPS_ColorMessage_Empty(FColor::Red, Format, ##__VA_ARGS__)
 
 
 /** Макрос, который выводит на экран сообщение с указанным цветом
-и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
+    и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
 @param  Color - Цвет текста
 @param  Format - Формат текста */
-#define FPS_ColorLOGMessage(Color, Format, ...) \
-    FPS_ColorMessage(\
+#define FPS_ColorMessage(Color, Format, ...) \
+    FPS_ColorMessage_Empty(\
         Color,\
         TEXT("'%s'::'%s': " Format), \
         *GetNameSafe(this), *FString(__func__), \
@@ -131,29 +131,29 @@ FPS_LOG_Struct(Error, "lInputComponent is NOT");
 /** Макрос, который выводит на экран сообщение (красным цветом)
 и дополнительную информацию о экземпляре класса и методе класса, где было вызвано сообщение
 @param  Format - Формат текста */
-#define FPS_LOGMessage(Format, ...) FPS_ColorLOGMessage(FColor::Red, Format, ##__VA_ARGS__)
+#define FPS_Message(Format, ...) FPS_ColorMessage(FColor::Red, Format, ##__VA_ARGS__)
 
 /** Макрос, который выводит на экран сообщение с указанным цветом
-и дополнительную информацию о классе и методе класса, где было вызвано сообщение
+    и дополнительную информацию о классе и методе класса, где было вызвано сообщение
 
 @param  Color - Цвет текста
 @param  Format - Формат текста
 
 @note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
-#define FPS_ColorStaticMessage(Color, Format, ...) \
-    FPS_ColorMessage(\
+#define FPS_ColorMessage_Static(Color, Format, ...) \
+    FPS_ColorMessage_Empty(\
         Color,\
         TEXT("'%s': " Format), \
         *FString(__FUNCTION__),\
         ##__VA_ARGS__)
 
 /** Макрос, который выводит на экран сообщение (красным цветом)
-и дополнительную информацию о классе и методе класса, где было вызвано сообщение
+    и дополнительную информацию о классе и методе класса, где было вызвано сообщение
 
 @param  Format - Формат текста
 
 @note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
-#define FPS_StaticMessage(Format, ...) FPS_ColorStaticMessage(FColor::Red, Format, ##__VA_ARGS__)
+#define FPS_Message_Static(Format, ...) FPS_ColorMessage_Static(FColor::Red, Format, ##__VA_ARGS__)
 //--------------------------------------------------------------------------------------
 
 

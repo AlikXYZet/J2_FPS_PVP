@@ -11,6 +11,7 @@
 
 // Interaction:
 #include "FPS_GameMode.h"
+#include "FPS_PlayerController.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -62,7 +63,6 @@ AFPS_GameState::AFPS_GameState()
 void AFPS_GameState::BeginPlay()
 {
     Super::BeginPlay();
-    FPS_LOGMessage("");
 
     BaseInit();
     InitStatisticsData();
@@ -72,7 +72,7 @@ void AFPS_GameState::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    //FPS_ColorLOGMessage(FColor::Cyan, " %d", ElapsedTime);
+    //FPS_ColorMessage(FColor::Cyan, " %d", ElapsedTime);
 }
 
 void AFPS_GameState::OnConstruction(const FTransform& Transform)
@@ -162,7 +162,7 @@ void AFPS_GameState::OnRep_MatchState()
 //void AFPS_GameState::OnRep_ElapsedTime()
 //{
 //    int32 lLocal = ElapsedTime;
-//    FPS_LOGMessage(" %d", lLocal);
+//    FPS_Message(" %d", lLocal);
 //}
 
 void AFPS_GameState::HandleMatchIsWaitingToStart()
@@ -172,10 +172,15 @@ void AFPS_GameState::HandleMatchIsWaitingToStart()
     ReInitSpectatorsData();
 }
 
-//void AFPS_GameState::HandleMatchHasStarted()
-//{
-//    Super::HandleMatchHasStarted();
-//}
+void AFPS_GameState::HandleMatchHasStarted()
+{
+    Super::HandleMatchHasStarted();
+
+    if (GetLocalRole() != ROLE_Authority && GetFPSGameMode())
+    {
+        GetFPSGameMode()->InitDestructionAccounting();
+    }
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -204,26 +209,31 @@ void AFPS_GameState::InitStatisticsData()
 
 void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& RemovedIndices, int32 FinalSize)
 {
-    auto lDeletedIndexesIterator = RemovedIndices.CreateConstIterator();
-    bool lIsAddedSpectator = false;
+    // Локальный флаг: Добавлен хотя бы один "Наблюдатель"
+    bool blIsAddedSpectator = false;
 
-    for (int32 i = 0; i < PlayersStatistics.Items.Num(); ++i)
+    OnPreRemovingPlayerStatistics.Broadcast(FinalSize + RemovedIndices.Num(), FinalSize);
+
+    // Удаляем указатели на старые элементы массива и перенос Игроков в Наблюдатели
+    // @note    Необходимо для корректного отображения данных перед смещением данных в массиве 'PlayersStatistics'
+    //          в момент вызова делегата 'OnEndSortingPlayerStatistics', что находится в "ReSortStatisticsData()"
+    for (int32 i : RemovedIndices)
     {
-        if (lDeletedIndexesIterator
-            && i == *lDeletedIndexesIterator)
-        {
-            SortedPlayerStatistics.Remove(&PlayersStatistics.Items[i]);
-
-            lIsAddedSpectator |= AddSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
-
-            // Нумерация в 'RemovedIndices' идёт по возрастанию
-            ++lDeletedIndexesIterator;
-        }
+        SortedPlayerStatistics.Remove(&PlayersStatistics.Items[i]);
+        blIsAddedSpectator |= AddSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
     }
 
     ReSortStatisticsData();
 
-    if (lIsAddedSpectator)
+    // Перезаполняем массив указателями, что будут валидны после смещения данных в массиве 'PlayersStatistics'
+    // Очистка и добавление по возрастающим значениям диапазона [0; FinalSize)
+    SortedPlayerStatistics.Empty(FinalSize);
+    for (int32 i = 0; i < FinalSize; ++i)
+    {
+        SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
+    }
+
+    if (blIsAddedSpectator)
     {
         Reaction_AddSpectatorData();
     }
@@ -231,29 +241,36 @@ void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& Remov
 
 void AFPS_GameState::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedIndices, int32 FinalSize)
 {
-    auto lDeletedIndexesIterator = AddedIndices.CreateConstIterator();
-    bool lIsRemovedSpectator = false;
+    /* ---   Players Statistics Data   --- */
 
-    for (int32 i = 0; i < PlayersStatistics.Items.Num(); ++i)
+    // Добавляем указатели на новые элементы массива 'PlayersStatistics'
+    // Добавление по возрастающим значениям диапазона [OldSize; NewSize)
+    for (int32 i = FinalSize - AddedIndices.Num(); i < FinalSize; ++i)
     {
-        if (lDeletedIndexesIterator
-            && i == *lDeletedIndexesIterator)
-        {
-            SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
-
-            lIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
-
-            // Нумерация в 'AddedIndices' идёт по возрастанию
-            ++lDeletedIndexesIterator;
-        }
+        SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
     }
 
-    ReSortStatisticsData();
+    OnPostAddingPlayerStatistics.Broadcast(FinalSize - AddedIndices.Num(), FinalSize);
 
-    if (lIsRemovedSpectator)
+    ReSortStatisticsData();
+    //-------------------------------------------
+
+
+    /* ---   Spectators Data   --- */
+
+    // Локальный флаг: Удалён хотя бы один "Наблюдатель"
+    bool blIsRemovedSpectator = false;
+
+    for (int32 i : AddedIndices)
+    {
+        blIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
+    }
+
+    if (blIsRemovedSpectator)
     {
         Reaction_RemoveSpectatorData();
     }
+    //-------------------------------------------
 }
 
 TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayerStatisticsSortingType InType) const
@@ -341,8 +358,6 @@ void AFPS_GameState::ReInitSpectatorsData()
 
 TSortingSpectatorsPredicate AFPS_GameState::GetSortingPredicateForSpectators(EPlayerStatisticsSortingType InType) const
 {
-    FPS_LOG(Warning, "Start: %d", (uint32)InType);
-
     switch (InType)
     {
 
@@ -374,29 +389,12 @@ TSortingSpectatorsPredicate AFPS_GameState::GetSortingPredicateForSpectators(EPl
         return SORTING_PREDICATE(PlayerName, < );
         break;
     }
-
-    FPS_LOG(Warning, "End: %d", (uint32)InType);
 }
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Role Selection   --- */
-
-void AFPS_GameState::Server_SetClientReadiness_Implementation(const APlayerController* Client, bool bReadiness)
-{
-    if (FPlayerStatisticsData** lData = GetFPSGameMode()->PlayersStatisticsMap.Find(Client))
-    {
-        (*lData)->bPlayerReadiness = bReadiness;
-        Client_SetClientReadiness(bReadiness);
-        // PS: Обновляем без проверки на неравенство, так как есть шанс утраты данных
-    }
-}
-
-void AFPS_GameState::Client_SetClientReadiness_Implementation(bool bReadiness)
-{
-    OnClientReadinessChange.Broadcast(bReadiness);
-}
 
 void AFPS_GameState::AddPlayerState(APlayerState* PlayerState)
 {
@@ -421,6 +419,17 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
         {
             Reaction_RemoveSpectatorData();
         }
+    }
+}
+
+void AFPS_GameState::SetPlayerReadiness(const APlayerState* PlayerState, bool bReadiness)
+{
+    if (FPlayerStatisticsData** lData = GetFPSGameMode()->PlayersStatisticsMap.Find(PlayerState))
+    {
+        (*lData)->bPlayerReadiness = bReadiness;
+
+        ((AFPS_PlayerController*)PlayerState->GetInstigatorController())->Client_SetMatchReadiness(bReadiness);
+        // PS: Обновляем без проверки на неравенство, так как есть шанс утраты данных
     }
 }
 //--------------------------------------------------------------------------------------

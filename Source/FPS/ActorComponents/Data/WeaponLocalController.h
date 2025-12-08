@@ -296,7 +296,7 @@ public:
     /** Задать значение скорости */
     UFUNCTION(BlueprintCallable,
         Category = "Speed Control",
-        meta = (DisplayName = "Set Speed Control", AutoCreateRefTerm = "Mode"))
+        meta = (DisplayName = "Set Speed Control"))
     void SetSpeedControl(ESpeedVariations Mode) override;
     //-------------------------------------------
 
