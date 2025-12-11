@@ -120,7 +120,7 @@ void AFPS_GameMode::BaseInit()
 //void AFPS_GameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 //{
 //    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-//    FPS_Message("Test");
+//    FPS_Message("");
 //}
 
 void AFPS_GameMode::PostLogin(APlayerController* NewPlayer)
@@ -149,35 +149,39 @@ void AFPS_GameMode::Logout(AController* Exiting)
 //{
 //    return Super::ReadyToEndMatch_Implementation();
 //}
-//
-//void AFPS_GameMode::HandleMatchIsWaitingToStart()
-//{
-//    Super::HandleMatchIsWaitingToStart();
-//    FPS_Message("Test");
-//}
-//
-//void AFPS_GameMode::HandleMatchHasStarted()
-//{
-//    Super::HandleMatchHasStarted();
-//    FPS_Message("Test");
-//}
-//
+
+
+
+void AFPS_GameMode::HandleMatchIsWaitingToStart()
+{
+    Super::HandleMatchIsWaitingToStart();
+    FPS_ColorMessage(FColor::Orange, "");
+}
+
+void AFPS_GameMode::HandleMatchHasStarted()
+{
+    Super::HandleMatchHasStarted();
+
+    InitDestructionAccounting();
+    FPS_ColorMessage(FColor::Orange, "");
+}
+
 //void AFPS_GameMode::HandleMatchHasEnded()
 //{
 //    Super::HandleMatchHasEnded();
-//    FPS_Message("Test");
+//    FPS_Message("");
 //}
 //
 //void AFPS_GameMode::HandleLeavingMap()
 //{
 //    Super::HandleLeavingMap();
-//    FPS_Message("Test");
+//    FPS_Message("");
 //}
 //
 //void AFPS_GameMode::HandleMatchAborted()
 //{
 //    Super::HandleMatchAborted();
-//    FPS_Message("Test");
+//    FPS_Message("");
 //}
 //
 //APawn* AFPS_GameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)

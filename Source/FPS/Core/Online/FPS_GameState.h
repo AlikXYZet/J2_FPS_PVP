@@ -15,6 +15,9 @@
 #include "FPS/Tools/Structs/GameData/MatchStateData.h"
 #include "FPS/Tools/Structs/GameData/PlayerStatisticsData.h"
 
+// Interaction:
+#include "FPS/Characters/PlayerCharacterState.h"
+
 // Generated:
 #include "FPS_GameState.generated.h"
 //--------------------------------------------------------------------------------------
@@ -89,6 +92,9 @@ enum struct EPlayerStatisticsSortingType : uint8
 
 
 /* ---   Pre-declaration of classes   --- */
+
+// Static Functions:
+static AFPS_GameState* const GetFPSGameState();
 
 // Interaction:
 class AFPS_PlayerController;
@@ -198,12 +204,6 @@ public:
 
     /** Используется для регистрации реплицируемых Переменных и Компонентов */
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-    /** Получить Текущее сетевое состояние */
-    FORCEINLINE ENetMode GetCurrentNetMode() const
-    {
-        return CurrentNetMode;
-    };
     //-------------------------------------------
 
 
@@ -356,21 +356,17 @@ public:
     {
         if (IsValid(PlayerState))
         {
-            if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
+            if (PlayerState == GetFPSGameState()->GetFirstPlayerState())
             {
                 return EPlayerNetworkStatus::Local;
             }
+            else if (((APlayerCharacterState*)PlayerState)->GetCurrentNetStatus() == ENetMode::NM_ListenServer)
+            {
+                return EPlayerNetworkStatus::ListenServer;
+            }
             else
             {
-                if (PlayerState->GetPlayerId() == MAX_uint8 + 2
-                    && PlayerState->GetPing() == 0)
-                {
-                    return EPlayerNetworkStatus::ListenServer;
-                }
-                else
-                {
-                    return EPlayerNetworkStatus::Client;
-                }
+                return EPlayerNetworkStatus::Client;
             }
         }
         else
@@ -395,6 +391,16 @@ public:
     void AddPlayerStatisticsData(const APlayerState* PlayerState)
     {
         PlayersStatistics.AddPlayer(PlayerState);
+    };
+
+    FORCEINLINE APlayerState* GetFirstPlayerState() const
+    {
+        if (PlayerArray.Num())
+        {
+            // PS: 'PlayerArray.Num()' может быть == 0
+            return PlayerArray[0];
+        }
+        return nullptr;
     };
     //-------------------------------------------
 
@@ -451,14 +457,6 @@ private:
 
 
 
-    /* ---   Net   --- */
-
-    // Текущее сетевое состояние
-    ENetMode CurrentNetMode;
-    //-------------------------------------------
-
-
-
     /* ---   Match Management   --- */
 
     // Текущее состояние матча
@@ -470,8 +468,12 @@ private:
     /* ---   Players Statistics Data   --- */
 
     // Эффективно реплицируемый Контейнер о Статистиках всех активных Игроков
-    UPROPERTY(Replicated)
+    UPROPERTY(ReplicatedUsing = OnRep_PlayersStatistics)
     FPlayerStatisticsArray PlayersStatistics;
+
+    // Флаг проверки синхронизации контейнера PlayersStatistics
+    // @note    TRUE, если все указатели != nullptr (см. 'OnRep_PlayersStatistics()')
+    bool bIsPlayersStatisticsSynchronized = false;
 
     // Сортированный массив указателей на Статистики Игроков
     TArray<const FPlayerStatisticsData*> SortedPlayerStatistics;
@@ -498,6 +500,10 @@ private:
 
     /** Получение предиката согласно выбору типа сортировки Статистики Игроков */
     TSortingPredicate GetSortingPredicateForPlayerStatistics(EPlayerStatisticsSortingType InType) const;
+
+    /** При Репликации: PlayersStatistics */
+    UFUNCTION()
+    void OnRep_PlayersStatistics();
     //-------------------------------------------
 
 

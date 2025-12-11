@@ -10,7 +10,6 @@
 
 // UE:
 #include "GameFramework/PlayerState.h"
-#include "GameFramework/GameState.h"
 
 // Generated:
 #include "PlayerData.generated.h"
@@ -92,39 +91,7 @@ struct FPlayerData
     };
 
     /** Обновить данные, зависимые от PlayerState  */
-    void UpdateDataOnPlayerState()
-    {
-        if (IsValid(PlayerState))
-        {
-            // Обновить Имя на актуальный
-            if (PlayerName != PlayerState->GetPlayerName())
-            {
-                PlayerName = PlayerState->GetPlayerName();
-            }
-
-            // Обновить Сетевой Статус на актуальный
-            if (PlayerState == PlayerState->GetWorld()->GetGameState()->PlayerArray[0])
-            {
-                PlayerNetStatus = EPlayerNetworkStatus::Local;
-            }
-            else
-            {
-                if (PlayerState->GetPlayerId() == MAX_uint8 + 2
-                    && PlayerState->GetPing() == 0)
-                {
-                    PlayerNetStatus = EPlayerNetworkStatus::ListenServer;
-                }
-                else
-                {
-                    PlayerNetStatus = EPlayerNetworkStatus::Client;
-                }
-            }
-        }
-        else
-        {
-            PlayerNetStatus = EPlayerNetworkStatus::NONE;
-        }
-    };
+    void UpdateDataOnPlayerState();
     //-------------------------------------------
 
 

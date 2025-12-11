@@ -86,7 +86,8 @@ public:
     /** Изменить Готовность Владельца */
     UFUNCTION(BlueprintCallable,
         Category = "Role Selection",
-        meta = (DisplayName = "Set Owner Readiness"))
+        meta = (DisplayName = "Set Owner Readiness",
+            DefaultToSelf, HideSelfPin = "true"))
     void SetOwnerReadiness(bool bReadiness = false) const;
     //--------------------------------------------
 

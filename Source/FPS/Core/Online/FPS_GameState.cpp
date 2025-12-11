@@ -62,9 +62,10 @@ AFPS_GameState::AFPS_GameState()
 
 void AFPS_GameState::BeginPlay()
 {
+    BaseInit();
+
     Super::BeginPlay();
 
-    BaseInit();
     InitStatisticsData();
 }
 
@@ -98,6 +99,21 @@ void AFPS_GameState::Destroyed()
 void AFPS_GameState::BaseInit()
 {
     IsValidStaticPointer();
+
+    if (HasAuthority())
+    {
+        if (GetNetMode() == ENetMode::NM_ListenServer)
+        {
+            if (APlayerCharacterState* PCS = Cast<APlayerCharacterState>(GetFirstPlayerState()))
+            {
+                PCS->SetCurrentNetStatus(ENetMode::NM_ListenServer);
+            }
+            else
+            {
+                FPS_LOG(Error, "'APlayerState' Type is NOT 'APlayerCharacterState'");
+            }
+        }
+    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -175,11 +191,6 @@ void AFPS_GameState::HandleMatchIsWaitingToStart()
 void AFPS_GameState::HandleMatchHasStarted()
 {
     Super::HandleMatchHasStarted();
-
-    if (GetLocalRole() != ROLE_Authority && GetFPSGameMode())
-    {
-        GetFPSGameMode()->InitDestructionAccounting();
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -215,12 +226,12 @@ void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& Remov
     OnPreRemovingPlayerStatistics.Broadcast(FinalSize + RemovedIndices.Num(), FinalSize);
 
     // Удаляем указатели на старые элементы массива и перенос Игроков в Наблюдатели
-    // @note    Необходимо для корректного отображения данных перед смещением данных в массиве 'PlayersStatistics'
+    // @note    Необходимо для корректного отображения данных перед их смещением в массиве 'PlayersStatistics'
     //          в момент вызова делегата 'OnEndSortingPlayerStatistics', что находится в "ReSortStatisticsData()"
     for (int32 i : RemovedIndices)
     {
-        SortedPlayerStatistics.Remove(&PlayersStatistics.Items[i]);
-        blIsAddedSpectator |= AddSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
+        SortedPlayerStatistics.Remove(&PlayersStatistics[i]);
+        blIsAddedSpectator |= AddSpectatorData(PlayersStatistics[i].PlayerData.PlayerState);
     }
 
     ReSortStatisticsData();
@@ -230,7 +241,7 @@ void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& Remov
     SortedPlayerStatistics.Empty(FinalSize);
     for (int32 i = 0; i < FinalSize; ++i)
     {
-        SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
+        SortedPlayerStatistics.Add(&PlayersStatistics[i]);
     }
 
     if (blIsAddedSpectator)
@@ -247,7 +258,7 @@ void AFPS_GameState::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedI
     // Добавление по возрастающим значениям диапазона [OldSize; NewSize)
     for (int32 i = FinalSize - AddedIndices.Num(); i < FinalSize; ++i)
     {
-        SortedPlayerStatistics.Add(&PlayersStatistics.Items[i]);
+        SortedPlayerStatistics.Add(&PlayersStatistics[i]);
     }
 
     OnPostAddingPlayerStatistics.Broadcast(FinalSize - AddedIndices.Num(), FinalSize);
@@ -263,7 +274,7 @@ void AFPS_GameState::OnPostAddingStatisticsDataItems(const TArray<int32>& AddedI
 
     for (int32 i : AddedIndices)
     {
-        blIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics.Items[i].PlayerData.PlayerState);
+        blIsRemovedSpectator |= RemoveSpectatorData(PlayersStatistics[i].PlayerData.PlayerState);
     }
 
     if (blIsRemovedSpectator)
@@ -337,6 +348,50 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
     default:
         return SORTING_PREDICATE(PlayerData.PlayerName, < );
         break;
+    }
+}
+
+void AFPS_GameState::OnRep_PlayersStatistics()
+{
+    if (!bIsPlayersStatisticsSynchronized)
+    {
+        bIsPlayersStatisticsSynchronized = true;
+        bool blIsRemovedSpectator = false;
+
+        for (FPlayerStatisticsData& Data : PlayersStatistics)
+        {
+            if (Data.PlayerData.PlayerState)
+            {
+                if (Data.PlayerData.PlayerName.IsEmpty())
+                {
+                    Data.PlayerData.UpdateDataOnPlayerState();
+                }
+
+                blIsRemovedSpectator |= RemoveSpectatorData(Data.PlayerData.PlayerState);
+            }
+            else
+            {
+                bIsPlayersStatisticsSynchronized = false;
+            }
+        }
+
+        if (blIsRemovedSpectator)
+        {
+            Reaction_RemoveSpectatorData();
+        }
+
+        if (bIsPlayersStatisticsSynchronized)
+        {
+            OnPostAddingPlayerStatistics.Broadcast(0, PlayersStatistics.Num());
+
+            SortedPlayerStatistics.Empty(PlayersStatistics.Num());
+            for (FPlayerStatisticsData& Data : PlayersStatistics)
+            {
+                SortedPlayerStatistics.Add(&Data);
+            }
+
+            ReSortStatisticsData();
+        }
     }
 }
 //--------------------------------------------------------------------------------------
@@ -415,6 +470,24 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
 
     if (!IsMatchInProgress())
     {
+        int32 lIndex = PlayersStatistics.Find(PlayerState);
+
+        if (lIndex != INDEX_NONE)
+        {
+            OnPreRemovingPlayerStatistics.Broadcast(PlayersStatistics.Num(), PlayersStatistics.Num() - 1);
+
+            // @note: Удаляем на сервере и на клиентах без вызова делегатов изменения
+            PlayersStatistics.RemoveAt(lIndex);
+
+            SortedPlayerStatistics.Empty(PlayersStatistics.Num());
+            for (FPlayerStatisticsData& Data : PlayersStatistics)
+            {
+                SortedPlayerStatistics.Add(&Data);
+            }
+
+            ReSortStatisticsData();
+        }
+
         if (RemoveSpectatorData(PlayerState))
         {
             Reaction_RemoveSpectatorData();
@@ -424,12 +497,19 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
 
 void AFPS_GameState::SetPlayerReadiness(const APlayerState* PlayerState, bool bReadiness)
 {
-    if (FPlayerStatisticsData** lData = GetFPSGameMode()->PlayersStatisticsMap.Find(PlayerState))
+    if (!IsMatchInProgress())
     {
-        (*lData)->bPlayerReadiness = bReadiness;
+        int32 lIndex = PlayersStatistics.Find(PlayerState);
 
-        ((AFPS_PlayerController*)PlayerState->GetInstigatorController())->Client_SetMatchReadiness(bReadiness);
-        // PS: Обновляем без проверки на неравенство, так как есть шанс утраты данных
+        if (lIndex != INDEX_NONE)
+        {
+            PlayersStatistics.SetReadiness(PlayersStatistics[lIndex], bReadiness);
+
+            if (AFPS_PlayerController* PC = Cast<AFPS_PlayerController>(PlayerState->GetOwner()))
+            {
+                PC->Client_SetMatchReadiness(bReadiness);
+            }
+        }
     }
 }
 //--------------------------------------------------------------------------------------

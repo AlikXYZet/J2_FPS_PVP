@@ -131,11 +131,13 @@ public:
     //@note   'Игры' должны переопределять это значение */
     //virtual bool ReadyToEndMatch_Implementation() override;
 
-    ///** Вызывается при переходе в состояние 'WaitingToStart' ('Ожидание Начала') */
-    //virtual void HandleMatchIsWaitingToStart() override;
 
-    ///** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
-    //virtual void HandleMatchHasStarted() override;
+
+    /** Вызывается при переходе в состояние 'WaitingToStart' ('Ожидание Начала') */
+    virtual void HandleMatchIsWaitingToStart() override;
+
+    /** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
+    virtual void HandleMatchHasStarted() override;
 
     ///** Вызывается, когда карта переходит в режим  'WaitingPostMatch' ('Ожидание После Матча') */
     //virtual void HandleMatchHasEnded() override;

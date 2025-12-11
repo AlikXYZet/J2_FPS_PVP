@@ -254,17 +254,22 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
         Item.AddDeaths();
         MarkItemDirty(Item);
     };
+
+    FORCEINLINE void SetReadiness(FPlayerStatisticsData& Item, bool bReadiness)
+    {
+        Item.bPlayerReadiness = bReadiness;
+        MarkItemDirty(Item);
+        OnPostChangingArrayData.Broadcast();
+    };
     //-------------------------------------------
 
 
 
-    /* ---   Array Methods   --- */
+    /* ---   Array Data Methods   --- */
 
     void AddPlayer(const APlayerState* NewPlayer)
     {
-        int32 lIndex = Items.FindLastByPredicate(
-            [NewPlayer](const FPlayerStatisticsData& Item)
-            { return Item == NewPlayer; });
+        int32 lIndex = Items.Find(NewPlayer);
 
         if (lIndex == INDEX_NONE)
         {
@@ -280,9 +285,7 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     void RemovePlayer(const APlayerState* OldPlayer)
     {
-        int32 lIndex = Items.FindLastByPredicate(
-            [OldPlayer](const FPlayerStatisticsData& Item)
-            { return Item == OldPlayer; });
+        int32 lIndex = Items.Find(OldPlayer);
 
         if (lIndex != INDEX_NONE)
         {
@@ -290,11 +293,66 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
                 TArray<int32>{lIndex},
                 Items.Num() - 1);
 
-            Items.RemoveAtSwap(lIndex);
+            Items.RemoveAt(lIndex);
 
             MarkArrayDirty();
         }
     };
+    //-------------------------------------------
+
+
+
+    /* ---   Array Methods   --- */
+
+    FORCEINLINE int32 Num() const
+    {
+        return Items.Num();
+    }
+
+    FORCEINLINE int32 Find(const FPlayerStatisticsData& Item) const
+    {
+        return Items.Find(Item);
+    }
+
+    FORCEINLINE int32 Find(const APlayerState* PS) const
+    {
+        return Items.Find(PS);
+    }
+
+    FORCEINLINE void RemoveAt(int32 Index)
+    {
+        Items.RemoveAt(Index);
+    }
+
+    FORCEINLINE FPlayerStatisticsData& operator[](int32 Index)
+    {
+        return Items[Index];
+    }
+
+    FORCEINLINE const FPlayerStatisticsData& operator[](int32 Index) const
+    {
+        return Items[Index];
+    }
+
+    FORCEINLINE auto begin()
+    {
+        return Items.begin();
+    }
+
+    FORCEINLINE auto begin() const
+    {
+        return Items.begin();
+    }
+
+    FORCEINLINE auto end()
+    {
+        return Items.end();
+    }
+
+    FORCEINLINE auto end() const
+    {
+        return Items.end();
+    }
     //-------------------------------------------
 
 

@@ -55,12 +55,12 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 @param  Verbosity - Уровень информации (Error, Warning и др.)
 @param  Format - Формат текста
 
-@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
+@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса или структуры может не существовать */
 #define FPS_LOG_Static(Verbosity, Format, ...) \
 { \
 	UE_LOG(LogFPS, Verbosity, \
-        TEXT("'%s'::'%s': " Format), \
-        *FString(typeid(*this).name()), *FString(__func__), \
+        TEXT("'%s': " Format), \
+        *FString(__FUNCTION__),\
         ##__VA_ARGS__); \
 }
 
@@ -139,7 +139,7 @@ FPS_LOG_Static(Error, "lInputComponent is NOT");
 @param  Color - Цвет текста
 @param  Format - Формат текста
 
-@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса может не существовать */
+@note   Используем '*FString(__FUNCTION__)', так как экземпляр класса или структуры может не существовать */
 #define FPS_ColorMessage_Static(Color, Format, ...) \
     FPS_ColorMessage_Empty(\
         Color,\

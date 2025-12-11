@@ -61,15 +61,15 @@ void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
 {
     if (SpeedControllers.Num())
     {
-        ESpeedVariations* lMax = nullptr;
+        ESpeedVariations lMax = ESpeedVariations::COUNT;
 
         for (ESpeedVariations* Data : SpeedControllers)
         {
             if (Data)
             {
-                if (!lMax || (*lMax < *Data && *Data < ESpeedVariations::COUNT))
+                if (lMax == ESpeedVariations::COUNT || (lMax < *Data && *Data < ESpeedVariations::COUNT))
                 {
-                    lMax = Data;
+                    lMax = *Data;
                 }
             }
             else
@@ -78,9 +78,9 @@ void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
             }
         }
 
-        if (lMax)
+        if (lMax != ESpeedVariations::COUNT)
         {
-            SetSpeedType(*lMax);
+            SetSpeedType(lMax);
         }
     }
 }
