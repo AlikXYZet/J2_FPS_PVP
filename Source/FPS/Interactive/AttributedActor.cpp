@@ -101,12 +101,12 @@ void AAttributedActor::InitAbilitySystemComp()
         }
         else
         {
-            FPS_LOG(Error, TEXT("AttributeSet is NOT"));
+            FPS_Error("AttributeSet is NOT");
         }
     }
     else
     {
-        FPS_LOG(Error, TEXT("AbilitySystemComp is NOT"));
+        FPS_Error("AbilitySystemComp is NOT");
     }
 }
 //--------------------------------------------------------------------------------------

@@ -62,12 +62,19 @@ protected:
     /* ---   Base   --- */
 
     // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
+    //virtual void BeginPlay() override;
     //-------------------------------------------
 
 
 
 public:
+
+    /* ---   Base   --- */
+
+    /** Вызывается после инициализации всех компонентов только во время игрового процесса */
+    //virtual void PostInitializeComponents() override;
+    //-------------------------------------------
+
 
     /* ---   Data   --- */
 

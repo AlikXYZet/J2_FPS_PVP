@@ -82,6 +82,9 @@ public:
     /** Вызывается при Создании компонента в Редакторе или Игровом Процессе */
     virtual void OnComponentCreated() override;
 
+
+    virtual void CreateChildActor() override;
+
     /** Инициализирует компонент до вызова в Игровом Процессе BeginPlay() Компонента и Актора-Владельца */
     virtual void InitializeComponent() override;
 
@@ -108,11 +111,22 @@ public:
 
     //
 
-    /** Получить текущий Каркас Оружия от Первого Лица */
-    FORCEINLINE const AFirstPersonWeaponFrame* GetCurrentFPWeaponFrame()
+    /** Получить Игрока-Владельца данного `UWeaponControlComponent`
+    @note   Может быть НЕ Безопасно, предварительно проверяется в `BaseInit()` с вызовом соответствующей ошибки */
+    FORCEINLINE APlayerCharacter* GetPlayerOwner() const
     {
-        return CurrentFPWeaponFrame;
+        return (APlayerCharacter*)GetOwner();
+    };
+
+    /** Получить текущий Каркас Оружия от Первого Лица
+    @note   Может быть НЕ Безопасно, предварительно проверяется в `InitData()` с вызовом соответствующей ошибки */
+    FORCEINLINE AFirstPersonWeaponFrame* GetCurrentFPWeaponFrame() const
+    {
+        return (AFirstPersonWeaponFrame*)GetChildActor();
     }
+
+    /** Получить компонент Сетевого контроллера Оружия */
+    UWeaponNetworkController* GetWeaponControlNetComp() const;
     //-------------------------------------------
 
 
@@ -209,7 +223,10 @@ public:
     const FWeaponData& BP_GetCurrentWeaponData() const;
 
     /** Получить данные текущего Оружия */
-    FORCEINLINE const FWeaponData* GetCurrentWeaponData() const { return WeaponControlNetComp->GetCurrentWeaponData(); };
+    FORCEINLINE const FWeaponData* GetCurrentWeaponData() const
+    {
+        return GetWeaponControlNetComp()->GetCurrentWeaponData();
+    };
 
     /** Получить данные текущего Слота */
     UFUNCTION(BlueprintCallable,
@@ -258,7 +275,7 @@ public:
     /** Получить текущие Действия игрока */
     FORCEINLINE uint8& GetCurrentActions() const
     {
-        return WeaponControlNetComp->CurrentActions;
+        return GetWeaponControlNetComp()->CurrentActions;
     };
 
     /** Управление Оружием: Задать Действие */
@@ -285,7 +302,7 @@ public:
     @param  Action - Проверяемое действие */
     FORCEINLINE bool CheckAction(EActionVariations Action) const
     {
-        return WeaponControlNetComp->CheckAction(Action);
+        return GetWeaponControlNetComp()->CheckAction(Action);
     };
     //-------------------------------------------
 
@@ -298,37 +315,14 @@ public:
         Category = "Speed Control",
         meta = (DisplayName = "Set Speed Control"))
     void SetSpeedControl(ESpeedVariations Mode) override;
+
+    /** Инициализация контроля Скорости */
+    void InitSpeedControl() override;
     //-------------------------------------------
 
 
 
 private:
-
-    /* ---   Local   --- */
-
-    /* Игрок-Владелец данного UWeaponControlComponent */
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Control|Check")
-    APlayerCharacter* PlayerOwner = nullptr;
-
-    // Компонент сетевого контроллера Оружия
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Control|Check")
-    UWeaponNetworkController* WeaponControlNetComp = nullptr;
-
-    // Текущий Каркас Оружия от Первого Лица
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Control|Check",
-        meta = (DisplayName = "Current FP Weapon Frame"))
-    AFirstPersonWeaponFrame* CurrentFPWeaponFrame = nullptr;
-
-    //
-
-    /** Инициализация базовых Данных */
-    void BaseInit();
-    //-------------------------------------------
-
-
 
     /* ---   Direction Fire   --- */
 
@@ -484,11 +478,6 @@ private:
 
     // Переменная контроля максимальной Скорости Персонажа
     ESpeedVariations SpeedControl = ESpeedVariations::Sprint;
-
-    //
-
-    /** Инициализация контроля Скорости */
-    void InitSpeedControl() override;
     //-------------------------------------------
 
 
@@ -516,8 +505,7 @@ public:
     /* ---   Base: Debugs   --- */
 
     /** Вызывается, когда какое-либо свойство этого объекта было изменено
-    * @note Используется для проверки изменённых переменных
-    */
+    @note   Используется для проверки изменённых переменных */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
     /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
@@ -541,10 +529,10 @@ private:
 
     /* Получить имена зарегистрированных Групп Действий */
     UFUNCTION()
-    TArray<FName> GetActionGroupsNames();
+    TArray<FName> GetActionGroupsNames() const;
 
     /* Проверить группы входных данных */
-    void CheckInputsGroups();
+    void CheckInputsGroups() const;
     //-------------------------------------------
 
 
@@ -561,7 +549,7 @@ private:
     /* ---   Switching   --- */
 
     /** Проверка количества Слотов */
-    void CheckNumOfSlots();
+    void CheckNumOfSlots() const;
     //-------------------------------------------
 
 #endif // WITH_EDITOR

@@ -58,7 +58,7 @@ static bool SafeProcessEvent(UObject* Owner, UFunction* Function)
 {
     if (!IsValid(Owner) || !Function)
     {
-        FPS_LOG_Empty(Error, TEXT("Invalid object or function!"));
+        FPS_LOG_Empty(Error, "Invalid object or function!");
         return false;
     }
 
@@ -138,22 +138,22 @@ bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
 #if WITH_EDITOR
         else
         {
-            FPS_LOG(Warning, TEXT("%s is Unsuitable Function:"),
+            FPS_LOG(Warning, "%s is Unsuitable Function:",
                 *NameFunction.ToString());
 
             if (CheckError & 0b0001)
-                FPS_LOG_Empty(Warning, TEXT("* Input parameters more than 1"));
+                FPS_LOG_Empty(Warning, "* Input parameters more than 1");
             if (CheckError & 0b0010)
-                FPS_LOG_Empty(Warning, TEXT("* Is NOT constant (not const or pure)"));
+                FPS_LOG_Empty(Warning, "* Is NOT constant (not const or pure)");
             if (CheckError & 0b0100)
-                FPS_LOG_Empty(Warning, TEXT("* Return value is NOT bool or Byte (uint8)"));
+                FPS_LOG_Empty(Warning, "* Return value is NOT bool or Byte (uint8)");
             if (CheckError & 0b1000)
-                FPS_LOG_Empty(Warning, TEXT("* SafeProcessEvent() failed"));
+                FPS_LOG_Empty(Warning, "* SafeProcessEvent() failed");
         }
     }
     else
     {
-        FPS_LOG(Warning, TEXT("%s() function NOT found:"),
+        FPS_LOG(Warning, "%s() function NOT found:",
             *NameFunction.ToString());
 #endif // WITH_EDITOR
     }

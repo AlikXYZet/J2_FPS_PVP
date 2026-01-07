@@ -28,19 +28,9 @@ AFPS_GameState* AFPS_GameState::CurrentGameState = nullptr;
 
 AFPS_GameState::AFPS_GameState()
 {
-    PrimaryActorTick.bCanEverTick = true; // Принудительно
+    // Установка вызова функции Tick() в каждом кадре
+    PrimaryActorTick.bCanEverTick = false; // Предварительно
     SetActorTickInterval(1.f); // 1 раз/сек.
-    /* @note    Если требуется использовать 'Tick()' для чего-то ещё, то следует заменить данный способ на Циклический Таймер.
-    Например:
-    // Таймер: Контроль состояния Раунда
-    // @note    Таймер с тактом раз в секунду для отслеживания времени
-    GetWorld()->GetTimerManager().SetTimer(
-        Timer_RoundStatusControl,
-        this,
-        &AFPS_GameState::RemainingRoundTimeCounter,
-        1.f,
-        true);
-    */
 
     // Настройка репликации
     bReplicates = true;
@@ -69,12 +59,10 @@ void AFPS_GameState::BeginPlay()
     InitStatisticsData();
 }
 
-void AFPS_GameState::Tick(float DeltaSeconds)
-{
-    Super::Tick(DeltaSeconds);
-
-    //FPS_ColorMessage(FColor::Cyan, " %d", ElapsedTime);
-}
+//void AFPS_GameState::Tick(float DeltaSeconds)
+//{
+//    Super::Tick(DeltaSeconds);
+//}
 
 void AFPS_GameState::OnConstruction(const FTransform& Transform)
 {
@@ -84,6 +72,13 @@ void AFPS_GameState::OnConstruction(const FTransform& Transform)
 
     CurrentGameState = this;
     //-------------------------------------------
+}
+
+void AFPS_GameState::PostInitializeComponents()
+{
+    // Обход действия кода в 'AGameState::PostInitializeComponents()'
+    Super::Super::PostInitializeComponents();
+    // @note    Переносим инициализацию 'TimerHandle_DefaultTimer' в 'OnRep_ElapsedTime()'
 }
 
 void AFPS_GameState::Destroyed()
@@ -104,13 +99,13 @@ void AFPS_GameState::BaseInit()
     {
         if (GetNetMode() == ENetMode::NM_ListenServer)
         {
-            if (APlayerCharacterState* PCS = Cast<APlayerCharacterState>(GetFirstPlayerState()))
+            if (APlayerCharacterState* PCS = GetFirstPlayerState<APlayerCharacterState>())
             {
                 PCS->SetCurrentNetStatus(ENetMode::NM_ListenServer);
             }
             else
             {
-                FPS_LOG(Error, "'APlayerState' Type is NOT 'APlayerCharacterState'");
+                FPS_Error("'APlayerState' Type is NOT 'APlayerCharacterState'");
             }
         }
     }
@@ -146,9 +141,9 @@ void AFPS_GameState::OnRep_MatchState()
 
     if (MatchState == MatchState::WaitingToStart || PreviousMatchState == MatchState::EnteringMap)
     {
-        // Call MatchIsWaiting to start even if you join in progress at a later state
-        HandleMatchIsWaitingToStart();
         CurrentMatchState = EMatchState::WaitingToStart;
+        // Вызываем 'MatchIsWaiting' для запуска, даже если идёт присоединение к процессу в более позднем состоянии
+        HandleMatchIsWaitingToStart();
     }
 
     // Warning: Без данного разрыва "if-else",
@@ -156,18 +151,18 @@ void AFPS_GameState::OnRep_MatchState()
     // при подключении к сессии с уже запущенном Матче
     if (MatchState == MatchState::InProgress)
     {
-        HandleMatchHasStarted();
         CurrentMatchState = EMatchState::InProgress;
+        HandleMatchHasStarted();
     }
     else if (MatchState == MatchState::WaitingPostMatch)
     {
-        HandleMatchHasEnded();
         CurrentMatchState = EMatchState::WaitingPostMatch;
+        HandleMatchHasEnded();
     }
     else if (MatchState == MatchState::LeavingMap)
     {
-        HandleLeavingMap();
         CurrentMatchState = EMatchState::LeavingMap;
+        HandleLeavingMap();
     }
 
     OnMatchStateChange.Broadcast(CurrentMatchState);
@@ -175,11 +170,37 @@ void AFPS_GameState::OnRep_MatchState()
     PreviousMatchState = MatchState;
 }
 
-//void AFPS_GameState::OnRep_ElapsedTime()
-//{
-//    int32 lLocal = ElapsedTime;
-//    FPS_Message(" %d", lLocal);
-//}
+void AFPS_GameState::OnRep_ElapsedTime()
+{
+    FPS_ColorMessage(FColor::Green, "%d", ElapsedTime);
+
+    // Проверка на значение, знаменующее останов таймера
+    if (ElapsedTime == MIN_int32)
+    {
+        StopDefaultTimer();
+    }
+    else
+    {
+        StartDefaultTimer();
+    }
+}
+
+void AFPS_GameState::DefaultTimer()
+{
+    // По умолчанию используется для отсчёта времени ("++ElapsedTime") во время матча
+    //Super::DefaultTimer(); // Вместо этого Копируем, оптимизируем и расширяем код
+
+    if (GetCurrentMatchState() <= EMatchState::InProgress)
+    {
+        ++ElapsedTime;
+        if (GetNetMode() != NM_DedicatedServer)
+        {
+            OnLocalElapsedTimeChange();
+        }
+    }
+
+    StartDefaultTimer();
+}
 
 void AFPS_GameState::HandleMatchIsWaitingToStart()
 {
@@ -191,6 +212,53 @@ void AFPS_GameState::HandleMatchIsWaitingToStart()
 void AFPS_GameState::HandleMatchHasStarted()
 {
     Super::HandleMatchHasStarted();
+}
+
+void AFPS_GameState::OnLocalElapsedTimeChange()
+{
+    FPS_ColorMessage(FColor::Cyan, "%d", ElapsedTime);
+    OnElapsedTimeChange.Broadcast(ElapsedTime);
+}
+
+void AFPS_GameState::UpdateElapsedTime()
+{
+    /** @note
+    Требуется обновлять на стороне Сервера при каждом изменении готовности среди Игроков:
+    * Изменилась готовность;
+    * Кто-то Добавился или Убрался из списка Игроков;
+    * Кто-то вышел из игры, когда был в списке Игроков */
+    int32 lCount = 0;
+
+    for (const FPlayerStatisticsData& Data : PlayersStatistics)
+    {
+        if (Data.bPlayerReadiness)
+        {
+            ++lCount;
+        }
+    }
+
+    if (IsMatchInWaitingToStart())
+    {
+        if (lCount != 0
+            && lCount == PlayersStatistics.Num())
+        {
+            // Если все готовы, то Запустить Сокращённое время ожидания
+            ElapsedTime = -ShortWaitTimeForMatchToStart;
+        }
+        else if (lCount)
+        {
+            // Если готовы не все, но хотя бы один, то Запустить Длинное время ожидания
+            ElapsedTime = -LongWaitTimeForMatchToStart;
+        }
+        else
+        {
+            // Если никто не готов, то Остановить время ожидания
+            ElapsedTime = MIN_int32;
+        }
+
+        // Контроль таймера в зависимости от значения 'ElapsedTime'
+        OnRep_ElapsedTime();
+    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -216,6 +284,55 @@ void AFPS_GameState::InitStatisticsData()
     PlayersStatistics.OnPreRemovingItems.AddDynamic(this, &AFPS_GameState::OnPreRemovingStatisticsDataItems);
     PlayersStatistics.OnPostAddingItems.AddDynamic(this, &AFPS_GameState::OnPostAddingStatisticsDataItems);
     PlayersStatistics.OnPostChangingArrayData.AddDynamic(this, &AFPS_GameState::ReSortStatisticsData);
+}
+
+void AFPS_GameState::RemovePlayerStatisticsData(APlayerState* PlayerState)
+{
+    if (HasAuthority())
+    {
+        if (PlayersStatistics.RemovePlayer(PlayerState))
+        {
+            if (AFPS_PlayerController* PC = Cast<AFPS_PlayerController>(PlayerState->GetOwner()))
+            {
+                // Учёт количества "Наблюдателей"
+                GetFPSGameMode()->PlayerSwitchedToSpectatorOnly(PC);
+
+                /** Смена роли на "Наблюдатель"
+                @note   Заменяем `PC->StartSpectatingOnly();`, так как в данный момент `StateName == NAME_Spectating` */
+                PlayerState->SetIsSpectator(true);
+                PlayerState->SetIsOnlyASpectator(true);
+                PC->bPlayerIsWaiting = false;
+
+                PC->Client_ChangedSelectedRole(false);
+            }
+
+            UpdateElapsedTime();
+        }
+    }
+}
+
+void AFPS_GameState::AddPlayerStatisticsData(APlayerState* PlayerState)
+{
+    if (HasAuthority())
+    {
+        if (PlayersStatistics.AddPlayer(PlayerState))
+        {
+            if (AFPS_PlayerController* PC = Cast<AFPS_PlayerController>(PlayerState->GetOwner()))
+            {
+                // Учёт количества "Игроков"
+                GetFPSGameMode()->PlayerSwitchedToPlayer(PC);
+
+                // Смена роли на "Игрок"
+                PlayerState->SetIsSpectator(false);
+                PlayerState->SetIsOnlyASpectator(false);
+                PC->bPlayerIsWaiting = true;
+
+                PC->Client_ChangedSelectedRole(true);
+            }
+
+            UpdateElapsedTime();
+        }
+    }
 }
 
 void AFPS_GameState::OnPreRemovingStatisticsDataItems(const TArray<int32>& RemovedIndices, int32 FinalSize)
@@ -353,6 +470,9 @@ TSortingPredicate AFPS_GameState::GetSortingPredicateForPlayerStatistics(EPlayer
 
 void AFPS_GameState::OnRep_PlayersStatistics()
 {
+    /** Проверка синхронизации массива 'PlayersStatistics'
+    @note   В момент подключения, 'PlayersStatistics' имеет "нулевые" указатели на 'PlayerState',
+    так как экземпляры 'APlayerState' ещё не синхронизированы, а данные массива не действительны */
     if (!bIsPlayersStatisticsSynchronized)
     {
         bIsPlayersStatisticsSynchronized = true;
@@ -449,6 +569,12 @@ TSortingSpectatorsPredicate AFPS_GameState::GetSortingPredicateForSpectators(EPl
 
 
 
+/* ---   Player Data   --- */
+
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Role Selection   --- */
 
 void AFPS_GameState::AddPlayerState(APlayerState* PlayerState)
@@ -476,7 +602,8 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
         {
             OnPreRemovingPlayerStatistics.Broadcast(PlayersStatistics.Num(), PlayersStatistics.Num() - 1);
 
-            // @note: Удаляем на сервере и на клиентах без вызова делегатов изменения
+            // @note: Удаляем и на Сервере и на Клиентах без лишнего вызова
+            // Делегата 'OnPreRemovingItems' массива 'PlayersStatistics'
             PlayersStatistics.RemoveAt(lIndex);
 
             SortedPlayerStatistics.Empty(PlayersStatistics.Num());
@@ -486,6 +613,11 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
             }
 
             ReSortStatisticsData();
+
+            if (HasAuthority())
+            {
+                UpdateElapsedTime();
+            }
         }
 
         if (RemoveSpectatorData(PlayerState))
@@ -497,7 +629,7 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
 
 void AFPS_GameState::SetPlayerReadiness(const APlayerState* PlayerState, bool bReadiness)
 {
-    if (!IsMatchInProgress())
+    if (!IsMatchInProgress() && HasAuthority())
     {
         int32 lIndex = PlayersStatistics.Find(PlayerState);
 
@@ -507,8 +639,10 @@ void AFPS_GameState::SetPlayerReadiness(const APlayerState* PlayerState, bool bR
 
             if (AFPS_PlayerController* PC = Cast<AFPS_PlayerController>(PlayerState->GetOwner()))
             {
-                PC->Client_SetMatchReadiness(bReadiness);
+                PC->Client_ChangedMatchReadiness(bReadiness);
             }
+
+            UpdateElapsedTime();
         }
     }
 }

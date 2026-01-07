@@ -48,7 +48,10 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "FPS Movement Component|Movement Mode")
-    virtual void SetCustomMovementMode(ESpeedVariations Mode);
+    virtual void SetCustomMovementMode(ESpeedVariations Mode)
+    {
+        SetMovementMode(EMovementMode::MOVE_Custom, (uint8)Mode);
+    };
     //-------------------------------------------
 
 
@@ -67,10 +70,21 @@ public:
     //
 
     /** Добавить контроль Скорости */
-    void AddSpeedControl(ESpeedVariations& Controller);
+    FORCEINLINE void AddSpeedControl(ESpeedVariations& Controller)
+    {
+        if (SpeedControllers.Find(&Controller) == INDEX_NONE)
+        {
+            SpeedControllers.Add(&Controller);
+            UpdateMaxSpeed();
+        }
+    };
 
     /** Удалить контроль Скорости */
-    void RemoveSpeedControl(ESpeedVariations& Controller);
+    FORCEINLINE void RemoveSpeedControl(ESpeedVariations& Controller)
+    {
+        SpeedControllers.Remove(&Controller);
+        UpdateMaxSpeed();
+    };
 
     /** Обновить ограничение максимальной скорости */
     void UpdateMaxSpeed();
@@ -83,7 +97,15 @@ public:
     /** Изменить значение максимальной скорости */
     UFUNCTION(BlueprintCallable,
         Category = "FPS Movement Component|Speed Control")
-    void SetSpeedType(ESpeedVariations Type);
+    void SetSpeedType(ESpeedVariations Type)
+    {
+        if (Type < ESpeedVariations::COUNT
+            && MaxWalkSpeed != BaseMovementSpeeds[(uint8)Type])
+        {
+            // Быстрое применение значения у Клиента-Владельца
+            SetMaxWalkSpeed(BaseMovementSpeeds[(uint8)Type]);
+        }
+    };
 
     /** Изменить значение максимальной скорости */
     UFUNCTION(BlueprintCallable,

@@ -92,8 +92,7 @@ void UFPS_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
 void UFPS_AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
     // Отслеживание со стороны клиента
-    if (OnZeroHealth.IsBound()
-        && Health.GetBaseValue() < 0.5f
+    if (Health.GetBaseValue() < 0.5f
         && OldHealth.GetBaseValue() >= 0.5f)
     {
         OnZeroHealth.Broadcast();

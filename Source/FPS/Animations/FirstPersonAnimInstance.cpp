@@ -63,7 +63,7 @@ void UFirstPersonAnimInstance::InitIKAnim()
     }
     else
     {
-        FPS_LOG(Error, TEXT("CurrentFPWeaponFrame is NOT"));
+        FPS_Error("CurrentFPWeaponFrame is NOT");
     }
 }
 

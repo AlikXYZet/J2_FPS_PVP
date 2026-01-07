@@ -16,6 +16,9 @@
 
 /* ---   Delegates   --- */
 
+// Делегат: При изменении выбранной Роли
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectedRoleChange, bool, bIsPlayer);
+
 // Делегат: При изменении Готовности текущего (локального) Игрока
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerReadinessChange, bool, bReadiness);
 //--------------------------------------------------------------------------------------
@@ -39,7 +42,12 @@ public:
 
     /* ---   Delegates   --- */
 
+    // Делегат: При изменении выбранной Роли
+    UPROPERTY(BlueprintAssignable)
+    FOnSelectedRoleChange OnSelectedRoleChange;
+
     // Делегат: При изменении Готовности текущего (локального) Игрока
+    UPROPERTY(BlueprintAssignable)
     FOnPlayerReadinessChange OnPlayerReadinessChange;
     //-------------------------------------------
 
@@ -57,8 +65,8 @@ protected:
 
     /* ---   Base   --- */
 
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
+    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
+    //virtual void BeginPlay() override;
     //-------------------------------------------
 
 
@@ -67,7 +75,7 @@ public:
 
     /* ---   Base   --- */
 
-    /** Функция, вызываемая каждый кадр в этом Акторе */
+    /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
     virtual void Tick(float DeltaSeconds) override;
     //-------------------------------------------
 
@@ -131,8 +139,13 @@ public:
         Server_SetMatchReadiness(bReadiness);
     };
 
+    /** Client: Изменилась выбранная Роль */
     UFUNCTION(Client, Reliable)
-    void Client_SetMatchReadiness(bool bReadiness = false) const;
+    void Client_ChangedSelectedRole(bool bIsPlayer = false) const;
+
+    /** Client: Изменилась Готовность к Матчу */
+    UFUNCTION(Client, Reliable)
+    void Client_ChangedMatchReadiness(bool bReadiness = false) const;
     //-------------------------------------------
 
 
@@ -163,12 +176,19 @@ private:
 
     /* ---   Role Selection   --- */
 
+    /** @note:
+    Действия данных RPC-методов исполняем в экземпляре 'AFPS_PlayerController',
+    а не в 'AFPS_GameState' для уменьшения количества передаваемых по сети данных */
+
+    /** Server: Перейти к Наблюдателям */
     UFUNCTION(Server, Reliable)
     void Server_GoToSpectators() const;
 
+    /** Server: Перейти к Игрокам */
     UFUNCTION(Server, Reliable)
     void Server_GoToPlayers() const;
 
+    /** Server: Изменить Готовность к Матчу */
     UFUNCTION(Server, Reliable)
     void Server_SetMatchReadiness(bool bReadiness) const;
     //-------------------------------------------

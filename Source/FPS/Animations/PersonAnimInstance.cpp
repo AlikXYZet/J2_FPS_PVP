@@ -107,12 +107,12 @@ void UPersonAnimInstance::BaseInit()
         }
         else
         {
-            FPS_LOG(Error, TEXT("WeaponControlNetComp is NOT"));
+            FPS_Error("WeaponControlNetComp is NOT");
         }
     }
     else
     {
-        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
+        FPS_Error("PlayerOwner is NOT");
     }
 
     // Timer_CustomUpdateAnimation

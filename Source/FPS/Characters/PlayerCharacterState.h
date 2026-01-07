@@ -24,6 +24,34 @@ class FPS_API APlayerCharacterState : public APlayerState
 
 public:
 
+    /* ---   Constructors   --- */
+
+    // Sets default values for this actor's properties
+    APlayerCharacterState();
+    //-------------------------------------------
+
+
+
+protected:
+
+    /* ---   Base   --- */
+
+    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
+    //virtual void BeginPlay() override;
+    //-------------------------------------------
+
+
+
+public:
+
+    /* ---   Base   --- */
+
+    /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
+    //virtual void Tick(float DeltaSeconds) override;
+    //-------------------------------------------
+
+
+
     /* ---   Net   --- */
 
     /** Используется для регистрации реплицируемых Переменных и Компонентов */

@@ -75,7 +75,7 @@ void UFPS_AbilitySystemComponent::CheckTagsInParams(TMap<FGameplayTag, float>& P
     {
         if (!Param.Key.IsValid())
         {
-            FPS_LOG_Component(Warning, TEXT("Invalid param: '%s' with a value of '%f' "),
+            FPS_LOG_Component(Warning, "Invalid param: '%s' with a value of '%f' ",
                 *Param.Key.GetTagName().ToString(), Param.Value);
         }
     }
@@ -128,13 +128,13 @@ void UFPS_AbilitySystemComponent::InitStartingAttributes()
             }
             else
             {
-                FPS_LOG_Component(Error, TEXT("'%s' is NOT used for this Actor. See Attribute '%s' "),
+                FPS_Error_Component("'%s' is NOT used for this Actor. See Attribute '%s' ",
                     *Pair.Key.GetAttributeSetClass()->GetName(), *Pair.Key.GetName());
             }
         }
         else
         {
-            FPS_LOG_Component(Warning, TEXT("Incorrect Attribute Name: '%s'"),
+            FPS_LOG_Component(Warning, "Incorrect Attribute Name: '%s'",
                 *Pair.Key.GetName());
         }
     }

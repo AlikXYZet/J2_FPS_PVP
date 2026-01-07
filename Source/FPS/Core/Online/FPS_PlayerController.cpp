@@ -16,6 +16,16 @@ AFPS_PlayerController::AFPS_PlayerController()
     // Установка вызова функции Tick() в каждом кадре.
     PrimaryActorTick.bCanEverTick = true; // Принудительно
     //-------------------------------------------
+
+
+    /* ---   Role Selection   --- */
+
+    /** "Наблюдатель" по умолчанию
+    @note   Заменяем `PC->StartSpectatingOnly();`, так как в данный момент:
+    * `StateName == NAME_Spectating`;
+    * `PlayerState == nullptr`. */
+    bPlayerIsWaiting = false;
+    //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
 
@@ -23,11 +33,11 @@ AFPS_PlayerController::AFPS_PlayerController()
 
 /* ---   Base   --- */
 
-void AFPS_PlayerController::BeginPlay()
-{
-    Super::BeginPlay();
-
-}
+//void AFPS_PlayerController::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//}
 
 void AFPS_PlayerController::Tick(float DeltaSeconds)
 {
@@ -103,7 +113,12 @@ void AFPS_PlayerController::Server_SetMatchReadiness_Implementation(bool bReadin
     GetFPSGameState()->SetPlayerReadiness(PlayerState, bReadiness);
 }
 
-void AFPS_PlayerController::Client_SetMatchReadiness_Implementation(bool bReadiness) const
+void AFPS_PlayerController::Client_ChangedSelectedRole_Implementation(bool bIsPlayer) const
+{
+    OnSelectedRoleChange.Broadcast(bIsPlayer);
+}
+
+void AFPS_PlayerController::Client_ChangedMatchReadiness_Implementation(bool bReadiness) const
 {
     OnPlayerReadinessChange.Broadcast(bReadiness);
 }

@@ -98,7 +98,7 @@ void URoleSelectionWidget::InitWithGameState()
     }
     else
     {
-        FPS_LOG(Error, TEXT("Current 'Game State' is NOT 'AFPS_GameState'"));
+        FPS_Error("Current 'Game State' is NOT 'AFPS_GameState'");
     }
 }
 
@@ -106,11 +106,12 @@ void URoleSelectionWidget::InitWithPlayerController()
 {
     if (AFPS_PlayerController* PC = GetOwningPlayer<AFPS_PlayerController>())
     {
+        PC->OnSelectedRoleChange.AddDynamic(this, &URoleSelectionWidget::Event_OnSelectedRoleChange);
         PC->OnPlayerReadinessChange.AddDynamic(this, &URoleSelectionWidget::Event_OnOwnerReadinessChange);
     }
     else
     {
-        FPS_LOG(Error, TEXT("Current 'Owning Player' is NOT 'AFPS_PlayerController'"));
+        FPS_Error("Current 'Owning Player' is NOT 'AFPS_PlayerController'");
     }
 }
 //--------------------------------------------------------------------------------------

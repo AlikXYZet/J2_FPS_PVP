@@ -116,6 +116,12 @@ public:
         meta = (DisplayName = "On Adding Spectators Items"))
     void Event_OnAddingSpectatorsItems(int32 FinalSize);
 
+    /** Событие BP: При изменении выбранной Роли */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Role Selection",
+        meta = (DisplayName = "On Selected Role Change"))
+    void Event_OnSelectedRoleChange(bool bIsPlayer);
+
     /** Событие BP: При изменении Готовности Владельца */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Role Selection",

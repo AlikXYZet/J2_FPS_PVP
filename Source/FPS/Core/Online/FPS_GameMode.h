@@ -82,6 +82,7 @@ protected:
 
     /* ---   Base   --- */
 
+    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
     virtual void BeginPlay() override;
     //-------------------------------------------
 
@@ -91,6 +92,7 @@ public:
 
     /* ---   Base   --- */
 
+    /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
     virtual void Tick(float DeltaSeconds) override;
 
     /** Вызывается при размещении экземпляра данного класса (в редакторе) или его запуске.
@@ -124,12 +126,16 @@ public:
     // 'Игры' должны переопределять эти функции, чтобы иметь дело со своей логикой, специфичной для игры
 
     ///** Возвращает значение true, если всё готово для начала матча
-    //@note   'Игры' должны переопределять это значение */
+    //@note   Вызывается при вызове 'Tick()' (в состоянии 'WaitingToStart') и 'StartPlay()' */
     //virtual bool ReadyToStartMatch_Implementation() override;
 
     ///** Возвращает значение true, если матч готов к завершению
-    //@note   'Игры' должны переопределять это значение */
+    //@note   Вызывается при вызове 'Tick()' в состоянии 'InProgress' ('В Процессе') */
     //virtual bool ReadyToEndMatch_Implementation() override;
+
+    ///** Запуск матча с предварительной проверкой его готовности
+    //(Переход к вызовам 'BeginPlay()' для Актеров) */
+    //virtual void StartPlay() override;
 
 
 
@@ -139,19 +145,19 @@ public:
     /** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
     virtual void HandleMatchHasStarted() override;
 
-    ///** Вызывается, когда карта переходит в режим  'WaitingPostMatch' ('Ожидание После Матча') */
-    //virtual void HandleMatchHasEnded() override;
+    /** Вызывается, когда карта переходит в режим 'WaitingPostMatch' ('Ожидание После Матча') */
+    virtual void HandleMatchHasEnded() override;
 
-    ///** Вызывается при переходе в состояние 'LeavingMap' ('Покидая Карту') */
-    //virtual void HandleLeavingMap() override;
+    /** Вызывается при переходе в состояние 'LeavingMap' ('Покидая Карту') */
+    virtual void HandleLeavingMap() override;
 
-    ///** Вызывается при переходе в состояние 'Aborted' ('Прервано') */
-    //virtual void HandleMatchAborted() override;
+    /** Вызывается при переходе в состояние 'Aborted' ('Прервано') */
+    virtual void HandleMatchAborted() override;
 
-    ///** Вызывается во время распределения Пешек Контроллерам
-    //@param  NewPlayer - Контроллер, которому передаётся (создаётся) Пешка
-    //@param  StartSpot - Метка создания
-    //@return Пешка, которая отдана под управлением Контроллера */
+    /** Вызывается во время распределения Пешек Контроллерам
+    @param  NewPlayer - Контроллер, которому передаётся (создаётся) Пешка
+    @param  StartSpot - Метка создания
+    @return Пешка, которая отдана под управлением Контроллера */
     //virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
     //-------------------------------------------
 
@@ -167,6 +173,26 @@ public:
 
 
 
+    /* ---   Role Selection   --- */
+
+    /** Удалит контроллеры из правильного списка, а затем добавит их к списку "Игроков" */
+    void PlayerSwitchedToPlayer(APlayerController* PC)
+    {
+        RemovePlayerControllerFromPlayerCount(PC);
+
+        if (GetWorld()->IsInSeamlessTravel() || PC->HasClientLoadedCurrentWorld())
+        {
+            NumPlayers++;
+        }
+        else
+        {
+            NumTravellingPlayers++;
+        }
+    };
+    //-------------------------------------------
+
+
+
 private:
 
     /* ---   Base   --- */
@@ -177,7 +203,16 @@ private:
 
 
 
-    /* --- Destruction Accounting --- */
+    /* ---   Match Management   --- */
+
+    /** Проверка значения прошедшего времени */
+    UFUNCTION()
+    void CheckElapsedTimeValue(int32 Value);
+    //-------------------------------------------
+
+
+
+    /* ---   Destruction Accounting   --- */
 
     /* Контейнер всех Уничтожаемых объектов с указателями на Игроков, что их уничтожил ("Разрушители")
     @note   Указатели на Атр.Актор и на Контроллер Игрока может быть НЕ Валиден.

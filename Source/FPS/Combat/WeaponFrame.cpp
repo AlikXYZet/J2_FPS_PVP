@@ -12,6 +12,15 @@
 
 
 
+/* ---   Macros   --- */
+
+/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
+#define COPYING_ComponentValues(ComponentName, Param) \
+    ComponentName->Set##Param(lTemplate->ComponentName->Get##Param()); \
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Constructors   --- */
 
 AWeaponFrame::AWeaponFrame()
@@ -19,8 +28,11 @@ AWeaponFrame::AWeaponFrame()
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false; // Предварительно
-
     SetActorTickInterval(0.1f); // 10 Hz
+
+    // Настройка репликации
+    bReplicates = true;
+    SetReplicateMovement(false);
     //-------------------------------------------
 
 
@@ -50,10 +62,6 @@ AWeaponFrame::AWeaponFrame()
 
 /* ---   Base   --- */
 
-void AWeaponFrame::BeginPlay()
-{
-    Super::BeginPlay();
-}
 //--------------------------------------------------------------------------------------
 
 
@@ -64,23 +72,25 @@ void AWeaponFrame::UpdateWeaponOnSelectedData(const FWeaponData* iData)
 {
     if (iData && iData->WeaponTemplate)
     {
+        /* Производим копирование и применение необходимых данных, а не пересоздание данного Актора */
+
         const AFirstPersonWeaponFrame* lTemplate = iData->WeaponTemplate.GetDefaultObject();
 
         // Skeletal Mesh:
         WeaponSkeletalMesh->SetSkeletalMesh(lTemplate->WeaponSkeletalMesh->SkeletalMesh);
-        WeaponSkeletalMesh->SetRelativeTransform(lTemplate->WeaponSkeletalMesh->GetRelativeTransform());
+        COPYING_ComponentValues(WeaponSkeletalMesh, RelativeTransform);
 
         // Static Mesh:
         WeaponStaticMesh->SetStaticMesh(lTemplate->WeaponStaticMesh->GetStaticMesh());
-        WeaponStaticMesh->SetRelativeTransform(lTemplate->WeaponStaticMesh->GetRelativeTransform());
+        COPYING_ComponentValues(WeaponStaticMesh, RelativeTransform);
     }
     else if (!iData)
     {
-        FPS_LOG(Error, "iData is NOT");
+        FPS_Error("iData is NOT");
     }
     else if (!iData->WeaponTemplate)
     {
-        FPS_LOG(Error, "WeaponTemplate is NOT");
+        FPS_Error("WeaponTemplate is NOT");
     }
 }
 //--------------------------------------------------------------------------------------

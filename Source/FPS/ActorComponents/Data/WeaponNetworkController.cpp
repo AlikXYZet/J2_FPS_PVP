@@ -56,6 +56,7 @@ static FActorSpawnParameters GetSpawnParameters()
 // Параметр создания выбрасываемых Акторов посредством метода DropActor()
 const FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawnParameters();
 
+// Массив Типов Объектов, что отслеживаются Hitscan-методом
 const TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan
 {
     // Соответствие проверено опытным путём:
@@ -107,7 +108,32 @@ void UWeaponNetworkController::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
-    BaseInit();
+    if (!GetOwner<APlayerCharacter>())
+    {
+        FPS_Error_Component("`GetPlayerOwner()` is NOT 'APlayerCharacter'");
+    }
+}
+
+void UWeaponNetworkController::CreateChildActor()
+{
+    Super::CreateChildActor();
+
+    ChildWeaponFrame = Cast<AWeaponFrame>(GetChildActor());
+
+    if (ChildWeaponFrame)
+    {
+        if (GetCurrentWeaponData())
+        {
+            ChildWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+        }
+    }
+    else if (GetPlayerOwner()->HasAuthority())
+    {
+        FPS_Error_Component("'%s' is NOT 'AWeaponFrame' (Check `Child Actor`)",
+            GetChildActor()
+            ? *GetChildActor()->GetFName().ToString()
+            : *FString("None"));
+    }
 }
 
 void UWeaponNetworkController::InitializeComponent()
@@ -118,16 +144,6 @@ void UWeaponNetworkController::InitializeComponent()
 void UWeaponNetworkController::BeginPlay()
 {
     Super::BeginPlay();
-}
-
-void UWeaponNetworkController::BaseInit()
-{
-    PlayerOwner = Cast<APlayerCharacter>(GetOwner());
-
-    if (!PlayerOwner)
-    {
-        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -140,24 +156,50 @@ void UWeaponNetworkController::GetLifetimeReplicatedProps(TArray<FLifetimeProper
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME_CONDITION(UWeaponNetworkController, CurrentActions, COND_SkipOwner);
+    DOREPLIFETIME(UWeaponNetworkController, ChildWeaponFrame);
 }
 
 void UWeaponNetworkController::InitializeForFirstPersonDisplay()
 {
-    if (CurrentWeaponFrame)
+    if (GetCurrentWeaponFrame())
     {
         // Отключить визуальное отображение
-        CurrentWeaponFrame->GetRootComponent()->SetVisibility(false, true);
+        GetCurrentWeaponFrame()->GetRootComponent()->SetVisibility(false, true);
 
         // Получить все UPrimitiveComponent
         TInlineComponentArray<UPrimitiveComponent*> PrimComponents;
-        CurrentWeaponFrame->GetComponents(PrimComponents);
+        GetCurrentWeaponFrame()->GetComponents(PrimComponents);
 
         // Включить тень во всех UPrimitiveComponent
         for (UPrimitiveComponent* Comp : PrimComponents)
         {
             Comp->SetCastHiddenShadow(true);
         }
+    }
+    else
+    {
+        FPS_Error_Component("'GetCurrentWeaponFrame()' is NOT");
+    }
+}
+
+void UWeaponNetworkController::OnRep_ChildWeaponFrame()
+{
+    if (ChildWeaponFrame && GetCurrentWeaponData())
+    {
+        ChildWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+
+        if (GetPlayerOwner()->IsLocallyControlled())
+        {
+            InitializeForFirstPersonDisplay();
+        }
+    }
+    else if (!ChildWeaponFrame)
+    {
+        FPS_Error_Component("'ChildWeaponFrame' is NOT");
+    }
+    else if (!GetCurrentWeaponData())
+    {
+        FPS_Error_Component("'GetCurrentWeaponData()' is NOT");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -166,44 +208,19 @@ void UWeaponNetworkController::InitializeForFirstPersonDisplay()
 
 /* ---   Data   --- */
 
-const FWeaponData& UWeaponNetworkController::BP_GetCurrentWeaponData() const
-{
-    return *GetCurrentWeaponData();
-}
-
 void UWeaponNetworkController::InitData()
 {
-    if (CurrentWeaponData)
+    if (WeaponDataSlots.IsValidIndex(0)
+        && (CurrentWeaponData = WeaponDataSlots[0]))
     {
-        CurrentWeaponFrame = Cast<AWeaponFrame>(GetChildActor());
-
-        if (CurrentWeaponFrame)
+        if (ChildWeaponFrame)
         {
-            CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-
-            /* Исправление Привязки дочернего актора
-            @note   На стороне клиента слетает привязанность Дочернего Актора не смотря на то,
-                    что данный компонент уже привязан к нужному сокету. Поэтому исправляем данным кодом */
-            if (PlayerOwner
-                && CurrentWeaponFrame->GetAttachParentSocketName() != WeaponSocketInMesh)
-            {
-                CurrentWeaponFrame->AttachToComponent(
-                    PlayerOwner->GetMesh(),
-                    FAttachmentTransformRules::KeepWorldTransform,
-                    WeaponSocketInMesh);
-            }
-        }
-        else
-        {
-            FPS_LOG(Error, TEXT("'%s' is NOT AWeaponFrame (Check CurrentWeaponFrame)"),
-                GetChildActor()
-                ? *GetChildActor()->GetFName().ToString()
-                : *FString("None"));
+            ChildWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
         }
     }
     else
     {
-        FPS_LOG(Error, TEXT("CurrentWeaponData is NOT"));
+        FPS_Error_Component("CurrentWeaponData is NOT");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -224,40 +241,12 @@ bool UWeaponNetworkController::CheckActions(EActionVariations Action, ...) const
 
     while (p)
     {
+        // Включение всех проверяемых бит
         bResult |= uint8(*p);
         ++p;
     }
 
-    return bResult && CheckActions(bResult);
-}
-
-AActor* UWeaponNetworkController::DropActor(const TSubclassOf<AActor>& iActorType, const FVector& iLocation, const FRotator& iRotation)
-{
-    if (iActorType.Get())
-    {
-        return GetWorld()->SpawnActor(
-            iActorType.Get(),
-            &iLocation,
-            &iRotation,
-            SpawnParameters);
-    }
-
-    return nullptr;
-}
-
-template<class T>
-T* UWeaponNetworkController::DropActor(const TSubclassOf<T>& iActorType, const FVector& iLocation, const FRotator& iRotation)
-{
-    if (iActorType.Get())
-    {
-        return GetWorld()->SpawnActor<T>(
-            iActorType.Get(),
-            iLocation,
-            iRotation,
-            SpawnParameters);
-    }
-
-    return nullptr;
+    return CheckActions(bResult);
 }
 //--------------------------------------------------------------------------------------
 
@@ -281,8 +270,11 @@ void UWeaponNetworkController::Server_SetCurrentWeaponDataByNum_Implementation(u
 void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementation(uint8 iNum)
 {
     CurrentWeaponData = WeaponDataSlots[iNum];
-    CurrentWeaponFrame->UpdateWeaponOnSelectedData(CurrentWeaponData);
-    OnChangingWeapon.Broadcast(*CurrentWeaponData);
+    if (GetChildActor())
+    {
+        GetCurrentWeaponFrame()->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+    }
+    OnChangingWeapon.Broadcast(*GetCurrentWeaponData());
 }
 //--------------------------------------------------------------------------------------
 
@@ -302,11 +294,11 @@ void UWeaponNetworkController::Server_DropProjectile_Implementation(const FVecto
 
 void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    AProjectile* lProjectile = DropActor<AProjectile>(CurrentWeaponData->ProjectileType.Get(), Location, Rotation);
+    AProjectile* lProjectile = DropActor<AProjectile>(GetCurrentWeaponData()->ProjectileType.Get(), Location, Rotation);
 
     if (lProjectile)
     {
-        if (PlayerOwner->HasAuthority())
+        if (GetPlayerOwner()->HasAuthority())
         {
             if (GetCurrentWeaponData()->DamageEffect)
             {
@@ -314,7 +306,7 @@ void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVe
             }
             else
             {
-                FPS_LOG(Error, "'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
+                FPS_Error_Component("'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
             }
         }
         else
@@ -323,7 +315,7 @@ void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVe
         }
     }
 
-    OnShootingWeapon.Broadcast(*CurrentWeaponData);
+    OnShootingWeapon.Broadcast(*GetCurrentWeaponData());
 }
 
 
@@ -344,7 +336,7 @@ void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVect
             EndLocation,
             ObjectTypesForHitscan,
             false,
-            TArray<AActor*>{PlayerOwner},
+            TArray<AActor*>{GetPlayerOwner()},
             EDrawDebugTrace::None,
             lHitResult,
             true);
@@ -356,7 +348,7 @@ void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVect
     }
     else
     {
-        FPS_LOG(Error, "'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
+        FPS_Error_Component("'Damage Effect' is NOT. See 'Current Weapon Data' and 'Weapon Data Table'");
     }
 
     FRotator lRotator = UKismetMathLibrary::FindLookAtRotation(StartLocation, EndLocation);
@@ -371,7 +363,7 @@ void UWeaponNetworkController::Multicast_TraceProjectile_Implementation(const FV
         DropActor(GetCurrentWeaponData()->FXTracer.Get(), Location, Rotation);
     }
 
-    OnShootingWeapon.Broadcast(*CurrentWeaponData);
+    OnShootingWeapon.Broadcast(*GetCurrentWeaponData());
 }
 
 
@@ -399,7 +391,7 @@ void UWeaponNetworkController::ProjectileDamage(const FHitResult& Hit)
         IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Hit.Actor);
         if (TargetInterface)
         {
-            PlayerOwner->AbilitySystemComp->ApplyGameplayEffectToTarget(
+            GetPlayerOwner()->AbilitySystemComp->ApplyGameplayEffectToTarget(
                 GetCurrentWeaponData()->DamageEffect.GetDefaultObject(),
                 TargetInterface->GetAbilitySystemComponent(),
                 0,
@@ -411,7 +403,7 @@ void UWeaponNetworkController::ProjectileDamage(const FHitResult& Hit)
 
 void UWeaponNetworkController::DropSleeve(const FVector& Location, const FRotator& Rotation)
 {
-    if (CurrentWeaponData->SleeveType.Get())
+    if (GetCurrentWeaponData()->SleeveType.Get())
     {
         Server_DropSleeve(Location, Rotation);
     }
@@ -424,7 +416,7 @@ void UWeaponNetworkController::Server_DropSleeve_Implementation(const FVector& L
 
 void UWeaponNetworkController::Multicast_DropSleeve_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    DropActor(CurrentWeaponData->SleeveType.Get(), Location, Rotation);
+    DropActor(GetCurrentWeaponData()->SleeveType.Get(), Location, Rotation);
 }
 //--------------------------------------------------------------------------------------
 
@@ -444,7 +436,7 @@ void UWeaponNetworkController::Server_DropStorage_Implementation(const FVector& 
 
 void UWeaponNetworkController::Multicast_DropStorage_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-    DropActor(CurrentWeaponData->StorageType.Get(), Location, Rotation);
+    DropActor(GetCurrentWeaponData()->StorageType.Get(), Location, Rotation);
     OnReloadingWeapon.Broadcast();
 }
 //--------------------------------------------------------------------------------------
@@ -468,7 +460,7 @@ void UWeaponNetworkController::PostEditChangeProperty(FPropertyChangedEvent& Pro
         }
         else
         {
-            FPS_LOG(Error, TEXT("WeaponFrameType is NOT"));
+            FPS_Error_Component("WeaponFrameType is NOT");
         }
     }
 

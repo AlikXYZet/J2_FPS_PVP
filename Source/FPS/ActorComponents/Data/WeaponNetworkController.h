@@ -127,6 +127,8 @@ public:
     /** Вызывается при Создании компонента в Редакторе или Игровом Процессе */
     virtual void OnComponentCreated() override;
 
+    virtual void CreateChildActor() override;
+
     /** Инициализирует компонент до вызова в Игровом Процессе BeginPlay() Компонента и Актора-Владельца */
     virtual void InitializeComponent() override;
 
@@ -151,10 +153,26 @@ public:
 
     //
 
+    /** Получить Игрока-Владельца данного `UWeaponControlComponent`
+    @note   Может быть НЕ Безопасно, предварительно проверяется в `BaseInit()` с вызовом соответствующей ошибки */
+    FORCEINLINE APlayerCharacter* GetPlayerOwner() const
+    {
+        return (APlayerCharacter*)GetOwner();
+    };
+
+    /** Получить текущий Каркас Оружия
+    @note   Может быть НЕ Безопасно, предварительно проверяется в `InitData()` с вызовом соответствующей ошибки */
+    FORCEINLINE AWeaponFrame* GetCurrentWeaponFrame() const
+    {
+        return ChildWeaponFrame;
+        /* @note    Не используем '(AWeaponFrame*)GetChildActor()', так как требуется
+        отслеживание готовности Актора посредством репликации данного указателя */
+    }
+
     /** Используется для регистрации реплицируемых Переменных */
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    /** Инициализировать под отображение от Первого Лица (скрыть отображение, но оставить тень) */
+    /** Инициализировать под отображение от Первого Лица (скрыть Визуал, но оставить Тень) */
     void InitializeForFirstPersonDisplay();
     //-------------------------------------------
 
@@ -166,7 +184,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Weapon Control|Data",
         meta = (DisplayName = "Get Current Weapon Data"))
-    const FWeaponData& BP_GetCurrentWeaponData() const;
+    const FWeaponData& BP_GetCurrentWeaponData() const { return *GetCurrentWeaponData(); };
 
     /** Получить данные текущего Оружия */
     FORCEINLINE const FWeaponData* GetCurrentWeaponData() const { return CurrentWeaponData; };
@@ -200,7 +218,7 @@ public:
 
 private:
 
-    /* ---   Delegates | Net   --- */
+    /* ---   Delegates   --- */
 
     /** OnStartChangingWeapon: Ретрансляцией на Сервер */
     UFUNCTION(Server, Reliable)
@@ -213,22 +231,17 @@ private:
 
 
 
-    /* ---   Base   --- */
+    /* ---   Net   --- */
 
-    /* Игрок-Владелец данного UWeaponControlComponent */
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Control|Check")
-    APlayerCharacter* PlayerOwner = nullptr;
-
-    // Указатель на текущий Каркас Оружия
-    UPROPERTY(VisibleInstanceOnly,
-        Category = "Weapon Control|Check")
-    AWeaponFrame* CurrentWeaponFrame = nullptr;
+    // Указатель на создаваемый Актор Оружия
+    UPROPERTY(ReplicatedUsing = OnRep_ChildWeaponFrame)
+    AWeaponFrame* ChildWeaponFrame = nullptr;
 
     //
 
-    /** Инициализация базовых Данных */
-    void BaseInit();
+    /** При репликации: 'ChildWeaponFrame' */
+    UFUNCTION()
+    void OnRep_ChildWeaponFrame();
     //-------------------------------------------
 
 
@@ -251,9 +264,10 @@ private:
 
     /* ---   Actions | Data   --- */
 
-    /** Метод изменения переменной CurrentActions через Сервер для её Репликации */
-    UFUNCTION(Server, Reliable) // Принудительно Надёжный
-        void Server_SetCurrentActions(uint8 Value);
+    /** Метод изменения переменной CurrentActions через Сервер для её Репликации
+    @mote   Принудительно Надёжный */
+    UFUNCTION(Server, Reliable)
+    void Server_SetCurrentActions(uint8 Value);
 
     /** Проверка действий Игрока
     @param  ActionsBits - Биты проверяемых действий */
@@ -264,12 +278,36 @@ private:
 
     /** Создание и выброс Астора согласно его Типу, Локации и Ротации
     @note   Более быстрый вызов для простого Актора */
-    AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation);
+    AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation)
+    {
+        if (ActorType.Get())
+        {
+            return GetWorld()->SpawnActor(
+                ActorType.Get(),
+                &Location,
+                &Rotation,
+                SpawnParameters);
+        }
+
+        return nullptr;
+    };
 
     /** Создание и выброс Наследника от Астора согласно его Подтипу, Локации и Ротации
     @note   Более быстрый вызов для наследника Актора */
     template<class T>
-    T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation);
+    T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation)
+    {
+        if (ActorType.Get())
+        {
+            return GetWorld()->SpawnActor<T>(
+                ActorType.Get(),
+                Location,
+                Rotation,
+                SpawnParameters);
+        }
+
+        return nullptr;
+    };
     //-------------------------------------------
 
 
@@ -279,13 +317,15 @@ private:
     /** Установить текущие данные оружия согласно Номеру */
     void SetCurrentWeaponDataByNum(uint8 Num);
 
-    /** Server: Установить текущие данные оружия согласно Номеру */
-    UFUNCTION(Server, Reliable) // Принудительно Надёжный
-        void Server_SetCurrentWeaponDataByNum(uint8 Num);
+    /** Server: Установить текущие данные оружия согласно Номеру
+    @mote   Принудительно Надёжный */
+    UFUNCTION(Server, Reliable)
+    void Server_SetCurrentWeaponDataByNum(uint8 Num);
 
-    /** Multicast: Установить текущие данные оружия согласно Номеру */
-    UFUNCTION(NetMulticast, Reliable) // Принудительно Надёжный
-        void Multicast_SetCurrentWeaponDataByNum(uint8 Num);
+    /** Multicast: Установить текущие данные оружия согласно Номеру
+    @mote   Принудительно Надёжный */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetCurrentWeaponDataByNum(uint8 Num);
     //-------------------------------------------
 
 

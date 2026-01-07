@@ -135,9 +135,9 @@ public:
         bIsRotatedToNewRotation = false;
     };
 
-    FORCEINLINE bool CheckRotationLock(ERotationVariations Value)
+    FORCEINLINE bool CheckLock(ERotationVariations Value)
     {
-        return LockRotation == Value;
+        return bool(LockRotation & Value);
     };
     //-------------------------------------------
 

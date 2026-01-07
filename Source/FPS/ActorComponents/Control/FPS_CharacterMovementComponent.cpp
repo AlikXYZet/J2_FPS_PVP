@@ -31,31 +31,11 @@ void UFPS_CharacterMovementComponent::OnMovementModeChanged(EMovementMode Previo
         SetSpeedType(ESpeedVariations(CustomMovementMode));
     }
 }
-
-void UFPS_CharacterMovementComponent::SetCustomMovementMode(ESpeedVariations Mode)
-{
-    SetMovementMode(EMovementMode::MOVE_Custom, (uint8)Mode);
-}
 //--------------------------------------------------------------------------------------
 
 
 
 /* ---   Speed Control   --- */
-
-void UFPS_CharacterMovementComponent::AddSpeedControl(ESpeedVariations& Controller)
-{
-    if (SpeedControllers.Find(&Controller) == INDEX_NONE)
-    {
-        SpeedControllers.Add(&Controller);
-        UpdateMaxSpeed();
-    }
-}
-
-void UFPS_CharacterMovementComponent::RemoveSpeedControl(ESpeedVariations& Controller)
-{
-    SpeedControllers.Remove(&Controller);
-    UpdateMaxSpeed();
-}
 
 void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
 {
@@ -89,16 +69,6 @@ void UFPS_CharacterMovementComponent::UpdateMaxSpeed()
 
 
 /* ---   Speed Control | MaxWalkSpeed   --- */
-
-void UFPS_CharacterMovementComponent::SetSpeedType(ESpeedVariations Type)
-{
-    if (Type < ESpeedVariations::COUNT
-        && MaxWalkSpeed != BaseMovementSpeeds[(uint8)Type])
-    {
-        // Быстрое применение значения у Клиента-Владельца
-        SetMaxWalkSpeed(BaseMovementSpeeds[(uint8)Type]);
-    }
-}
 
 void UFPS_CharacterMovementComponent::SetMaxWalkSpeed(float Value)
 {

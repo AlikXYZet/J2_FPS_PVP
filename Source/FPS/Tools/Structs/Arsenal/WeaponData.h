@@ -124,19 +124,23 @@ struct FWeaponData : public FTableRowBase
     FPersonAnimData PersonAnimations;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Person Animations: Shooting")
+        Category = "Person Animations: Shooting",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float ShootingWeapon_Time = 0.2f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Person Animations: Reloading")
+        Category = "Person Animations: Reloading",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float ReloadingWeapon_Time = 2.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Person Animations: Changing")
+        Category = "Person Animations: Changing",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float RemoveWeapon_Time = 2.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Person Animations: Changing")
+        Category = "Person Animations: Changing",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float TakeWeapon_Time = 2.f;
     //-------------------------------------------
 

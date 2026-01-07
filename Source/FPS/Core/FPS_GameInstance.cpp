@@ -99,7 +99,7 @@ void UFPS_GameInstance::InitSettingsSaving()
             }
             else
             {
-                FPS_LOG(Error, TEXT("MusicSoundClass is NOT"));
+                FPS_Error("MusicSoundClass is NOT");
             }
 
             if (EffectsSoundClass)
@@ -114,12 +114,12 @@ void UFPS_GameInstance::InitSettingsSaving()
             }
             else
             {
-                FPS_LOG(Error, TEXT("EffectsSoundClass is NOT"));
+                FPS_Error("EffectsSoundClass is NOT");
             }
         }
         else
         {
-            FPS_LOG(Error, TEXT("SoundMix is NOT"));
+            FPS_Error("SoundMix is NOT");
         }
         //-------------------------------------------
     }

@@ -30,21 +30,9 @@ AFPS_GameMode* AFPS_GameMode::CurrentGameMode = nullptr;
 
 AFPS_GameMode::AFPS_GameMode()
 {
-    // Set this pawn to call Tick() every frame.
-    // You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true; // Принудительно
+    // Установка вызова функции Tick() в каждом кадре
+    PrimaryActorTick.bCanEverTick = false; // Предварительно
     SetActorTickInterval(1.f); // 1 раз/сек.
-    /* @note    Если требуется использовать 'Tick()' для чего-то ещё, то следует заменить данный способ на Циклический Таймер.
-    Например:
-    // Таймер: Контроль состояния Раунда
-    // @note    Таймер с тактом раз в секунду для отслеживания времени
-    GetWorld()->GetTimerManager().SetTimer(
-        Timer_RoundStatusControl,
-        this,
-        &AFPS_GameMode::RemainingRoundTimeCounter,
-        1.f,
-        true);
-    */
 
     // Настройка репликации
     bReplicates = false;
@@ -82,9 +70,9 @@ void AFPS_GameMode::BeginPlay()
 
 void AFPS_GameMode::Tick(float DeltaSeconds)
 {
-    Super::Tick(DeltaSeconds);
-
-    //RemainingRoundTimeCounter();
+    // Обход действия кода в 'AGameMode::Tick()'
+    Super::Super::Tick(DeltaSeconds);
+    // @note    Переносим логику контроля матча в 'AFPS_GameMode::CheckElapsedTimeValue(int32 Value)'
 }
 
 void AFPS_GameMode::OnConstruction(const FTransform& Transform)
@@ -110,6 +98,11 @@ void AFPS_GameMode::Destroyed()
 void AFPS_GameMode::BaseInit()
 {
     IsValidStaticPointer();
+
+    if (AFPS_GameState::IsValidStaticPointer())
+    {
+        GetFPSGameState()->OnElapsedTimeChange.AddDynamic(this, &AFPS_GameMode::CheckElapsedTimeValue);
+    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -120,7 +113,7 @@ void AFPS_GameMode::BaseInit()
 //void AFPS_GameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 //{
 //    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-//    FPS_Message("");
+//    FPS_ColorMessage(FColor::Green, "");
 //}
 
 void AFPS_GameMode::PostLogin(APlayerController* NewPlayer)
@@ -144,10 +137,15 @@ void AFPS_GameMode::Logout(AController* Exiting)
 //    Влияет на поведение 'ReadyToStartMatch()' по умолчанию */
 //    bDelayedStart;
 //}
-//
+
 //bool AFPS_GameMode::ReadyToEndMatch_Implementation()
 //{
 //    return Super::ReadyToEndMatch_Implementation();
+//}
+
+//void AFPS_GameMode::StartPlay()
+//{
+//    Super::StartPlay();
 //}
 
 
@@ -160,34 +158,48 @@ void AFPS_GameMode::HandleMatchIsWaitingToStart()
 
 void AFPS_GameMode::HandleMatchHasStarted()
 {
-    Super::HandleMatchHasStarted();
-
     InitDestructionAccounting();
+
+    Super::HandleMatchHasStarted();
     FPS_ColorMessage(FColor::Orange, "");
 }
 
-//void AFPS_GameMode::HandleMatchHasEnded()
-//{
-//    Super::HandleMatchHasEnded();
-//    FPS_Message("");
-//}
-//
-//void AFPS_GameMode::HandleLeavingMap()
-//{
-//    Super::HandleLeavingMap();
-//    FPS_Message("");
-//}
-//
-//void AFPS_GameMode::HandleMatchAborted()
-//{
-//    Super::HandleMatchAborted();
-//    FPS_Message("");
-//}
-//
+void AFPS_GameMode::HandleMatchHasEnded()
+{
+    Super::HandleMatchHasEnded();
+    FPS_ColorMessage(FColor::Orange, "");
+}
+
+void AFPS_GameMode::HandleLeavingMap()
+{
+    Super::HandleLeavingMap();
+    FPS_ColorMessage(FColor::Orange, "");
+}
+
+void AFPS_GameMode::HandleMatchAborted()
+{
+    Super::HandleMatchAborted();
+    FPS_ColorMessage(FColor::Orange, "");
+}
+
 //APawn* AFPS_GameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
 //{
 //    return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
 //}
+
+void AFPS_GameMode::CheckElapsedTimeValue(int32 Value)
+{
+    if (Value == 0)
+    {
+        bDelayedStart = false;
+        StartPlay();
+    }
+    else if (Value == GetFPSGameState()->MatchDurationTime)
+    {
+        bDelayedStart = true;
+        EndMatch();
+    }
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -219,8 +231,6 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
         // Если Цель является Атрибутированным Актором:
         if (Cast<AAttributedActor>(TargetASC.GetOwnerActor()))
         {
-            FPS_Message_Empty("Target is Actor");
-
             // Заполнить массив его 'Вредителей'
             if (TSet<APlayerController*>* lAllWreckers = AllAttributedActor.Find((AAttributedActor*)TargetASC.GetOwnerActor()))
             {
@@ -230,14 +240,10 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
         // Если Цель является Игроком:
         else if (APlayerCharacter* lPlayer = Cast<APlayerCharacter>(TargetASC.GetOwnerActor()))
         {
-            FPS_Message_Empty("Target is Player");
-
             // Увеличить счётчик Смертей для Цели
             if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find(lPlayer->GetPlayerState()))
             {
                 GetPlayersStatistics().AddDeaths(**lTargetStats);
-
-                FPS_ColorMessage_Empty(FColor::Green, "Add Deaths");
             }
 
             auto lIterator = lPlayerWreckers.CreateIterator();
@@ -248,8 +254,6 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                 && *lIterator != lPlayer->GetController())
             {
                 GetPlayersStatistics().AddKills(**lWreckerStats);
-
-                FPS_ColorMessage_Empty(FColor::Green, "Add Kills");
             }
 
             // Увеличить счётчик Помощи для остальных 'Вредителей'
@@ -260,8 +264,6 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                     && *lIterator != lPlayer->GetController())
                 {
                     GetPlayersStatistics().AddAssists(**lWreckerStats);
-
-                    FPS_ColorMessage_Empty(FColor::Cyan, "Add Assists");
                 }
             }
 

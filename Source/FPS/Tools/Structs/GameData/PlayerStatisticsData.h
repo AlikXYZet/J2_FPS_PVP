@@ -267,7 +267,7 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
 
     /* ---   Array Data Methods   --- */
 
-    void AddPlayer(const APlayerState* NewPlayer)
+    bool AddPlayer(const APlayerState* NewPlayer)
     {
         int32 lIndex = Items.Find(NewPlayer);
 
@@ -280,10 +280,14 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
                 Items.Num());
 
             MarkArrayDirty();
+
+            return true;
         }
+
+        return false;
     };
 
-    void RemovePlayer(const APlayerState* OldPlayer)
+    bool RemovePlayer(const APlayerState* OldPlayer)
     {
         int32 lIndex = Items.Find(OldPlayer);
 
@@ -296,7 +300,11 @@ struct FPlayerStatisticsArray : public FFastArraySerializer
             Items.RemoveAt(lIndex);
 
             MarkArrayDirty();
+
+            return true;
         }
+
+        return false;
     };
     //-------------------------------------------
 

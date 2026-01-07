@@ -36,8 +36,8 @@ UWeaponLocalController::UWeaponLocalController()
     // If true, we call the virtual InitializeComponent()
     bWantsInitializeComponent = true;
 
-    // Компонент реплицируем по умолчанию
-    SetIsReplicatedByDefault(true);
+    // Компонент НЕ реплицируем по умолчанию
+    SetIsReplicatedByDefault(false);
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -50,11 +50,34 @@ void UWeaponLocalController::OnComponentCreated()
 {
     Super::OnComponentCreated();
 
-    BaseInit();
+    if (GetOwner<APlayerCharacter>())
+    {
+        if (!GetWeaponControlNetComp())
+        {
+            FPS_Error_Component("'GetWeaponControlNetComp()' is NOT");
+        }
+    }
+    else
+    {
+        FPS_Error_Component("`GetPlayerOwner()` is NOT 'APlayerCharacter'");
+    }
 
 #if WITH_EDITOR
     CheckNumOfSlots();
 #endif // WITH_EDITOR
+}
+
+void UWeaponLocalController::CreateChildActor()
+{
+    Super::CreateChildActor();
+
+    if (!Cast<AFirstPersonWeaponFrame>(GetChildActor()))
+    {
+        FPS_Error_Component("'%s' is NOT 'AFirstPersonWeaponFrame' (Check `Child Actor`)",
+            GetChildActor()
+            ? *GetChildActor()->GetFName().ToString()
+            : *FString("None"));
+    }
 }
 
 void UWeaponLocalController::InitializeComponent()
@@ -67,8 +90,6 @@ void UWeaponLocalController::InitializeComponent()
 void UWeaponLocalController::BeginPlay()
 {
     Super::BeginPlay();
-
-    InitSpeedControl();
 }
 //--------------------------------------------------------------------------------------
 
@@ -76,23 +97,10 @@ void UWeaponLocalController::BeginPlay()
 
 /* ---   Local   --- */
 
-void UWeaponLocalController::BaseInit()
+FORCEINLINE UWeaponNetworkController* UWeaponLocalController::GetWeaponControlNetComp() const
 {
-    PlayerOwner = Cast<APlayerCharacter>(GetOwner());
-
-    if (PlayerOwner)
-    {
-        WeaponControlNetComp = PlayerOwner->WeaponControlNetComp;
-
-        if (!WeaponControlNetComp)
-        {
-            FPS_LOG(Error, TEXT("WeaponControlNetComp is NOT"));
-        }
-    }
-    else
-    {
-        FPS_LOG(Error, TEXT("PlayerOwner is NOT"));
-    }
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
+    return GetPlayerOwner()->WeaponControlNetComp;
 }
 //--------------------------------------------------------------------------------------
 
@@ -102,31 +110,31 @@ void UWeaponLocalController::BaseInit()
 
 void UWeaponLocalController::ReAttachWeaponForAiming()
 {
-    if (CurrentFPWeaponFrame->GetRootComponent()->GetAttachParent() != PlayerOwner->FPCamera)
+    if (GetCurrentFPWeaponFrame()->GetRootComponent()->GetAttachParent() != GetPlayerOwner()->FPCamera)
     {
-        CurrentFPWeaponFrame->AttachToComponent(
-            PlayerOwner->FPCamera,
+        GetCurrentFPWeaponFrame()->AttachToComponent(
+            GetPlayerOwner()->FPCamera,
             FAttachmentTransformRules::KeepWorldTransform);
 
-        CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
+        GetCurrentFPWeaponFrame()->SmoothMovementComponent->MoveToLocation(
             GetCurrentWeaponData()->AimingLocation);
 
-        CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
+        GetCurrentFPWeaponFrame()->SmoothRotationComponent->RotateToRotator();
     }
 }
 
 void UWeaponLocalController::ReAttachWeaponForFromHip()
 {
-    if (CurrentFPWeaponFrame->GetRootComponent()->GetAttachParent() != this)
+    if (GetCurrentFPWeaponFrame()->GetRootComponent()->GetAttachParent() != this)
     {
-        CurrentFPWeaponFrame->AttachToComponent(
+        GetCurrentFPWeaponFrame()->AttachToComponent(
             this,
             FAttachmentTransformRules::KeepWorldTransform);
 
-        CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
+        GetCurrentFPWeaponFrame()->SmoothMovementComponent->MoveToLocation(
             GetCurrentWeaponData()->HipLocation);
 
-        CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
+        GetCurrentFPWeaponFrame()->SmoothRotationComponent->RotateToRotator();
     }
 }
 //--------------------------------------------------------------------------------------
@@ -177,7 +185,7 @@ void UWeaponLocalController::SetupPlayerInputs()
     }
     else
     {
-        FPS_LOG(Error, TEXT("lInputComponent is NOT"));
+        FPS_Error_Component("lInputComponent is NOT");
     }
 
 
@@ -216,53 +224,39 @@ void UWeaponLocalController::InitData()
     {
         CurrentSlot = &WeaponSlots[0];
 
-        if (WeaponControlNetComp)
+        if (UWeaponNetworkController* WNComp = GetWeaponControlNetComp())
         {
-            WeaponControlNetComp->WeaponDataSlots.Empty(WeaponSlots.Num());
+            WNComp->WeaponDataSlots.Empty(WeaponSlots.Num());
 
             for (FWeaponSlotData& Slot : WeaponSlots)
             {
-                WeaponControlNetComp->WeaponDataSlots.Add(
+                WNComp->WeaponDataSlots.Add(
                     WeaponsDataTable->FindRow<FWeaponData>(Slot.WeaponType, "InitData"));
             }
 
-            WeaponControlNetComp->CurrentWeaponData = WeaponControlNetComp->WeaponDataSlots[0];
-            WeaponControlNetComp->InitData();
+            WNComp->InitData();
         }
 
-        if (GetCurrentWeaponData())
+        if (const FWeaponData* WData = GetCurrentWeaponData())
         {
-            CurrentFPWeaponFrame = Cast<AFirstPersonWeaponFrame>(GetChildActor());
+            GetCurrentFPWeaponFrame()->UpdateWeaponOnSelectedData(WData);
 
-            if (CurrentFPWeaponFrame)
-            {
-                CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
+            GetCurrentFPWeaponFrame()->SmoothMovementComponent->MoveToLocation(WData->HipLocation);
 
-                CurrentFPWeaponFrame->SmoothMovementComponent->MoveToLocation(
-                    GetCurrentWeaponData()->HipLocation);
-
-                CurrentFPWeaponFrame->SmoothRotationComponent->RotateToRotator();
-            }
-            else
-            {
-                FPS_LOG(Error, TEXT("'%s' is NOT AFirstPersonWeaponFrame (Check CurrentWeaponFrame)"),
-                    GetChildActor()
-                    ? *GetChildActor()->GetFName().ToString()
-                    : *FString("None"));
-            }
+            GetCurrentFPWeaponFrame()->SmoothRotationComponent->RotateToRotator();
         }
         else
         {
-            FPS_LOG(Error, TEXT("CurrentWeaponData is NOT"));
+            FPS_Error_Component("'GetCurrentWeaponData()' is NOT");
         }
     }
     else if (!WeaponsDataTable)
     {
-        FPS_LOG(Error, TEXT("WeaponsDataTable is NOT"));
+        FPS_Error_Component("WeaponsDataTable is NOT");
     }
     else if (!WeaponSlots.IsValidIndex(0))
     {
-        FPS_LOG(Error, TEXT("WeaponSlots[0] is NOT"));
+        FPS_Error_Component("WeaponSlots[0] is NOT");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -336,7 +330,7 @@ void UWeaponLocalController::UpdateCurrentActions()
 
     if (OldActions != GetCurrentActions())
     {
-        WeaponControlNetComp->Server_SetCurrentActions(GetCurrentActions());
+        GetWeaponControlNetComp()->Server_SetCurrentActions(GetCurrentActions());
 
         // FP: Вызов действия 'Block' может отключить несколько бит за раз, что приведёт к ошибке
         // завершения других действий -- НЕ запустится вызов соответствующих методов 'Stop####()'.
@@ -515,9 +509,9 @@ void UWeaponLocalController::StopReloading()
         --(CurrentSlot->NumPreparedCartridges);
     }
 
-    FTransform lTransform = CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
+    FTransform lTransform = GetCurrentFPWeaponFrame()->ShootGuidance->GetComponentTransform();
 
-    WeaponControlNetComp->DropStorage(
+    GetWeaponControlNetComp()->DropStorage(
         lTransform.GetLocation(),
         lTransform.Rotator());
 }
@@ -550,7 +544,7 @@ void UWeaponLocalController::StartReloading()
 
 void UWeaponLocalController::StartChangeWeaponSlot()
 {
-    WeaponControlNetComp->Broadcast_OnStartChangingWeapon();
+    GetWeaponControlNetComp()->Broadcast_OnStartChangingWeapon();
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
@@ -588,12 +582,12 @@ void UWeaponLocalController::ShootingWeapons()
     if (bChecker)
     {
         // Указатель на трансформацию какой-либо Направляющей
-        const FTransform* lGuidanceTransform = &CurrentFPWeaponFrame->ShootGuidance->GetComponentTransform();
+        const FTransform* lGuidanceTransform = &GetCurrentFPWeaponFrame()->ShootGuidance->GetComponentTransform();
 
         const FVector lStartLocation = lGuidanceTransform->GetLocation();
-        
+
         const FVector lEndTraceLocation =
-            PlayerOwner->FPCamera->GetComponentTransform()
+            GetPlayerOwner()->FPCamera->GetComponentTransform()
             .TransformPosition(FVector(10000.f, 0.f, 0.f));
 
         if (!GetCurrentWeaponData()->bUseHitscanMethod
@@ -608,10 +602,10 @@ void UWeaponLocalController::ShootingWeapons()
                 bool bCheckTraceResult =
                     GetWorld()->LineTraceSingleByChannel(
                         lHitResult,
-                        PlayerOwner->FPCamera->GetComponentLocation(),
+                        GetPlayerOwner()->FPCamera->GetComponentLocation(),
                         lEndTraceLocation,
                         ECC_Projectiles,
-                        PlayerOwner->CollisionParamsForTrace);
+                        GetPlayerOwner()->GetCollisionParamsForTrace());
 
                 lRotator = UKismetMathLibrary::FindLookAtRotation(
                     lStartLocation,
@@ -624,16 +618,16 @@ void UWeaponLocalController::ShootingWeapons()
                 lRotator = lGuidanceTransform->Rotator();
             }
 
-            WeaponControlNetComp->DropProjectile(lStartLocation, lRotator);
+            GetWeaponControlNetComp()->DropProjectile(lStartLocation, lRotator);
         }
         else
         {
-            WeaponControlNetComp->TraceProjectile(lStartLocation, lEndTraceLocation);
+            GetWeaponControlNetComp()->TraceProjectile(lStartLocation, lEndTraceLocation);
         }
 
-        lGuidanceTransform = &CurrentFPWeaponFrame->CaseDropGuidance->GetComponentTransform();
+        lGuidanceTransform = &GetCurrentFPWeaponFrame()->CaseDropGuidance->GetComponentTransform();
 
-        WeaponControlNetComp->DropSleeve(
+        GetWeaponControlNetComp()->DropSleeve(
             lGuidanceTransform->GetLocation(),
             lGuidanceTransform->Rotator());
     }
@@ -647,9 +641,9 @@ void UWeaponLocalController::ChangeWeaponSlot()
 {
     CurrentSlot = &WeaponSlots[NewSlotNum];
 
-    WeaponControlNetComp->SetCurrentWeaponDataByNum(NewSlotNum);
+    GetWeaponControlNetComp()->SetCurrentWeaponDataByNum(NewSlotNum);
 
-    CurrentFPWeaponFrame->UpdateWeaponOnSelectedData(WeaponControlNetComp->WeaponDataSlots[NewSlotNum]);
+    GetCurrentFPWeaponFrame()->UpdateWeaponOnSelectedData(GetWeaponControlNetComp()->WeaponDataSlots[NewSlotNum]);
 
     GetWorld()->GetTimerManager().SetTimer(
         Timer_ActionControl,
@@ -670,16 +664,14 @@ void UWeaponLocalController::SetSpeedControl(ESpeedVariations Mode)
     {
         SpeedControl = Mode;
 
-        PlayerOwner->GetFPSCharacterMovement()->UpdateMaxSpeed();
+        GetPlayerOwner()->GetFPSCharacterMovement()->UpdateMaxSpeed();
     }
 };
 
 void UWeaponLocalController::InitSpeedControl()
 {
-    if (PlayerOwner && PlayerOwner->IsLocallyControlled())
-    {
-        PlayerOwner->GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
-    }
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
+    GetPlayerOwner()->GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
 }
 //--------------------------------------------------------------------------------------
 
@@ -702,7 +694,7 @@ void UWeaponLocalController::PostEditChangeProperty(FPropertyChangedEvent& Prope
         }
         else
         {
-            FPS_LOG(Error, TEXT("FPWeaponFrameType is NOT"));
+            FPS_Error_Component("FPWeaponFrameType is NOT");
         }
     }
 
@@ -736,7 +728,7 @@ TArray<FName> UWeaponLocalController::GetSocketNamesInFPMesh() const
 
 /* ---   Inputs   --- */
 
-TArray<FName> UWeaponLocalController::GetActionGroupsNames()
+TArray<FName> UWeaponLocalController::GetActionGroupsNames()const
 {
     TArray<FName> ActionNames;
 
@@ -746,7 +738,7 @@ TArray<FName> UWeaponLocalController::GetActionGroupsNames()
 }
 
 
-void UWeaponLocalController::CheckInputsGroups()
+void UWeaponLocalController::CheckInputsGroups() const
 {
     TArray<FName> lUsed = {
         /* ---   Switching   --- */
@@ -767,12 +759,12 @@ void UWeaponLocalController::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            FPS_LOG(Warning, TEXT("Not used at least one of the Actions ('%s')"),
+            FPS_LOG_Component(Warning, "Not used at least one of the Actions ('%s')",
                 *Data.ToString());
         }
         else if (lArray_ActionNames.Find(Data) == INDEX_NONE)
         {
-            FPS_LOG(Error, TEXT("'%s' is NOT an Action"),
+            FPS_Error_Component("'%s' is NOT an Action",
                 *Data.ToString());
         }
     }
@@ -798,12 +790,12 @@ TArray<FName> UWeaponLocalController::GetAllWeaponsNames() const
 
 /* ---   Switching   --- */
 
-void UWeaponLocalController::CheckNumOfSlots()
+void UWeaponLocalController::CheckNumOfSlots() const
 {
     // Проверка наличия слотов
     if (!WeaponSlots.Num())
     {
-        FPS_LOG(Warning, TEXT("WeaponSlots.Num() == 0"));
+        FPS_LOG_Component(Warning, "WeaponSlots.Num() == 0");
     }
 }
 //--------------------------------------------------------------------------------------

@@ -104,7 +104,7 @@ protected:
 
     /* ---   Base   --- */
 
-    // Called when the game starts or when spawned
+    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
     virtual void BeginPlay() override;
     //-------------------------------------------
 
@@ -114,15 +114,22 @@ public:
 
     /* ---   Base   --- */
 
-    // Параметры Коллизии для Трассировки
-    FCollisionQueryParams CollisionParamsForTrace;
+    /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
+    //virtual void Tick(float DeltaSeconds) override;
 
-    //
+    /** Вызывается после инициализации всех компонентов только во время игрового процесса */
+    virtual void PostInitializeComponents() override;
 
     /** Вызывается при подключения Контроллера
     @note   Вызывается только на сервере (или в автономном режиме)
     @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой) */
-    //virtual void PossessedBy(AController* NewController) override;
+    virtual void PossessedBy(AController* NewController) override;
+
+    // Получить параметры Коллизии для Трассировки
+    FORCEINLINE const FCollisionQueryParams& GetCollisionParamsForTrace() const
+    {
+        return CollisionParamsForTrace;
+    };
     //-------------------------------------------
 
 
@@ -263,9 +270,20 @@ public:
 
 
 
+    /* ---   Events   --- */
+
+    /** Событие BP: При Инициализации Локального Контроллера */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Player Character|Visualization",
+        meta = (DisplayName = "On Local Controller Initialization"))
+    void Event_OnLocalControllerInitialization();
+    //-------------------------------------------
+
+
+
     /* ---   GAS Events   --- */
 
-        /** Событие BP: Изменение Здоровья */
+    /** Событие BP: Изменение Здоровья */
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "Changing Health"))
@@ -306,11 +324,16 @@ private:
 
     /* ---   Base   --- */
 
-    /** Очистка от неиспользуемых компонентов при Локальном контроллере */
-    void CleaningForLocally();
+    // Параметры Коллизии для Трассировки
+    FCollisionQueryParams CollisionParamsForTrace;
 
-    /** Очистка от неиспользуемых компонентов при Сетевом контроллере */
-    void CleaningForNetwork();
+    //
+
+    /** Инициализация при Локальном контроллере */
+    void InitForLocally();
+
+    /** Инициализация при Сетевом контроллере */
+    void InitForNetwork();
     //-------------------------------------------
 
 

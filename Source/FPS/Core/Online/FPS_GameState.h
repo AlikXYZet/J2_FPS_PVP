@@ -57,6 +57,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPostAddingSpectators, int32, Fina
 
 // Делегат: При Завершении сортировки Массива данных Наблюдателей
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndSortingSpectators);
+
+// Делегат: При изменении Прошедшего Времени ('ElapsedTime')
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnElapsedTimeChange, int32, ElapsedTime);
 //--------------------------------------------------------------------------------------
 
 
@@ -80,7 +83,7 @@ enum struct EPlayerStatisticsSortingType : uint8
 
     // Спадающий список:
 
-    NameDown = NameUp + 0x80    UMETA(DisplayName = "Name Down"),
+    NameDown = NameUp + MAX_int8    UMETA(DisplayName = "Name Down"),
     PingDown    UMETA(DisplayName = "Ping Down"),
     KillsDown   UMETA(DisplayName = "Kills Down"),
     AssistsDown UMETA(DisplayName = "Assists Down"),
@@ -132,6 +135,10 @@ public:
 
     // Делегат: При Завершении сортировки Массива данных Наблюдателей
     FOnEndSortingSpectators OnEndSortingSpectators;
+
+    // Делегат: При изменении Прошедшего Времени ('ElapsedTime')
+    UPROPERTY(BlueprintAssignable)
+    FOnElapsedTimeChange OnElapsedTimeChange;
     //-------------------------------------------
 
 
@@ -178,6 +185,7 @@ protected:
 
     /* ---   Base   --- */
 
+    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
     virtual void BeginPlay() override;
     //-------------------------------------------
 
@@ -187,11 +195,15 @@ public:
 
     /* ---   Base   --- */
 
-    virtual void Tick(float DeltaSeconds) override;
+    /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
+    //virtual void Tick(float DeltaSeconds) override;
 
     /** Вызывается при размещении экземпляра данного класса (в редакторе) или его запуске.
     @param	Transform - Трансформация данного Актора */
     virtual void OnConstruction(const FTransform& Transform) override;
+
+    /** Вызывается после инициализации всех компонентов только во время игрового процесса */
+    virtual void PostInitializeComponents() override;
 
     /** Вызывается, когда этот субъект явно уничтожается во время игрового процесса или в редакторе,
     * но не вызывается во время трансляции уровней или завершения игрового процесса */
@@ -210,11 +222,34 @@ public:
 
     /* ---   Match Management   --- */
 
+    // Время Долгого ожидания начала Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    uint8 LongWaitTimeForMatchToStart = 60;
+
+    // Время Короткого ожидания начала Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    uint8 ShortWaitTimeForMatchToStart = 5;
+
+    // Время продолжительности Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    int32 MatchDurationTime = 300;
+
+    //
+
     /** При Репликации: 'MatchState' */
     virtual void OnRep_MatchState() override;
 
     /** При Репликации: 'ElapsedTime' */
-    //virtual void OnRep_ElapsedTime() override;
+    virtual void OnRep_ElapsedTime() override;
+
+    /** Вызывается стандартным Таймером Матча с частотой примерно 1 раз/сек. с учётом сетевой задержки */
+    virtual void DefaultTimer() override;
 
     /** Вызывается при переходе в состояние 'WaitingToStart' ('Ожидание Начала') */
     virtual void HandleMatchIsWaitingToStart() override;
@@ -222,10 +257,16 @@ public:
     /** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
     virtual void HandleMatchHasStarted() override;
 
-    /** Возвращает значение true, если состояние матча находится 'InProgress' ('В Процессе') */
-    FORCEINLINE bool IsMatchInProgress() const
+    /** Возвращает значение true, если состояние матча находится 'WaitingToStart' ('Ожидание Начала') */
+    FORCEINLINE virtual bool IsMatchInWaitingToStart() const
     {
-        return CurrentMatchState == EMatchState::InProgress;
+        return GetCurrentMatchState() == EMatchState::WaitingToStart;
+    }
+
+    /** Возвращает значение true, если состояние матча находится 'InProgress' ('В Процессе') */
+    FORCEINLINE virtual bool IsMatchInProgress() const override
+    {
+        return GetCurrentMatchState() == EMatchState::InProgress;
     }
 
     /** Получить Текущее состояние матча */
@@ -255,7 +296,7 @@ public:
         // Если новый тип сортировки равен старому, то сменить на противоположный тип
         // Например: новый и старый тип - это "A" по возрастанию => сменить на "A" по убыванию
         if (PlayerStatisticsSortingType == InType)
-            PlayerStatisticsSortingType = EPlayerStatisticsSortingType(uint8(InType) + 0x80);
+            PlayerStatisticsSortingType = EPlayerStatisticsSortingType(uint8(InType) + MAX_int8);
         else
             PlayerStatisticsSortingType = InType;
 
@@ -304,7 +345,7 @@ public:
         // Если новый тип сортировки равен старому, то сменить на противоположный тип
         // Например: новый и старый тип - это "A" по возрастанию => сменить на "A" по убыванию
         if (SpectatorsSortingType == InType)
-            SpectatorsSortingType = EPlayerStatisticsSortingType(uint8(InType) + 0x80);
+            SpectatorsSortingType = EPlayerStatisticsSortingType(uint8(InType) + MAX_int8);
         else
             SpectatorsSortingType = InType;
 
@@ -375,30 +416,25 @@ public:
         }
     };
 
-    /** Удалить из списка данные Статистики данного Игрока */
-    UFUNCTION(BlueprintCallable,
-        Category = "FPS Game State|Role Selection",
-        meta = (DisplayName = "Remove Player Statistics Data"))
-    void RemovePlayerStatisticsData(const APlayerState* PlayerState)
-    {
-        PlayersStatistics.RemovePlayer(PlayerState);
-    };
-
-    /** Добавить в список данные Статистики для данного Игрока */
-    UFUNCTION(BlueprintCallable,
-        Category = "FPS Game State|Role Selection",
-        meta = (DisplayName = "Add Player Statistics Data"))
-    void AddPlayerStatisticsData(const APlayerState* PlayerState)
-    {
-        PlayersStatistics.AddPlayer(PlayerState);
-    };
-
+    /** Получить первого игрока */
     FORCEINLINE APlayerState* GetFirstPlayerState() const
     {
         if (PlayerArray.Num())
         {
             // PS: 'PlayerArray.Num()' может быть == 0
             return PlayerArray[0];
+        }
+        return nullptr;
+    };
+
+    /** Получить первого игрока */
+    template<class T>
+    FORCEINLINE T* GetFirstPlayerState() const
+    {
+        if (PlayerArray.Num())
+        {
+            // PS: 'PlayerArray.Num()' может быть == 0
+            return Cast<T>(PlayerArray[0]);
         }
         return nullptr;
     };
@@ -418,18 +454,24 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "FPS Game State|Role Selection",
         meta = (DisplayName = "Client Go To Spectators"))
-    void ClientGoToSpectators(const APlayerState* PlayerState)
+    void ClientGoToSpectators(APlayerState* PlayerState)
     {
-        RemovePlayerStatisticsData(PlayerState);
+        if (!IsMatchInProgress())
+        {
+            RemovePlayerStatisticsData(PlayerState);
+        }
     };
 
     /** Перевести Клиента к Игрокам */
     UFUNCTION(BlueprintCallable,
         Category = "FPS Game State|Role Selection",
         meta = (DisplayName = "Client Go To Players"))
-    void ClientGoToPlayers(const APlayerState* PlayerState)
+    void ClientGoToPlayers(APlayerState* PlayerState)
     {
-        AddPlayerStatisticsData(PlayerState);
+        if (!IsMatchInProgress())
+        {
+            AddPlayerStatisticsData(PlayerState);
+        }
     };
 
     /** Изменить Готовность Первого (локально) Игрока */
@@ -461,6 +503,32 @@ private:
 
     // Текущее состояние матча
     EMatchState CurrentMatchState;
+
+    //
+
+    /** Вызывается при локальном изменении 'ElapsedTime' */
+    void OnLocalElapsedTimeChange();
+
+    /** Обновить 'ElapsedTime' в зависимости от количества готовых игроков */
+    void UpdateElapsedTime();
+
+    /** Запустить стандартный таймер отслеживания Длительности Матча (см. 'ElapsedTime') */
+    FORCEINLINE void StartDefaultTimer()
+    {
+        // Дублирован из 'Super::DefaultTimer()'
+        GetWorldTimerManager().SetTimer(
+            TimerHandle_DefaultTimer,
+            this,
+            &AFPS_GameState::DefaultTimer,
+            GetWorldSettings()->GetEffectiveTimeDilation() / GetWorldSettings()->DemoPlayTimeDilation,
+            true);
+    };
+
+    /** Остановить стандартный таймер отслеживания Длительности Матча (см. 'ElapsedTime') */
+    FORCEINLINE void StopDefaultTimer()
+    {
+        GetWorldTimerManager().ClearTimer(TimerHandle_DefaultTimer);
+    };
     //-------------------------------------------
 
 
@@ -471,7 +539,7 @@ private:
     UPROPERTY(ReplicatedUsing = OnRep_PlayersStatistics)
     FPlayerStatisticsArray PlayersStatistics;
 
-    // Флаг проверки синхронизации контейнера PlayersStatistics
+    // Флаг проверки синхронизации контейнера 'PlayersStatistics'
     // @note    TRUE, если все указатели != nullptr (см. 'OnRep_PlayersStatistics()')
     bool bIsPlayersStatisticsSynchronized = false;
 
@@ -490,6 +558,12 @@ private:
     /** Инициализация данных Статистики */
     void InitStatisticsData();
 
+    /** Удалить из списка данные Статистики данного Игрока */
+    void RemovePlayerStatisticsData(APlayerState* PlayerState);
+
+    /** Добавить в список данные Статистики для данного Игрока */
+    void AddPlayerStatisticsData(APlayerState* PlayerState);
+
     /** Событие Делегата: При Удалении элементов данных статистики */
     UFUNCTION()
     void OnPreRemovingStatisticsDataItems(const TArray<int32>& RemovedIndices, int32 FinalSize);
@@ -501,7 +575,7 @@ private:
     /** Получение предиката согласно выбору типа сортировки Статистики Игроков */
     TSortingPredicate GetSortingPredicateForPlayerStatistics(EPlayerStatisticsSortingType InType) const;
 
-    /** При Репликации: PlayersStatistics */
+    /** При Репликации: 'PlayersStatistics' */
     UFUNCTION()
     void OnRep_PlayersStatistics();
     //-------------------------------------------
@@ -540,13 +614,6 @@ private:
         return false;
     };
 
-    /** Реакция на удаление данных Наблюдателя из списка */
-    FORCEINLINE void Reaction_RemoveSpectatorData()
-    {
-        OnRemovingSpectators.Broadcast(SortedSpectators.Num());
-        ReSortSpectatorsData();
-    }
-
     /** Добавить данные Наблюдателя в список с предварительной проверкой на уничтожение */
     FORCEINLINE bool AddSpectatorData(const APlayerState* PlayerState)
     {
@@ -559,6 +626,13 @@ private:
         }
         return false;
     };
+
+    /** Реакция на удаление данных Наблюдателя из списка */
+    FORCEINLINE void Reaction_RemoveSpectatorData()
+    {
+        OnRemovingSpectators.Broadcast(SortedSpectators.Num());
+        ReSortSpectatorsData();
+    }
 
     /** Реакция на добавление данных Наблюдателя из списка */
     FORCEINLINE void Reaction_AddSpectatorData()

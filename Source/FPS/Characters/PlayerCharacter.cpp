@@ -73,7 +73,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     //-------------------------------------------
 
 
-    /* ---   Non-scene Components   --- */
+    /* ---   Point Components   --- */
 
     // Компонент сетевого контроллера Оружия
     WeaponControlNetComp = CreateDefaultSubobject<UWeaponNetworkController>(TEXT("Weapon Control Network Component"));
@@ -84,6 +84,11 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     WeaponControlLocComp = CreateDefaultSubobject<UWeaponLocalController>(TEXT("Weapon Control Local Component"));
     WeaponControlLocComp->SetupAttachment(FPMesh, "WeaponSocket_HandR");
     WeaponControlLocComp->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+
+    //-------------------------------------------
+
+
+    /* ---   Non-scene Components   --- */
 
     // Компонент Системы Способностей (GAS)
     AbilitySystemComp = CreateDefaultSubobject<UFPS_AbilitySystemComponent>(TEXT("Ability System Comp"));
@@ -103,32 +108,68 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (IsLocallyControlled())
+    if (!HasAuthority())
     {
-        CleaningForLocally();
-
-        CollisionParamsForTrace.AddIgnoredActor(this);
-
-        InitAbilitySystemComp();
-        InitSpeedControl();
-    }
-    else
-    {
-        CleaningForNetwork();
+        /* Чистка на стороне Клиентов:
+        @note   В данный момент, на стороне Сервера, пешка Игрока-Сервера ещё не имеет Контроллера */
+        if (IsLocallyControlled())
+        {
+            InitForLocally();
+        }
+        else
+        {
+            InitForNetwork();
+        }
     }
 }
 
-void APlayerCharacter::CleaningForLocally()
+void APlayerCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+}
+
+//void APlayerCharacter::Tick(float DeltaSeconds)
+//{
+//    Super::Tick(DeltaSeconds);
+//}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+    /* @note   Вызывается только на сервере (или в автономном режиме) */
+
+    Super::PossessedBy(NewController);
+
+    // Чистка на стороне Сервера
+    if (IsLocallyControlled())
+    {
+        WeaponControlNetComp->InitializeForFirstPersonDisplay();
+        /* @note    Данный метод на стороне Клиента вызывается самостоятельно посредством репликации
+        Однако, на стороне Сервера требуется вызов для Игрока-Сервера */
+
+        InitForLocally();
+    }
+    else
+    {
+        InitForNetwork();
+    }
+}
+
+FORCEINLINE void APlayerCharacter::InitForLocally()
 {
     GetMesh()->SetVisibility(false);
     GetMesh()->SetCastHiddenShadow(true);
 
     FPMesh->HideBoneByName(HiddenBoneInFPMesh, EPhysBodyOp::PBO_None);
 
-    WeaponControlNetComp->InitializeForFirstPersonDisplay();
+    CollisionParamsForTrace.AddIgnoredActor(this);
+
+    InitAbilitySystemComp();
+    InitSpeedControl();
+
+    Event_OnLocalControllerInitialization();
 }
 
-void APlayerCharacter::CleaningForNetwork()
+FORCEINLINE void APlayerCharacter::InitForNetwork()
 {
     WeaponControlLocComp->DestroyComponent();
     FPMesh->DestroyComponent();
@@ -303,10 +344,10 @@ void APlayerCharacter::SetSpeedControl(ESpeedVariations Mode)
     }
 }
 
-void APlayerCharacter::InitSpeedControl()
+FORCEINLINE void APlayerCharacter::InitSpeedControl()
 {
     GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
-    SetSpeedControl(ESpeedVariations::Jog);
+    WeaponControlLocComp->InitSpeedControl();
 }
 //--------------------------------------------------------------------------------------
 
@@ -314,7 +355,7 @@ void APlayerCharacter::InitSpeedControl()
 
 /* ---   GAS   --- */
 
-void APlayerCharacter::InitAbilitySystemComp()
+FORCEINLINE void APlayerCharacter::InitAbilitySystemComp()
 {
     if (AbilitySystemComp)
     {
@@ -329,12 +370,12 @@ void APlayerCharacter::InitAbilitySystemComp()
         }
         else
         {
-            FPS_LOG(Error, TEXT("AttributeSet is NOT"));
+            FPS_Error("AttributeSet is NOT");
         }
     }
     else
     {
-        FPS_LOG(Error, TEXT("AbilitySystemComp is NOT"));
+        FPS_Error("AbilitySystemComp is NOT");
     }
 }
 //--------------------------------------------------------------------------------------
@@ -396,12 +437,12 @@ void APlayerCharacter::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            FPS_LOG(Warning, TEXT("Not used at least one of the Actions ('%s')"),
+            FPS_LOG(Warning, "Not used at least one of the Actions ('%s')",
                 *Data.ToString());
         }
         else if (lArray_ActionNames.Find(Data) == INDEX_NONE)
         {
-            FPS_LOG(Error, TEXT("'%s' is NOT an Action"),
+            FPS_Error("'%s' is NOT an Action",
                 *Data.ToString());
         }
     }
@@ -420,12 +461,12 @@ void APlayerCharacter::CheckInputsGroups()
     {
         if (Data == NAME_None)
         {
-            FPS_LOG(Warning, TEXT("Not used at least one of the Axes ('%s')"),
+            FPS_LOG(Warning, "Not used at least one of the Axes ('%s')",
                 *Data.ToString());
         }
         else if (lArray_AxisNames.Find(Data) == INDEX_NONE)
         {
-            FPS_LOG(Error, TEXT("'%s' is NOT an Axis"),
+            FPS_Error("'%s' is NOT an Axis",
                 *Data.ToString());
         }
     }
