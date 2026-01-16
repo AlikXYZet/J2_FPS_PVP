@@ -663,12 +663,11 @@ void UWeaponLocalController::SetSpeedControl(ESpeedVariations Mode)
     if (SpeedControl != Mode)
     {
         SpeedControl = Mode;
-
         GetPlayerOwner()->GetFPSCharacterMovement()->UpdateMaxSpeed();
     }
 };
 
-void UWeaponLocalController::InitSpeedControl()
+FORCEINLINE void UWeaponLocalController::InitSpeedControl()
 {
     // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     GetPlayerOwner()->GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);

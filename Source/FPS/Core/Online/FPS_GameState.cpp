@@ -43,6 +43,13 @@ AFPS_GameState::AFPS_GameState()
     // Общедоступный указатель на текущий экземпляр класса 'AFPS_GameState'
     CurrentGameState = this;
     //-------------------------------------------
+
+
+    /* ---   Match Management   --- */
+
+    // Выставить "блокируещее" значение по умолчанию
+    ElapsedTime = MIN_int32;
+    //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
 
@@ -131,7 +138,7 @@ void AFPS_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 
 
-/* ---   Match Management   --- */
+/* ---   Match Management : Match State   --- */
 
 void AFPS_GameState::OnRep_MatchState()
 {
@@ -151,7 +158,7 @@ void AFPS_GameState::OnRep_MatchState()
     // при подключении к сессии с уже запущенном Матче
     if (MatchState == MatchState::InProgress)
     {
-        CurrentMatchState = EMatchState::InProgress;
+        CurrentMatchState = EMatchState::PreProgress;
         HandleMatchHasStarted();
     }
     else if (MatchState == MatchState::WaitingPostMatch)
@@ -165,10 +172,126 @@ void AFPS_GameState::OnRep_MatchState()
         HandleLeavingMap();
     }
 
-    OnMatchStateChange.Broadcast(CurrentMatchState);
-
     PreviousMatchState = MatchState;
+
+    OnMatchStateChange.Broadcast(CurrentMatchState);
 }
+
+void AFPS_GameState::HandleMatchIsWaitingToStart()
+{
+    Super::HandleMatchIsWaitingToStart();
+
+    ReInitSpectatorsData();
+}
+
+void AFPS_GameState::HandleMatchHasStarted()
+{
+    Super::HandleMatchHasStarted();
+
+    SetElapsedTime(MatchStartDelayTime);
+}
+
+void AFPS_GameState::HandleMatchHasEnded()
+{
+    Super::HandleMatchHasEnded();
+
+    SetElapsedTime(MatchEndingDelayTime);
+}
+
+void AFPS_GameState::MatchStateControl()
+{
+    switch (GetCurrentMatchState())
+    {
+
+    case EMatchState::WaitingToStart:
+        if (HasAuthority())
+        {
+            GetFPSGameMode()->bDelayedStart = false;
+            GetFPSGameMode()->StartPlay();
+        }
+        break;
+
+    case EMatchState::PreProgress:
+        // Local:
+        {
+            SetCurrentMatchState(EMatchState::InProgress);
+            SetElapsedTime(MatchDurationTime);
+        }
+        break;
+
+    case EMatchState::InProgress:
+        if (HasAuthority())
+        {
+            GetFPSGameMode()->bDelayedStart = true;
+            GetFPSGameMode()->EndMatch();
+        }
+        break;
+
+    case EMatchState::WaitingPostMatch:
+        if (HasAuthority())
+        {
+            GetFPSGameMode()->RestartGame();
+        }
+        break;
+
+        //case EMatchState::LeavingMap:
+        //    break;
+
+        //case EMatchState::Aborted:
+        //    break;
+
+        //case EMatchState::Custom:
+        //    break;
+
+    default:
+        break;
+    }
+}
+
+void AFPS_GameState::CheckPlayersReadiness()
+{
+    /** @note
+    Требуется обновлять на стороне Сервера при каждом изменении готовности среди Игроков:
+    * Изменилась готовность;
+    * Кто-то Добавился или Убрался из списка Игроков;
+    * Кто-то вышел из игры, когда был в списке Игроков */
+    int32 lCount = 0;
+
+    for (const FPlayerStatisticsData& Data : PlayersStatistics)
+    {
+        if (Data.bPlayerReadiness)
+        {
+            ++lCount;
+        }
+    }
+
+    if (IsMatchInWaitingToStart())
+    {
+        if (lCount)
+        {
+            if (lCount == PlayersStatistics.Num())
+            {
+                // Если все готовы, то Запустить Сокращённое время ожидания
+                Multicast_SetElapsedTime(ShortWaitTimeForMatchToStart);
+            }
+            else
+            {
+                // Если готовы не все, но хотя бы один, то Запустить Длинное время ожидания
+                Multicast_SetElapsedTime(LongWaitTimeForMatchToStart);
+            }
+        }
+        else
+        {
+            // Если никто не готов, то Остановить время ожидания
+            Multicast_SetElapsedTime(MIN_int32);
+        }
+    }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Match Management : Elapsed Time   --- */
 
 void AFPS_GameState::OnRep_ElapsedTime()
 {
@@ -190,75 +313,24 @@ void AFPS_GameState::DefaultTimer()
     // По умолчанию используется для отсчёта времени ("++ElapsedTime") во время матча
     //Super::DefaultTimer(); // Вместо этого Копируем, оптимизируем и расширяем код
 
-    if (GetCurrentMatchState() <= EMatchState::InProgress)
+    --ElapsedTime;
+
+    // Все изменения состояния Матча будут происходить при 'ElapsedTime == 0'
+    if (ElapsedTime == 0)
     {
-        ++ElapsedTime;
-        if (GetNetMode() != NM_DedicatedServer)
-        {
-            OnLocalElapsedTimeChange();
-        }
+        MatchStateControl();
     }
+
+    OnElapsedTimeChange.Broadcast(ElapsedTime);
+
+    FPS_ColorMessage(FColor::Cyan, "%d", ElapsedTime);
 
     StartDefaultTimer();
 }
 
-void AFPS_GameState::HandleMatchIsWaitingToStart()
+void AFPS_GameState::Multicast_SetElapsedTime_Implementation(int32 Time)
 {
-    Super::HandleMatchIsWaitingToStart();
-
-    ReInitSpectatorsData();
-}
-
-void AFPS_GameState::HandleMatchHasStarted()
-{
-    Super::HandleMatchHasStarted();
-}
-
-void AFPS_GameState::OnLocalElapsedTimeChange()
-{
-    FPS_ColorMessage(FColor::Cyan, "%d", ElapsedTime);
-    OnElapsedTimeChange.Broadcast(ElapsedTime);
-}
-
-void AFPS_GameState::UpdateElapsedTime()
-{
-    /** @note
-    Требуется обновлять на стороне Сервера при каждом изменении готовности среди Игроков:
-    * Изменилась готовность;
-    * Кто-то Добавился или Убрался из списка Игроков;
-    * Кто-то вышел из игры, когда был в списке Игроков */
-    int32 lCount = 0;
-
-    for (const FPlayerStatisticsData& Data : PlayersStatistics)
-    {
-        if (Data.bPlayerReadiness)
-        {
-            ++lCount;
-        }
-    }
-
-    if (IsMatchInWaitingToStart())
-    {
-        if (lCount != 0
-            && lCount == PlayersStatistics.Num())
-        {
-            // Если все готовы, то Запустить Сокращённое время ожидания
-            ElapsedTime = -ShortWaitTimeForMatchToStart;
-        }
-        else if (lCount)
-        {
-            // Если готовы не все, но хотя бы один, то Запустить Длинное время ожидания
-            ElapsedTime = -LongWaitTimeForMatchToStart;
-        }
-        else
-        {
-            // Если никто не готов, то Остановить время ожидания
-            ElapsedTime = MIN_int32;
-        }
-
-        // Контроль таймера в зависимости от значения 'ElapsedTime'
-        OnRep_ElapsedTime();
-    }
+    SetElapsedTime(Time);
 }
 //--------------------------------------------------------------------------------------
 
@@ -306,7 +378,7 @@ void AFPS_GameState::RemovePlayerStatisticsData(APlayerState* PlayerState)
                 PC->Client_ChangedSelectedRole(false);
             }
 
-            UpdateElapsedTime();
+            CheckPlayersReadiness();
         }
     }
 }
@@ -330,7 +402,7 @@ void AFPS_GameState::AddPlayerStatisticsData(APlayerState* PlayerState)
                 PC->Client_ChangedSelectedRole(true);
             }
 
-            UpdateElapsedTime();
+            CheckPlayersReadiness();
         }
     }
 }
@@ -616,7 +688,7 @@ void AFPS_GameState::RemovePlayerState(APlayerState* PlayerState)
 
             if (HasAuthority())
             {
-                UpdateElapsedTime();
+                CheckPlayersReadiness();
             }
         }
 
@@ -642,7 +714,7 @@ void AFPS_GameState::SetPlayerReadiness(const APlayerState* PlayerState, bool bR
                 PC->Client_ChangedMatchReadiness(bReadiness);
             }
 
-            UpdateElapsedTime();
+            CheckPlayersReadiness();
         }
     }
 }

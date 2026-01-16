@@ -13,6 +13,7 @@
 #include "FPS/Tools/Interfaces/Movement/SpeedControllerInterface.h"
 
 // Structs:
+#include "FPS/Tools/Structs/GameData/MatchStateData.h"
 #include "FPS/Tools/Structs/Movement/SpeedControlData.h"
 
 // Interaction:
@@ -118,7 +119,7 @@ public:
     //virtual void Tick(float DeltaSeconds) override;
 
     /** Вызывается после инициализации всех компонентов только во время игрового процесса */
-    virtual void PostInitializeComponents() override;
+    //virtual void PostInitializeComponents() override;
 
     /** Вызывается при подключения Контроллера
     @note   Вызывается только на сервере (или в автономном режиме)
@@ -351,6 +352,10 @@ private:
 
     /** Скорость передвижения: Ходьба (лёгкий бег) */
     void StopSprint();
+
+    /** Управление входными сигналами (вводом) основываясь на состояние матча */
+    UFUNCTION()
+    void ControlInputsBasedOnMatchStatus(EMatchState NewMatchState);
     //-------------------------------------------
 
 

@@ -51,22 +51,21 @@ void AFPS_PlayerController::Tick(float DeltaSeconds)
 
 /* ---   Mouse To Center   --- */
 
-void AFPS_PlayerController::SetMouseToCenter()
+FORCEINLINE void AFPS_PlayerController::SetMouseToCenter()
 {
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     if (bMouseToCenter)
     {
         if (GetPawn())
         {
-            if (!IsPaused())
+            if (!IsPaused()
+                && GetMousePosition(MousePositionX, MousePositionY))
             {
-                if (GetMousePosition(MousePositionX, MousePositionY))
-                {
-                    GetViewportSize(SizeCenterX, SizeCenterY);
+                GetViewportSize(SizeCenterX, SizeCenterY);
 
-                    if (MousePositionX != int32(SizeCenterX / 2) || MousePositionY != int32(SizeCenterY / 2))
-                    {
-                        SetMouseLocation(SizeCenterX / 2, SizeCenterY / 2);
-                    }
+                if (MousePositionX != int32(SizeCenterX / 2) || MousePositionY != int32(SizeCenterY / 2))
+                {
+                    SetMouseLocation(SizeCenterX / 2, SizeCenterY / 2);
                 }
             }
         }

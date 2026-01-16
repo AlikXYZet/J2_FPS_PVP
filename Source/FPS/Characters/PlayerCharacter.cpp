@@ -22,6 +22,7 @@
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
+#include "FPS/Core/Online/FPS_GameState.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -45,6 +46,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     // Set this pawn to call Tick() every frame.
     // You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false; // Предварительно
+    SetActorTickInterval(1.f); // 1 раз/сек.
     //-------------------------------------------
 
 
@@ -123,14 +125,14 @@ void APlayerCharacter::BeginPlay()
     }
 }
 
-void APlayerCharacter::PostInitializeComponents()
-{
-    Super::PostInitializeComponents();
-}
-
 //void APlayerCharacter::Tick(float DeltaSeconds)
 //{
 //    Super::Tick(DeltaSeconds);
+//}
+
+//void APlayerCharacter::PostInitializeComponents()
+//{
+//    Super::PostInitializeComponents();
 //}
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -156,6 +158,7 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 FORCEINLINE void APlayerCharacter::InitForLocally()
 {
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     GetMesh()->SetVisibility(false);
     GetMesh()->SetCastHiddenShadow(true);
 
@@ -166,11 +169,17 @@ FORCEINLINE void APlayerCharacter::InitForLocally()
     InitAbilitySystemComp();
     InitSpeedControl();
 
+    DisableInput(GetController<APlayerController>());
+
+    GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &APlayerCharacter::ControlInputsBasedOnMatchStatus);
+    FPS_ColorMessage(FColor::Orange, "*OnMatchStateChange = %lld", &GetFPSGameState()->OnMatchStateChange);
+
     Event_OnLocalControllerInitialization();
 }
 
 FORCEINLINE void APlayerCharacter::InitForNetwork()
 {
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     WeaponControlLocComp->DestroyComponent();
     FPMesh->DestroyComponent();
     //FPCamera->DestroyComponent(); // Debug: Пропадает камера у Игрока Сервера
@@ -329,6 +338,39 @@ void APlayerCharacter::StopSprint()
     IsSprinting ^= 0b11;
     SetSpeedControl(ESpeedVariations::Jog);
 }
+
+void APlayerCharacter::ControlInputsBasedOnMatchStatus(EMatchState NewMatchState)
+{
+    FPS_ColorMessage(FColor::Orange, "NewMatchState = %d", NewMatchState);
+    switch (NewMatchState)
+    {
+        //case EMatchState::WaitingToStart:
+        //    break;
+
+        //case EMatchState::PreProgress:
+        //    break;
+
+    case EMatchState::InProgress:
+        EnableInput(GetController<APlayerController>());
+        break;
+
+    case EMatchState::WaitingPostMatch:
+        DisableInput(GetController<APlayerController>());
+        break;
+
+        //case EMatchState::LeavingMap:
+        //    break;
+
+        //case EMatchState::Aborted:
+        //    break;
+
+        //case EMatchState::Custom:
+        //    break;
+
+    default:
+        break;
+    }
+}
 //--------------------------------------------------------------------------------------
 
 
@@ -346,6 +388,7 @@ void APlayerCharacter::SetSpeedControl(ESpeedVariations Mode)
 
 FORCEINLINE void APlayerCharacter::InitSpeedControl()
 {
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     GetFPSCharacterMovement()->AddSpeedControl(SpeedControl);
     WeaponControlLocComp->InitSpeedControl();
 }
@@ -357,6 +400,7 @@ FORCEINLINE void APlayerCharacter::InitSpeedControl()
 
 FORCEINLINE void APlayerCharacter::InitAbilitySystemComp()
 {
+    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     if (AbilitySystemComp)
     {
         if (AttributeSet)

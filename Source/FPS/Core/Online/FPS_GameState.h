@@ -220,42 +220,19 @@ public:
 
 
 
-    /* ---   Match Management   --- */
-
-    // Время Долгого ожидания начала Матча
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
-    uint8 LongWaitTimeForMatchToStart = 60;
-
-    // Время Короткого ожидания начала Матча
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
-    uint8 ShortWaitTimeForMatchToStart = 5;
-
-    // Время продолжительности Матча
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
-    int32 MatchDurationTime = 300;
-
-    //
+    /* ---   Match Management : Match State   --- */
 
     /** При Репликации: 'MatchState' */
     virtual void OnRep_MatchState() override;
-
-    /** При Репликации: 'ElapsedTime' */
-    virtual void OnRep_ElapsedTime() override;
-
-    /** Вызывается стандартным Таймером Матча с частотой примерно 1 раз/сек. с учётом сетевой задержки */
-    virtual void DefaultTimer() override;
 
     /** Вызывается при переходе в состояние 'WaitingToStart' ('Ожидание Начала') */
     virtual void HandleMatchIsWaitingToStart() override;
 
     /** Вызывается при переходе в состояние 'InProgress' ('В Процессе') */
     virtual void HandleMatchHasStarted() override;
+
+    /** Вызывается при переходе в состояние 'WaitingPostMatch' ('Ожидание после Матча') */
+    virtual void HandleMatchHasEnded() override;
 
     /** Возвращает значение true, если состояние матча находится 'WaitingToStart' ('Ожидание Начала') */
     FORCEINLINE virtual bool IsMatchInWaitingToStart() const
@@ -266,7 +243,8 @@ public:
     /** Возвращает значение true, если состояние матча находится 'InProgress' ('В Процессе') */
     FORCEINLINE virtual bool IsMatchInProgress() const override
     {
-        return GetCurrentMatchState() == EMatchState::InProgress;
+        return GetCurrentMatchState() == EMatchState::PreProgress
+            || GetCurrentMatchState() == EMatchState::InProgress;
     }
 
     /** Получить Текущее состояние матча */
@@ -274,6 +252,49 @@ public:
     {
         return CurrentMatchState;
     };
+    //-------------------------------------------
+
+
+
+    /* ---   Match Management : Elapsed Time   --- */
+
+    // Время Долгого ожидания начала Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    uint8 LongWaitTimeForMatchToStart = 60;
+
+    // Время Короткого ожидания начала Матча (Готовы все Игрок)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    uint8 ShortWaitTimeForMatchToStart = 5;
+
+    // Время задержки начала Матча, используемая для сетевой инициализации в момент запуска Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    int32 MatchStartDelayTime = 5;
+
+    // Время продолжительности Матча
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    int32 MatchDurationTime = 300;
+
+    // Время задержки окончания Матча, используемая для отображения результатов
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    int32 MatchEndingDelayTime = 10;
+
+    //
+
+    /** При Репликации: Только первая репликация 'ElapsedTime' ('COND_InitialOnly') */
+    virtual void OnRep_ElapsedTime() override;
+
+    /** Вызывается стандартным Таймером Матча с частотой примерно 1 раз/сек. с учётом сетевой задержки */
+    virtual void DefaultTimer() override;
     //-------------------------------------------
 
 
@@ -499,18 +520,32 @@ private:
 
 
 
-    /* ---   Match Management   --- */
+    /* ---   Match Management : Match State   --- */
 
     // Текущее состояние матча
     EMatchState CurrentMatchState;
 
     //
 
-    /** Вызывается при локальном изменении 'ElapsedTime' */
-    void OnLocalElapsedTimeChange();
+    /** Контроль и Запуск изменения состояния Матча */
+    void MatchStateControl();
+
+    /** Установить новое значение состояния Матча
+    @note   Без сетевого взаимодействия */
+    FORCEINLINE void SetCurrentMatchState(EMatchState State)
+    {
+        CurrentMatchState = State;
+        FPS_ColorMessage(FColor::Orange, "GetCurrentMatchState() == %d", GetCurrentMatchState());
+        OnMatchStateChange.Broadcast(CurrentMatchState);
+    };
 
     /** Обновить 'ElapsedTime' в зависимости от количества готовых игроков */
-    void UpdateElapsedTime();
+    void CheckPlayersReadiness();
+    //-------------------------------------------
+
+
+
+    /* ---   Match Management : Elapsed Time   --- */
 
     /** Запустить стандартный таймер отслеживания Длительности Матча (см. 'ElapsedTime') */
     FORCEINLINE void StartDefaultTimer()
@@ -529,6 +564,20 @@ private:
     {
         GetWorldTimerManager().ClearTimer(TimerHandle_DefaultTimer);
     };
+
+    /** Установить новое значение времени
+    @note   Без сетевого взаимодействия */
+    FORCEINLINE void SetElapsedTime(int32 Time)
+    {
+        ElapsedTime = Time;
+
+        // Контроль таймера в зависимости от значения 'ElapsedTime'
+        OnRep_ElapsedTime();
+    }
+
+    /** Установить новое значение времени с ретрансляцией на Клиенты */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetElapsedTime(int32 Time);
     //-------------------------------------------
 
 

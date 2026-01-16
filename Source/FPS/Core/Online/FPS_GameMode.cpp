@@ -98,11 +98,6 @@ void AFPS_GameMode::Destroyed()
 void AFPS_GameMode::BaseInit()
 {
     IsValidStaticPointer();
-
-    if (AFPS_GameState::IsValidStaticPointer())
-    {
-        GetFPSGameState()->OnElapsedTimeChange.AddDynamic(this, &AFPS_GameMode::CheckElapsedTimeValue);
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -186,20 +181,6 @@ void AFPS_GameMode::HandleMatchAborted()
 //{
 //    return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
 //}
-
-void AFPS_GameMode::CheckElapsedTimeValue(int32 Value)
-{
-    if (Value == 0)
-    {
-        bDelayedStart = false;
-        StartPlay();
-    }
-    else if (Value == GetFPSGameState()->MatchDurationTime)
-    {
-        bDelayedStart = true;
-        EndMatch();
-    }
-}
 //--------------------------------------------------------------------------------------
 
 
@@ -208,66 +189,69 @@ void AFPS_GameMode::CheckElapsedTimeValue(int32 Value)
 
 void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& TargetASC, const FGameplayEffectSpec& iSpec)
 {
-    TSet<APlayerController*> lPlayerWreckers;
-
-    // Получение Игроков по Эффекту, что вызвал уничтожение
-    GetAllInstigatorPlayers(iSpec, lPlayerWreckers);
-
-    // Получить Игроков, что вызвали другие текущие активные Эффекты
-    if (int32 lNum = TargetASC.GetNumActiveGameplayEffects())
+    if (IsMatchInProgress())
     {
-        TArray<FGameplayEffectSpec> OutSpecCopies;
-        // Резервирование памяти
-        OutSpecCopies.Reserve(lNum);
-        // Копирование данных о всех Активных Эффектов.
-        // PS: Данный метод почему-то НЕ имеет предварительного резервирования памяти
-        TargetASC.GetAllActiveGameplayEffectSpecs(OutSpecCopies);
+        TSet<APlayerController*> lPlayerWreckers;
 
-        GetAllInstigatorPlayers(OutSpecCopies, lPlayerWreckers);
-    }
+        // Получение Игроков по Эффекту, что вызвал уничтожение
+        GetAllInstigatorPlayers(iSpec, lPlayerWreckers);
 
-    if (lPlayerWreckers.Num())
-    {
-        // Если Цель является Атрибутированным Актором:
-        if (Cast<AAttributedActor>(TargetASC.GetOwnerActor()))
+        // Получить Игроков, что вызвали другие текущие активные Эффекты
+        if (int32 lNum = TargetASC.GetNumActiveGameplayEffects())
         {
-            // Заполнить массив его 'Вредителей'
-            if (TSet<APlayerController*>* lAllWreckers = AllAttributedActor.Find((AAttributedActor*)TargetASC.GetOwnerActor()))
-            {
-                lAllWreckers->Append(lPlayerWreckers);
-            }
+            TArray<FGameplayEffectSpec> OutSpecCopies;
+            // Резервирование памяти
+            OutSpecCopies.Reserve(lNum);
+            // Копирование данных о всех Активных Эффектов.
+            // PS: Данный метод почему-то НЕ имеет предварительного резервирования памяти
+            TargetASC.GetAllActiveGameplayEffectSpecs(OutSpecCopies);
+
+            GetAllInstigatorPlayers(OutSpecCopies, lPlayerWreckers);
         }
-        // Если Цель является Игроком:
-        else if (APlayerCharacter* lPlayer = Cast<APlayerCharacter>(TargetASC.GetOwnerActor()))
+
+        if (lPlayerWreckers.Num())
         {
-            // Увеличить счётчик Смертей для Цели
-            if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find(lPlayer->GetPlayerState()))
+            // Если Цель является Атрибутированным Актором:
+            if (Cast<AAttributedActor>(TargetASC.GetOwnerActor()))
             {
-                GetPlayersStatistics().AddDeaths(**lTargetStats);
+                // Заполнить массив его 'Вредителей'
+                if (TSet<APlayerController*>* lAllWreckers = AllAttributedActor.Find((AAttributedActor*)TargetASC.GetOwnerActor()))
+                {
+                    lAllWreckers->Append(lPlayerWreckers);
+                }
             }
-
-            auto lIterator = lPlayerWreckers.CreateIterator();
-            FPlayerStatisticsData** lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
-
-            // Увеличить счётчик Убийств для первого 'Вредителя'
-            if (lWreckerStats
-                && *lIterator != lPlayer->GetController())
+            // Если Цель является Игроком:
+            else if (APlayerCharacter* lPlayer = Cast<APlayerCharacter>(TargetASC.GetOwnerActor()))
             {
-                GetPlayersStatistics().AddKills(**lWreckerStats);
-            }
+                // Увеличить счётчик Смертей для Цели
+                if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find(lPlayer->GetPlayerState()))
+                {
+                    GetPlayersStatistics().AddDeaths(**lTargetStats);
+                }
 
-            // Увеличить счётчик Помощи для остальных 'Вредителей'
-            for (++lIterator; lIterator; ++lIterator)
-            {
-                lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
+                auto lIterator = lPlayerWreckers.CreateIterator();
+                FPlayerStatisticsData** lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
+
+                // Увеличить счётчик Убийств для первого 'Вредителя'
                 if (lWreckerStats
                     && *lIterator != lPlayer->GetController())
                 {
-                    GetPlayersStatistics().AddAssists(**lWreckerStats);
+                    GetPlayersStatistics().AddKills(**lWreckerStats);
                 }
-            }
 
-            GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
+                // Увеличить счётчик Помощи для остальных 'Вредителей'
+                for (++lIterator; lIterator; ++lIterator)
+                {
+                    lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
+                    if (lWreckerStats
+                        && *lIterator != lPlayer->GetController())
+                    {
+                        GetPlayersStatistics().AddAssists(**lWreckerStats);
+                    }
+                }
+
+                GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
+            }
         }
     }
 }

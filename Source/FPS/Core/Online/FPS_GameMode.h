@@ -205,9 +205,17 @@ private:
 
     /* ---   Match Management   --- */
 
-    /** Проверка значения прошедшего времени */
-    UFUNCTION()
-    void CheckElapsedTimeValue(int32 Value);
+    /** Получить текущее состояние Матча */
+    FORCEINLINE EMatchState GetCurrentMatchState() const
+    {
+        return GetFPSGameState()->GetCurrentMatchState();
+    };
+
+    /** Сравнить текущее состояние Матча */
+    FORCEINLINE bool IsCurrentMatchState(const EMatchState State) const
+    {
+        return GetCurrentMatchState() == State;
+    };
     //-------------------------------------------
 
 
