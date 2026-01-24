@@ -22,6 +22,7 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 
 /* ---   Collision Channels   --- */
 
+// Канал трассировки, соответствующий новому каналу "Projectiles"
 #define ECC_Projectiles ECC_GameTraceChannel1
 //--------------------------------------------------------------------------------------
 

@@ -61,7 +61,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
     // Камера от Первого лица
     FPCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FP Camera"));
-    FPCamera->SetupAttachment(GetMesh(), "neck_01");
+    FPCamera->SetupAttachment(GetMesh(), "CameraSocket_Head");
     FPCamera->SetRelativeLocation(FVector(17.25f, -1.2f, -7.4f));
     FPCamera->SetUsingAbsoluteRotation(true);
     FPCamera->bUsePawnControlRotation = true;
@@ -97,7 +97,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     AbilitySystemComp->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
     // Скрытый Набор Атрибутов (для GAS)
-    AttributeSet = CreateDefaultSubobject<UFPS_AttributeSet>(TEXT("Attributes"));
+    //AttributeSet = CreateDefaultSubobject<UFPS_AttributeSet>(TEXT("Attributes"));
+    // PS: Создание перенесено в `PreInitializeComponents()`, см. в обсуждении ошибки UE-81109
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -129,6 +130,22 @@ void APlayerCharacter::BeginPlay()
 //{
 //    Super::Tick(DeltaSeconds);
 //}
+
+void APlayerCharacter::PreInitializeComponents()
+{
+    Super::PreInitializeComponents();
+
+    // Скрытый Набор Атрибутов (для GAS)
+    if (!AttributeSet)
+    {
+        AttributeSet = NewObject<UFPS_AttributeSet>(this, TEXT("Attributes"));
+        AbilitySystemComp->AddAttributeSetSubobject(AttributeSet);
+    }
+    // PS: Создание здесь экземпляра AttributeSet через NewObject<T>(*),
+    // а не в конструкторе через CreateDefaultSubobject<T>(*),
+    // является решением ошибки, описанной в UE-81109:
+    // "уничтожение сборщиком AttributeSet у дубликатов актора-владельца"
+}
 
 //void APlayerCharacter::PostInitializeComponents()
 //{

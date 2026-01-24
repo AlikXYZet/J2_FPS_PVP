@@ -102,13 +102,6 @@ public:
         meta = (DisplayName = "FP Weapon Frame Type"))
     TSubclassOf<AFirstPersonWeaponFrame> FPWeaponFrameType;
 
-    /* Сокет Оружия в FPMesh */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Local",
-        meta = (GetOptions = "GetSocketNamesInFPMesh",
-            DisplayName = "Weapon Socket In FPMesh"))
-    FName WeaponSocketInFPMesh = NAME_None;
-
     //
 
     /** Получить Игрока-Владельца данного `UWeaponControlComponent`
@@ -345,6 +338,20 @@ private:
 
     /** Инициализация данных */
     void InitData();
+
+    // Заряжено ли оружие? (Проверка возможности заряда и заряжено ли)
+    FORCEINLINE bool IsWeaponLoaded()
+    {
+        return GetCurrentWeaponData()->bIsWeaponChargeable
+            && CurrentSlot->bIsWeaponLoaded;
+    }
+
+    // НЕ Заряжено ли оружие? (Проверка возможности заряда и НЕ заряжено ли)
+    FORCEINLINE bool IsWeaponNotLoaded()
+    {
+        return GetCurrentWeaponData()->bIsWeaponChargeable
+            && CurrentSlot->bIsWeaponLoaded == false;
+    }
     //-------------------------------------------
 
 
@@ -482,7 +489,7 @@ private:
 
 
 
-    /* ---   Booleanas   --- */
+    /* ---   Booleanas and uint8   --- */
 
     // Отслеживание задания Действий Игрока
     uint8 SettingActions = 0;

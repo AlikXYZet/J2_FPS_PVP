@@ -118,6 +118,9 @@ public:
     /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
     //virtual void Tick(float DeltaSeconds) override;
 
+    /** Вызывается перед инициализацией всех компонентов */
+    virtual void PreInitializeComponents() override;
+
     /** Вызывается после инициализации всех компонентов только во время игрового процесса */
     //virtual void PostInitializeComponents() override;
 

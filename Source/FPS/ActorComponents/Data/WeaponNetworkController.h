@@ -145,12 +145,6 @@ public:
         Category = "Weapon Control|Net")
     TSubclassOf<AWeaponFrame> WeaponFrameType;
 
-    /* Сокет Оружия в FPMesh */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
-        Category = "Weapon Control|Net",
-        meta = (GetOptions = "GetSocketNamesInMesh"))
-    FName WeaponSocketInMesh = NAME_None;
-
     //
 
     /** Получить Игрока-Владельца данного `UWeaponControlComponent`

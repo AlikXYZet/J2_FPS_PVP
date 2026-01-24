@@ -93,7 +93,7 @@ struct FWeaponData : public FTableRowBase
 
 
 
-    /* ---   Dropping   --- */
+    /* ---   Dropping: Projectile   --- */
 
     // Эффект поражения данным снарядом
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
@@ -163,6 +163,13 @@ struct FWeaponData : public FTableRowBase
         Category = "Dropping: Projectile",
         meta = (DisplayAfter = "DamageEffect"))
     uint8 bUseHitscanMethod : 1;
+
+    // Флаг: Заряжаемо ли Оружие
+    // Например: возможность +1 патрон в патроннике
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Specifications",
+        meta = (DisplayAfter = "DamageEffect"))
+    uint8 bIsWeaponChargeable : 1;
     //-------------------------------------------
 };
 //--------------------------------------------------------------------------------------

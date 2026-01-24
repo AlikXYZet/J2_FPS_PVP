@@ -445,7 +445,7 @@ void UWeaponLocalController::SetReloading()
     {
         bool bChecker = false;
 
-        if (CurrentSlot->bIsWeaponLoaded)
+        if (!IsWeaponLoaded())
         {
             if (CurrentSlot->NumAllCartridge > 0
                 && CurrentSlot->NumPreparedCartridges < GetCurrentWeaponData()->MaxPreparedCartridges)
@@ -502,7 +502,7 @@ void UWeaponLocalController::StopReloading()
         CurrentSlot->NumAllCartridge -= Difference;
     }
 
-    if (CurrentSlot->bIsWeaponLoaded == false
+    if (IsWeaponNotLoaded()
         && CurrentSlot->NumPreparedCartridges > 0)
     {
         CurrentSlot->bIsWeaponLoaded = true;
@@ -571,7 +571,7 @@ void UWeaponLocalController::ShootingWeapons()
         --(CurrentSlot->NumPreparedCartridges);
         bChecker = true;
     }
-    else if (CurrentSlot->bIsWeaponLoaded)
+    else if (IsWeaponLoaded())
     {
         // "Использование" заряженного Патрона
         CurrentSlot->bIsWeaponLoaded = false;
@@ -684,16 +684,46 @@ FORCEINLINE void UWeaponLocalController::InitSpeedControl()
 
 void UWeaponLocalController::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
-    if (PropertyChangedEvent.Property
-        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UWeaponLocalController, FPWeaponFrameType))
+    if (PropertyChangedEvent.Property)
     {
-        if (FPWeaponFrameType)
+        const FName PropertyName = PropertyChangedEvent.Property->GetFName();
+
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UWeaponLocalController, FPWeaponFrameType))
         {
-            SetChildActorClass(FPWeaponFrameType);
+            if (FPWeaponFrameType)
+            {
+                SetChildActorClass(FPWeaponFrameType);
+            }
+            else
+            {
+                FPS_Error_Component("FPWeaponFrameType is NOT");
+            }
         }
-        else
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UWeaponLocalController, WeaponsDataTable))
         {
-            FPS_Error_Component("FPWeaponFrameType is NOT");
+            if (WeaponSlots.Num())
+            {
+                TArray<FName> AllNames = GetAllWeaponsNames();
+                FName FirstName = AllNames.IsValidIndex(0) ? AllNames[0] : FName();
+
+                for (auto Iter = WeaponSlots.CreateIterator(); Iter; ++Iter)
+                {
+                    if (!WeaponsDataTable->FindRow<FWeaponData>(Iter->WeaponType, "PostEditChangeProperty"))
+                    {
+                        if (FirstName.IsNone())
+                        {
+                            Iter->WeaponType = NAME_None;
+
+                            FPS_LOG_Component(Warning, "Weapon Type from Slot Number '%d' is NOT",
+                                Iter.GetIndex());
+                        }
+                        else
+                        {
+                            WeaponsDataTable->FindRow<FWeaponData>(FirstName, "PostEditChangeProperty");
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -791,8 +821,29 @@ TArray<FName> UWeaponLocalController::GetAllWeaponsNames() const
 
 void UWeaponLocalController::CheckNumOfSlots() const
 {
-    // Проверка наличия слотов
-    if (!WeaponSlots.Num())
+    // Проверка выбранных слотов оружия
+    if (WeaponSlots.Num())
+    {
+        for (auto Iter = WeaponSlots.CreateConstIterator(); Iter; ++Iter)
+        {
+            if (Iter->WeaponType == NAME_None)
+            {
+                FPS_LOG_Component(Warning, "Weapon Type from Slot Number '%d' is NOT",
+                    Iter.GetIndex());
+            }
+            else if (!WeaponsDataTable)
+            {
+                FPS_Error_Component("WeaponsDataTable is NOT");
+            }
+            else if (!WeaponsDataTable->FindRow<FWeaponData>(Iter->WeaponType, "CheckNumOfSlots"))
+            {
+                FPS_Error_Component("Weapon Type '%s' from Slot Number '%d' does NOT exist",
+                    *Iter->WeaponType.ToString(),
+                    Iter.GetIndex());
+            }
+        }
+    }
+    else
     {
         FPS_LOG_Component(Warning, "WeaponSlots.Num() == 0");
     }
