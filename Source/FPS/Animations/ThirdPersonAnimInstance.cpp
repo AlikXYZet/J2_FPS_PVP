@@ -80,11 +80,12 @@ TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> UThirdPersonAnimInstance::GetMa
     {
         TArray<FSoundBySurfacesType*> lAllRows;
 
-        SoundTable->GetAllRows<FSoundBySurfacesType>("UPersonAnimInstance::GetMapForSound", lAllRows);
+        SoundTable->GetAllRows<FSoundBySurfacesType>(__FUNCTION__, lAllRows);
 
         if (lAllRows.Num())
         {
             TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> lResult;
+            lResult.Reserve(lAllRows.Num());
 
             for (const FSoundBySurfacesType* lRow : lAllRows)
             {
