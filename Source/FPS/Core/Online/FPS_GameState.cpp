@@ -295,7 +295,7 @@ void AFPS_GameState::CheckPlayersReadiness()
 
 void AFPS_GameState::OnRep_ElapsedTime()
 {
-    FPS_ColorMessage(FColor::Green, "%d", ElapsedTime);
+    //FPS_ColorMessage(FColor::Green, "%d", ElapsedTime);
 
     // Проверка на значение, знаменующее останов таймера
     if (ElapsedTime == MIN_int32)
@@ -323,7 +323,7 @@ void AFPS_GameState::DefaultTimer()
 
     OnElapsedTimeChange.Broadcast(ElapsedTime);
 
-    FPS_ColorMessage(FColor::Cyan, "%d", ElapsedTime);
+    //FPS_ColorMessage(FColor::Cyan, "%d", ElapsedTime);
 
     StartDefaultTimer();
 }

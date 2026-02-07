@@ -27,6 +27,9 @@ namespace FPS_GameplayTags
 
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayState_OnDestroyed, "GameplayState.OnDestroyed",
         "Gameplay State: On Destroyed");
+
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayState_WithoutArmor, "GameplayState.WithoutArmor",
+        "Gameplay State: Without Armor");
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------

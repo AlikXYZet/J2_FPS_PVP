@@ -148,7 +148,7 @@ void AFPS_GameMode::Logout(AController* Exiting)
 void AFPS_GameMode::HandleMatchIsWaitingToStart()
 {
     Super::HandleMatchIsWaitingToStart();
-    FPS_ColorMessage(FColor::Orange, "");
+    //FPS_ColorMessage(FColor::Orange, "");
 }
 
 void AFPS_GameMode::HandleMatchHasStarted()
@@ -156,25 +156,25 @@ void AFPS_GameMode::HandleMatchHasStarted()
     InitDestructionAccounting();
 
     Super::HandleMatchHasStarted();
-    FPS_ColorMessage(FColor::Orange, "");
+    //FPS_ColorMessage(FColor::Orange, "");
 }
 
 void AFPS_GameMode::HandleMatchHasEnded()
 {
     Super::HandleMatchHasEnded();
-    FPS_ColorMessage(FColor::Orange, "");
+    //FPS_ColorMessage(FColor::Orange, "");
 }
 
 void AFPS_GameMode::HandleLeavingMap()
 {
     Super::HandleLeavingMap();
-    FPS_ColorMessage(FColor::Orange, "");
+    //FPS_ColorMessage(FColor::Orange, "");
 }
 
 void AFPS_GameMode::HandleMatchAborted()
 {
     Super::HandleMatchAborted();
-    FPS_ColorMessage(FColor::Orange, "");
+    //FPS_ColorMessage(FColor::Orange, "");
 }
 
 //APawn* AFPS_GameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)

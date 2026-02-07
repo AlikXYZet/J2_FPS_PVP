@@ -28,7 +28,12 @@ void UFPS_AbilitySystemComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    InitStartingData();
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_InitStartingData,
+        this,
+        &UFPS_AbilitySystemComponent::InitStartingData,
+        0.1f,
+        false);
 }
 
 void UFPS_AbilitySystemComponent::OnComponentCreated()

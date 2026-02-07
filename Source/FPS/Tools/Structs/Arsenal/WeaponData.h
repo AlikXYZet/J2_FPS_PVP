@@ -99,7 +99,7 @@ struct FWeaponData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Dropping: Projectile",
         meta = (BlueprintBaseOnly = ""))
-    TSubclassOf<UGameplayEffect> DamageEffect;
+    TArray<TSubclassOf<UGameplayEffect>> DamageEffects;
 
     // Тип используемого Снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,

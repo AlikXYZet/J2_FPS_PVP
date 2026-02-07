@@ -300,7 +300,7 @@ void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVe
     {
         if (GetPlayerOwner()->HasAuthority())
         {
-            if (GetCurrentWeaponData()->DamageEffect)
+            if (GetCurrentWeaponData()->DamageEffects.Num())
             {
                 lProjectile->OnActorHit.AddDynamic(this, &UWeaponNetworkController::OnProjectileHitForServer);
             }
@@ -326,7 +326,7 @@ void UWeaponNetworkController::TraceProjectile(const FVector& StartLocation, con
 
 void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVector& StartLocation, const FVector& EndLocation)
 {
-    if (GetCurrentWeaponData()->DamageEffect)
+    if (GetCurrentWeaponData()->DamageEffects.Num())
     {
         TArray<FHitResult> lHitResult;
 
@@ -336,7 +336,7 @@ void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVect
             EndLocation,
             ObjectTypesForHitscan,
             false,
-            TArray<AActor*>{GetPlayerOwner()},
+            TArray<AActor*>{GetOwner()},
             EDrawDebugTrace::None,
             lHitResult,
             true);
@@ -391,11 +391,12 @@ void UWeaponNetworkController::ProjectileDamage(const FHitResult& Hit)
         IAbilitySystemInterface* TargetInterface = Cast<IAbilitySystemInterface>(Hit.Actor);
         if (TargetInterface)
         {
-            GetPlayerOwner()->AbilitySystemComp->ApplyGameplayEffectToTarget(
-                GetCurrentWeaponData()->DamageEffect.GetDefaultObject(),
-                TargetInterface->GetAbilitySystemComponent(),
-                0,
-                FGameplayEffectContextHandle());
+            for (auto& Effect : GetCurrentWeaponData()->DamageEffects)
+            {
+                GetPlayerOwner()->AbilitySystemComp->ApplyGameplayEffectToTarget(
+                    Effect.GetDefaultObject(),
+                    TargetInterface->GetAbilitySystemComponent());
+            }
         }
     }
 }

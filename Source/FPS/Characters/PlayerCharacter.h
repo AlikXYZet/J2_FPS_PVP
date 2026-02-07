@@ -320,6 +320,12 @@ public:
         Category = "Gameplay Ability System|Events",
         meta = (DisplayName = "On Zero Health"))
     void Event_OnZeroHealth();
+
+    /** Событие BP: При Нулевой Броне */
+    UFUNCTION(BlueprintImplementableEvent,
+        Category = "Gameplay Ability System|Events",
+        meta = (DisplayName = "On Zero Armor"))
+    void Event_OnZeroArmor();
     //-------------------------------------------
 
 

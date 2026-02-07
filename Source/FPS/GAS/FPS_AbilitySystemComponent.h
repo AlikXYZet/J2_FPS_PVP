@@ -161,6 +161,11 @@ private:
 
     /* ---   GAS   --- */
 
+    // Таймер для InitStartingData()
+    FTimerHandle Timer_InitStartingData;
+
+    //
+
     /** Инициализация стартовых Данных (атрибутов, способностей, эффектов) */
     void InitStartingData();
 
@@ -207,3 +212,11 @@ private:
     void CheckTagsInStartingEffectsWithParameters();
     //-------------------------------------------
 };
+
+
+
+/* ---   undef   --- */
+
+//#undef GAMEPLAYATTRIBUTE_VALUE_HandleChanged  // Используется вне данного файла
+//#undef GAMEPLAYATTRIBUTE_VALUE_Delegating     // Используется вне данного файла
+//--------------------------------------------------------------------------------------

@@ -98,6 +98,7 @@ void AAttributedActor::InitAbilitySystemComp()
             GAMEPLAYATTRIBUTE_VALUE_Delegating_AAttributedActor(MaxArmor);
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &AAttributedActor::Event_OnZeroHealth);
+            AttributeSet->OnZeroArmor.AddDynamic(this, &AAttributedActor::Event_OnZeroArmor);
         }
         else
         {

@@ -115,6 +115,12 @@ void AFPS_PlayerController::Server_SetMatchReadiness_Implementation(bool bReadin
 void AFPS_PlayerController::Client_ChangedSelectedRole_Implementation(bool bIsPlayer) const
 {
     OnSelectedRoleChange.Broadcast(bIsPlayer);
+
+    // Если роль сменилась на "Наблюдатель", то уведомить о смене готовности игрока как "false"
+    if (!bIsPlayer)
+    {
+        OnPlayerReadinessChange.Broadcast(false);
+    }
 }
 
 void AFPS_PlayerController::Client_ChangedMatchReadiness_Implementation(bool bReadiness) const

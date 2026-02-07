@@ -30,8 +30,11 @@
 
 /* ---   Delegates   --- */
 
-// Делегат: Завершение вращения
+// Делегат: При Нулевом Здоровье
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroHealth);
+
+// Делегат: При Нулевой Броне
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroArmor);
 // ----------------------------------------------------------------------------------------------------
 
 
@@ -45,9 +48,13 @@ public:
 
     /* ---   Delegates   --- */
 
-    /* Делегат: Завершение вращения */
+    /* Делегат: При Нулевом Здоровье */
     UPROPERTY(BlueprintAssignable)
     FOnZeroHealth OnZeroHealth;
+
+    /* Делегат: При Нулевой Броне */
+    UPROPERTY(BlueprintAssignable)
+    FOnZeroArmor OnZeroArmor;
     //-------------------------------------------
 
 
@@ -103,13 +110,13 @@ public:
     // Показатель Брони
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Armor,
         Category = "Attributes")
-    FGameplayAttributeData Armor = 0.f;
+    FGameplayAttributeData Armor = 100.f;
     ATTRIBUTE_ACCESSORS(UFPS_AttributeSet, Armor);
 
     // Показатель максимальной Брони
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxArmor,
         Category = "Attributes")
-    FGameplayAttributeData MaxArmor = 0.f;
+    FGameplayAttributeData MaxArmor = 100.f;
     ATTRIBUTE_ACCESSORS(UFPS_AttributeSet, MaxArmor);
     //-------------------------------------------
 
@@ -140,3 +147,10 @@ protected:
 
 private:
 };
+
+
+
+/* ---   undef   --- */
+
+#undef ATTRIBUTE_ACCESSORS
+//--------------------------------------------------------------------------------------

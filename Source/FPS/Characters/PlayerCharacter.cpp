@@ -189,7 +189,6 @@ FORCEINLINE void APlayerCharacter::InitForLocally()
     DisableInput(GetController<APlayerController>());
 
     GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &APlayerCharacter::ControlInputsBasedOnMatchStatus);
-    FPS_ColorMessage(FColor::Orange, "*OnMatchStateChange = %lld", &GetFPSGameState()->OnMatchStateChange);
 
     Event_OnLocalControllerInitialization();
 }
@@ -358,7 +357,6 @@ void APlayerCharacter::StopSprint()
 
 void APlayerCharacter::ControlInputsBasedOnMatchStatus(EMatchState NewMatchState)
 {
-    FPS_ColorMessage(FColor::Orange, "NewMatchState = %d", NewMatchState);
     switch (NewMatchState)
     {
         //case EMatchState::WaitingToStart:
@@ -428,6 +426,7 @@ FORCEINLINE void APlayerCharacter::InitAbilitySystemComp()
             GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(MaxArmor);
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::Event_OnZeroHealth);
+            AttributeSet->OnZeroArmor.AddDynamic(this, &APlayerCharacter::Event_OnZeroArmor);
         }
         else
         {

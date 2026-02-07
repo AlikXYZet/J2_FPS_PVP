@@ -535,7 +535,6 @@ private:
     FORCEINLINE void SetCurrentMatchState(EMatchState State)
     {
         CurrentMatchState = State;
-        FPS_ColorMessage(FColor::Orange, "GetCurrentMatchState() == %d", GetCurrentMatchState());
         OnMatchStateChange.Broadcast(CurrentMatchState);
     };
 

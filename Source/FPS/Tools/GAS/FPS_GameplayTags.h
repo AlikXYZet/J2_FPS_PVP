@@ -38,6 +38,16 @@ namespace FPS_GameplayTags
 
     // Геймплейное состояние: Уничтожен
     FPS_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayState_OnDestroyed);
+
+    // Геймплейное состояние: Без Брони (защиты)
+    FPS_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayState_WithoutArmor);
     //-------------------------------------------
 }
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   undef   --- */
+
+//#undef UE_DEFINE_GAMEPLAY_TAG_COMMENT // Используется вне данного файла
 //--------------------------------------------------------------------------------------

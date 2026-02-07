@@ -16,6 +16,14 @@
 
 
 
+/* ---   Macros   --- */
+
+// Смещение значений Атрибутов, ниже которого Атрибут воспринимается как с Нулевым значением
+#define ZERO_VALUE_OFFSET 0.5f
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Net   --- */
 
 void UFPS_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -42,7 +50,7 @@ bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData&
     if (Data.EvaluatedData.Attribute == GetHealthAttribute())
     {
         // Отслеживание со стороны сервера
-        if (GetHealth() > 0.f
+        if (GetHealth() >= ZERO_VALUE_OFFSET
             && GetHealth() <= -Data.EvaluatedData.Magnitude)
         {
             GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
@@ -54,6 +62,24 @@ bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData&
             {
                 GetFPSGameMode()->DestructionRegistration(Data.Target, Data.EffectSpec);
             }
+        }
+    }
+    else if (Data.EvaluatedData.Attribute == GetArmorAttribute())
+    {
+        // Отслеживание со стороны сервера
+        if (GetArmor() >= ZERO_VALUE_OFFSET
+            && GetArmor() <= -Data.EvaluatedData.Magnitude)
+        {
+            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_WithoutArmor);
+
+            OnZeroArmor.Broadcast();
+        }
+        else if (GetArmor() < ZERO_VALUE_OFFSET
+            && Data.EvaluatedData.Magnitude >= ZERO_VALUE_OFFSET)
+        {
+            GetOwningAbilitySystemComponent()->RemoveLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_WithoutArmor);
         }
     }
 
@@ -75,10 +101,22 @@ void UFPS_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
     if (Attribute == GetHealthAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+
+        if (NewValue < ZERO_VALUE_OFFSET)
+        {
+            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_OnDestroyed);
+        }
     }
     else if (Attribute == GetArmorAttribute())
     {
         NewValue = FMath::Clamp(NewValue, 0.f, GetMaxArmor());
+
+        if (NewValue < ZERO_VALUE_OFFSET)
+        {
+            GetOwningAbilitySystemComponent()->AddLooseGameplayTag(
+                FPS_GameplayTags::GameplayState_WithoutArmor);
+        }
     }
 
     Super::PreAttributeBaseChange(Attribute, NewValue);
@@ -92,8 +130,8 @@ void UFPS_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
 void UFPS_AttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
     // Отслеживание со стороны клиента
-    if (Health.GetBaseValue() < 0.5f
-        && OldHealth.GetBaseValue() >= 0.5f)
+    if (Health.GetBaseValue() < ZERO_VALUE_OFFSET
+        && OldHealth.GetBaseValue() >= ZERO_VALUE_OFFSET)
     {
         OnZeroHealth.Broadcast();
     }
@@ -108,6 +146,13 @@ void UFPS_AttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHeal
 
 void UFPS_AttributeSet::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 {
+    // Отслеживание со стороны клиента
+    if (Armor.GetBaseValue() < ZERO_VALUE_OFFSET
+        && OldArmor.GetBaseValue() >= ZERO_VALUE_OFFSET)
+    {
+        OnZeroArmor.Broadcast();
+    }
+
     GAMEPLAYATTRIBUTE_REPNOTIFY(UFPS_AttributeSet, Armor, OldArmor);
 }
 
