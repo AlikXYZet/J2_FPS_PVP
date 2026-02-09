@@ -9,6 +9,7 @@ public class FPS : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicDependencyModuleNames.AddRange(new string[] {
+
             // Base:
             "Core",
             "CoreUObject",
@@ -30,6 +31,9 @@ public class FPS : ModuleRules
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
+
+            // Scripting
+            "EditorScriptingUtilitiesExpansion",
         });
     }
 }

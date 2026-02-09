@@ -1,0 +1,31 @@
+{
+    "FileVersion": 3,
+    "Version": 4.27,
+    "VersionName": "0.1",
+    "FriendlyName": "Editor Scripting Utilities Expansion",
+    "Description": "Expansion of functionality for the plugin 'Editor Scripting Utilities'",
+    "Category": "Scripting",
+    "CreatedBy": "",
+    "CreatedByURL": "",
+    "DocsURL": "",
+    "MarketplaceURL": "",
+    "SupportURL": "",
+    "CanContainContent": true,
+    "IsBetaVersion": true,
+    "IsExperimentalVersion": false,
+    "Installed": false,
+
+    "Modules": [
+        {
+            "Name": "EditorScriptingUtilitiesExpansion",
+            "Type": "Editor",
+            "LoadingPhase": "PreDefault"
+        }
+    ],
+    "Plugins": [
+        {
+            "Name": "EditorScriptingUtilities",
+            "Enabled": true
+        }
+    ]
+}
