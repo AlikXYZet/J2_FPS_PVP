@@ -23,6 +23,7 @@
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
 #include "FPS/Core/Online/FPS_GameState.h"
+#include "FPS/Core/Online/FPS_PlayerController.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -51,9 +52,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
 
     /* ---   Components   --- */
-
-    // Root Capsule Component
-    GetCapsuleComponent()->SetCollisionProfileName(UCollisionProfile::PhysicsActor_ProfileName);
 
     // Главный Меш образа
     GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -90.f));
@@ -86,7 +84,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
     WeaponControlLocComp = CreateDefaultSubobject<UWeaponLocalController>(TEXT("Weapon Control Local Component"));
     WeaponControlLocComp->SetupAttachment(FPMesh, "WeaponSocket_HandR");
     WeaponControlLocComp->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
-
     //-------------------------------------------
 
 
@@ -188,6 +185,8 @@ FORCEINLINE void APlayerCharacter::InitForLocally()
 
     DisableInput(GetController<APlayerController>());
 
+    GetController<AFPS_PlayerController>()->SetMouseControlToCenter(true);
+
     GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &APlayerCharacter::ControlInputsBasedOnMatchStatus);
 
     Event_OnLocalControllerInitialization();
@@ -206,15 +205,11 @@ FORCEINLINE void APlayerCharacter::InitForNetwork()
 
 /* ---   Net   --- */
 
-bool APlayerCharacter::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
-{
-    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-
-    if (WeaponControlNetComp)
-        WroteSomething |= Channel->ReplicateSubobject(WeaponControlNetComp, *Bunch, *RepFlags);
-
-    return WroteSomething;
-}
+// Излишне
+//bool APlayerCharacter::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
+//{
+//    return Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+//}
 
 void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

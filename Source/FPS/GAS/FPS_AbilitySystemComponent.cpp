@@ -32,7 +32,7 @@ void UFPS_AbilitySystemComponent::BeginPlay()
         Timer_InitStartingData,
         this,
         &UFPS_AbilitySystemComponent::InitStartingData,
-        0.1f,
+        0.5f,
         false);
 }
 

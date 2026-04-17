@@ -7,8 +7,8 @@
 #include "FPS/Tools/GlobalMacros.h"
 
 // UE:
-#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // Net:
 #include "Net/UnrealNetwork.h"
@@ -131,7 +131,7 @@ void UWeaponNetworkController::CreateChildActor()
     {
         FPS_Error_Component("'%s' is NOT 'AWeaponFrame' (Check `Child Actor`)",
             GetChildActor()
-            ? *GetChildActor()->GetFName().ToString()
+            ? *GetChildActor()->GetName()
             : *FString("None"));
     }
 }
@@ -468,10 +468,10 @@ void UWeaponNetworkController::PostEditChangeProperty(FPropertyChangedEvent& Pro
     Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
-void UWeaponNetworkController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeChainProperty(PropertyChangedEvent);
-}
+//void UWeaponNetworkController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+//{
+//    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+//}
 //--------------------------------------------------------------------------------------
 
 

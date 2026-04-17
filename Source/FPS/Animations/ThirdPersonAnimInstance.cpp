@@ -3,6 +3,9 @@
 // Base:
 #include "ThirdPersonAnimInstance.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -52,23 +55,26 @@ void UThirdPersonAnimInstance::PlaySurfaceSound(const TMap<TEnumAsByte<EPhysical
             ETraceTypeQuery::TraceTypeQuery1,
             false,
             TArray<AActor*>{PlayerOwner},
-            EDrawDebugTrace::Type::None,
+            EDrawDebugTrace::None,
             lHitResult,
             true))
         {
             // Поиск Звука из TMap
-            USoundBase* lSound = *iSoundsMap.Find(UGameplayStatics::GetSurfaceType(lHitResult));
-
-            if (!lSound)
+            USoundBase* const* lpSound = iSoundsMap.Find(UGameplayStatics::GetSurfaceType(lHitResult));
+            if (!lpSound)
             {
-                // Поиск "резервного" Звука из TMap
-                lSound = *iSoundsMap.Find(EPhysicalSurface::SurfaceType_Default);
+                // Повторный поиск, но со значением по умолчанию
+                lpSound = iSoundsMap.Find(EPhysicalSurface::SurfaceType_Default);
             }
 
-            if (lSound)
+            if (lpSound)
             {
-                // Воспроизвести звук
-                UGameplayStatics::PlaySoundAtLocation(GetWorld(), lSound, lHitResult.Location);
+                USoundBase* lSound = *lpSound;
+                if (lSound)
+                {
+                    // Воспроизвести звук
+                    UGameplayStatics::PlaySoundAtLocation(GetWorld(), lSound, lHitResult.Location);
+                }
             }
         }
     }
@@ -101,7 +107,9 @@ TMap<TEnumAsByte<EPhysicalSurface>, USoundBase*> UThirdPersonAnimInstance::GetMa
 
 void UThirdPersonAnimInstance::InitSounds()
 {
+    MapOfSurfaceSoundsWhenStep.Empty();
     MapOfSurfaceSoundsWhenStep = GetMapForSound(SurfaceSoundsWhenStep);
+    MapOfSurfaceSoundsWhenLanding.Empty();
     MapOfSurfaceSoundsWhenLanding = GetMapForSound(SurfaceSoundsWhenLanding);
 }
 //--------------------------------------------------------------------------------------

@@ -13,6 +13,10 @@
 
 // UE:
 #include "GameFramework/InputSettings.h"
+
+// Interaction:
+#include "FPS/Characters/PlayerCharacter.h"
+#include "FPS/Core/Online/FPS_PlayerController.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -138,7 +142,7 @@ bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
 #if WITH_EDITOR
         else
         {
-            FPS_LOG(Warning, "%s is Unsuitable Function:",
+            FPS_LOG_Component(Warning, "%s is Unsuitable Function:",
                 *NameFunction.ToString());
 
             if (CheckError & 0b0001)
@@ -153,7 +157,7 @@ bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
     }
     else
     {
-        FPS_LOG(Warning, "%s() function NOT found:",
+        FPS_LOG_Component(Warning, "%s() function NOT found:",
             *NameFunction.ToString());
 #endif // WITH_EDITOR
     }
@@ -165,16 +169,29 @@ void UInteractiveComponent::InitUsedComponents()
 {
     AActor* lOwner = GetOwner();
 
-    if (UsedComponents.Num() > 1
-        || (UsedComponents.Num() == 1
-            && UsedComponents[0].Component)
-        && lOwner)
+    if (lOwner
+        && UsedComponents.IsValidIndex(0)
+        && UsedComponents[0].ComponentName.IsValid())
     {
-        for (FComponentRendering& Data : UsedComponents)
+        TArray<UPrimitiveComponent*> lPComponents;
+        lOwner->GetComponents<UPrimitiveComponent>(lPComponents);
+
+        if (lPComponents.Num())
         {
-            if (Data.Component)
+            for (FComponentRendering& Data : UsedComponents)
             {
-                Data.Component->SetCustomDepthStencilValue(Data.DepthStencilValue);
+                if (Data.ComponentName.IsValid())
+                {
+                    // Поиск компонента по его Имени
+                    if (UPrimitiveComponent** lpComp = lPComponents.FindByPredicate([Data](const UPrimitiveComponent* Item)
+                        { return Item && Item->GetFName() == Data.ComponentName; }))
+                    {
+                        // Заполнение недостающего указателя на выделяемый компонент
+                        Data.Component = *lpComp;
+                        // Включение контура подсветки для выделяемого компонента
+                        Data.Component->SetCustomDepthStencilValue(Data.DepthStencilValue);
+                    }
+                }
             }
         }
 
@@ -210,38 +227,31 @@ uint8 UInteractiveComponent::CheckFunction(UObject* Owner, UFunction* Function)
 
 void UInteractiveComponent::InitActionGroup()
 {
-    UInputSettings* InputSettings = UInputSettings::GetInputSettings();
-    TArray<FInputActionKeyMapping> lArray;
-
-    InputSettings->GetActionMappingByName(SelectedActionGroups, lArray);
-    ActionKeys.Empty();
-
-    for (FInputActionKeyMapping& Data : lArray)
-    {
-        ActionKeys.Add(Data.Key);
-    }
-
-    if (lArray.Num())
-    {
-        GetOwner()->OnClicked.AddDynamic(this, &UInteractiveComponent::OwnerWasClicked);
-    }
+    GetOwner()->OnClicked.AddDynamic(this, &UInteractiveComponent::OwnerWasClicked);
 }
 
 void UInteractiveComponent::OwnerWasClicked(AActor* TouchedActor, FKey ButtonReleased)
 {
-    if (OnOwnerWasClicked.IsBound()
-        && ActionKeys.Find(ButtonReleased))
+    if (ActionKeys.Find(ButtonReleased))
     {
-        for (FComponentRendering& Data : UsedComponents)
+        OnOwnerWasClicked.Broadcast(ButtonReleased);
+
+        if (AFPS_PlayerController* lPC = Cast<AFPS_PlayerController>(GetWorld()->GetFirstPlayerController()))
         {
-            if (Data.Component
-                && Data.Component->bRenderCustomDepth)
-            {
-                OnOwnerWasClicked.Broadcast(ButtonReleased);
-                break;
-            }
+            lPC->ToInteract(this);
         }
     }
+}
+
+void UInteractiveComponent::ReactionActionsOnServer(ACharacter* Instigator)
+{
+    OnServerReactionToActions.Broadcast(Instigator);
+    Multicast_OwnerWasClicked(Instigator);
+}
+
+void UInteractiveComponent::Multicast_OwnerWasClicked_Implementation(ACharacter* Instigator)
+{
+    OnClientReactionToActions.Broadcast(Instigator);
 }
 //--------------------------------------------------------------------------------------
 
@@ -260,20 +270,14 @@ void UInteractiveComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
     if (PropertyChangedEvent.Property
         && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UInteractiveComponent, SelectedActionGroups))
     {
-        ReinitActionGroup();
+        ReInitActionGroup();
     }
 };
 
-void UInteractiveComponent::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeChainProperty(PropertyChangedEvent);
-
-    if (PropertyChangedEvent.Property
-        && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UInteractiveComponent, SelectedActionGroups))
-    {
-        ReinitActionGroup();
-    }
-}
+//void UInteractiveComponent::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+//{
+//    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+//}
 //--------------------------------------------------------------------------------------
 
 
@@ -284,14 +288,15 @@ TArray<FName> UInteractiveComponent::GetNamesOfHighlightedComponents()
 {
     if (AActor* lOwner = GetOwner())
     {
-        TArray<UActorComponent*> lPC;
-        lOwner->GetComponents(UPrimitiveComponent::StaticClass(), lPC);
+        TArray<UPrimitiveComponent*> lPComp;
+        lOwner->GetComponents<UPrimitiveComponent>(lPComp);
 
-        if (lPC.Num())
+        if (lPComp.Num())
         {
             TArray<FName> lResult;
+            lResult.Reserve(lPComp.Num());
 
-            for (UActorComponent* lComp : lPC)
+            for (UActorComponent* lComp : lPComp)
             {
                 lResult.Add(lComp->GetFName());
             }
@@ -343,7 +348,7 @@ TArray<FName> UInteractiveComponent::GetActionGroupsNames()
     return ActionNames;
 }
 
-void UInteractiveComponent::ReinitActionGroup()
+void UInteractiveComponent::ReInitActionGroup()
 {
     UInputSettings* InputSettings = UInputSettings::GetInputSettings();
     TArray<FInputActionKeyMapping> lArray;

@@ -32,33 +32,34 @@ class FPS_API IInteractiveInterface
 
 public:
 
-    /* ---   Base   --- */
+    /* ---   Interactive : Base   --- */
 
-    // Базовая инициализация для работоспособности
+    /** Инициализация компонента Интерактивности */
     virtual void InitInteractiveComponent() = 0;
-    /*{
+    //{
         // Пример:
-        InteractiveComponent->UsedComponents.AddUnique({ BlockMesh, 0 });
-        InteractiveComponent->AddNamePredicate("CheckHighlighting");
-        InteractiveComponent->OnOwnerWasClicked.AddDynamic(this, &IInteractiveInterface::ProcessInteractiveAction);
-    };*/
+        //InteractiveComponent->UsedComponents.AddUnique({ BlockMesh, 0 });
+        //InteractiveComponent->AddNamePredicate("CheckHighlighting");
+        //InteractiveComponent->OnOwnerWasClickedLocally.AddDynamic(this, &IInteractiveInterface::ProcessInteractiveAction);
+    //};
     //-------------------------------------------
 
 
 
-    /* ---   Highlighting   --- */
+    /* ---   Interactive : Highlighting   --- */
 
-    /* Предикат условия выделения */
+    /** Предикат условия выделения */
     UFUNCTION()
-    virtual bool CheckHighlighting() const = 0;
+    virtual bool CheckHighlighting() const { return true; };
     //-------------------------------------------
 
 
 
-    /* ---   Actions   --- */
+    /* ---   Interactive : Actions   --- */
 
-    // Обработка интерактивного действия (клик по Актеру)
+    /** Обработка интерактивного действия (клик по Актеру) */
     UFUNCTION()
-    virtual void ProcessInteractiveAction(const FKey& ButtonReleased) = 0;
+    virtual void ProcessInteractiveAction(const FKey& ButtonReleased) {};
     //-------------------------------------------
 };
+

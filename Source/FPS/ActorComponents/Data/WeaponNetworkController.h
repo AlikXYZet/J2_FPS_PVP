@@ -42,7 +42,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStartChangingWeapon, const FWeapo
 
 // Делегат: При Смене Оружия
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChangingWeapon, const FWeaponData&, CurrentNewWeaponData);
-// ----------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 
 
 
@@ -412,12 +412,11 @@ public:
     /* ---   Base: Debugs   --- */
 
     /** Вызывается, когда какое-либо свойство этого объекта было изменено
-    * @note Используется для проверки изменённых переменных
-    */
+    @note   Используется для проверки изменённых переменных */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
-    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
-    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
+    /** Альтернативная версия PostEditChange, вызываемая при изменении свойств внутри структур */
+    //virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
     //-------------------------------------------
 
 

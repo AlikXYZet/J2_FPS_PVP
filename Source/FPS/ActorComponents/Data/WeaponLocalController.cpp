@@ -20,7 +20,6 @@
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Combat/FirstPersonWeaponFrame.h"
 #include "FPS/Combat/Projectile.h"
-#include "FPS/Combat/WeaponFrame.h"
 //--------------------------------------------------------------------------------------
 
 
@@ -75,7 +74,7 @@ void UWeaponLocalController::CreateChildActor()
     {
         FPS_Error_Component("'%s' is NOT 'AFirstPersonWeaponFrame' (Check `Child Actor`)",
             GetChildActor()
-            ? *GetChildActor()->GetFName().ToString()
+            ? *GetChildActor()->GetName()
             : *FString("None"));
     }
 }
@@ -215,6 +214,28 @@ const FWeaponData& UWeaponLocalController::BP_GetCurrentWeaponData() const
 const FWeaponSlotData& UWeaponLocalController::BP_GetCurrentSlotData() const
 {
     return *GetCurrentSlotData();
+}
+
+bool UWeaponLocalController::AddCartridgesToReserve(const FName& WeaponType, const int32 Number)
+{
+    int32 lIndex = WeaponSlots.Find(WeaponType);
+
+    if (lIndex != INDEX_NONE)
+    {
+        // Найденный индекс в следующих массивах валиден всегда
+        FWeaponSlotData& lWeaponSlot = WeaponSlots[lIndex];
+        FWeaponData* lWeaponDataSlot = GetWeaponControlNetComp()->WeaponDataSlots[lIndex];
+
+        if (lWeaponDataSlot->MaxStoredCartridges > lWeaponSlot.NumAllCartridge)
+        {
+            lWeaponSlot.NumAllCartridge = FMath::Min(
+                lWeaponDataSlot->MaxStoredCartridges,
+                lWeaponSlot.NumAllCartridge + Number);
+
+            return true;
+        }
+    }
+    return false;
 }
 
 void UWeaponLocalController::InitData()
@@ -730,10 +751,10 @@ void UWeaponLocalController::PostEditChangeProperty(FPropertyChangedEvent& Prope
     Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
-void UWeaponLocalController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeChainProperty(PropertyChangedEvent);
-}
+//void UWeaponLocalController::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent)
+//{
+//    Super::PostEditChangeChainProperty(PropertyChangedEvent);
+//}
 //--------------------------------------------------------------------------------------
 
 

@@ -153,7 +153,7 @@ public:
     /* ---   Net   --- */
 
     /** Метод, позволяющий субъекту реплицировать подобъекты в своем Актор-канале */
-    virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+    //virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
     /** Используется для регистрации реплицируемых Переменных и Компонентов */
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -256,8 +256,7 @@ public:
 
     /** Задать значение скорости */
     UFUNCTION(BlueprintCallable,
-        Category = "Player Character|Movement Speed",
-        meta = (AutoCreateRefTerm = "Mode"))
+        Category = "Player Character|Movement Speed")
     void SetSpeedControl(ESpeedVariations Mode) override;
     //-------------------------------------------
 

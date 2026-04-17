@@ -187,16 +187,13 @@ void AFPS_GameMode::HandleMatchAborted()
 
 /* --- Destruction Accounting --- */
 
-void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& TargetASC, const FGameplayEffectSpec& iSpec)
+void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& TargetASC)
 {
     if (IsMatchInProgress())
     {
         TSet<APlayerController*> lPlayerWreckers;
 
-        // Получение Игроков по Эффекту, что вызвал уничтожение
-        GetAllInstigatorPlayers(iSpec, lPlayerWreckers);
-
-        // Получить Игроков, что вызвали другие текущие активные Эффекты
+        // Получить Игроков, что вызвали текущие активные Эффекты
         if (int32 lNum = TargetASC.GetNumActiveGameplayEffects())
         {
             TArray<FGameplayEffectSpec> OutSpecCopies;

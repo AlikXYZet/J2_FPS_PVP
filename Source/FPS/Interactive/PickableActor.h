@@ -9,7 +9,7 @@
 #include "GameFramework/Actor.h"
 
 // Interface:
-//#include "FPS/Tools/Interfaces/Properties/InteractiveInterface.h"
+#include "FPS/Tools/Interfaces/Properties/InteractiveInterface.h"
 
 // Generated:
 #include "PickableActor.generated.h"
@@ -26,7 +26,7 @@ class UInteractiveComponent;
 
 
 UCLASS()
-class FPS_API APickableActor : public AActor//, public IInteractiveInterface
+class FPS_API APickableActor : public AActor, public IInteractiveInterface
 {
     GENERATED_BODY()
 
@@ -42,17 +42,22 @@ public:
 
     /* ---   Components   --- */
 
+    /** Меш визуализации блока */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = Components,
+        meta = (AllowPrivateAccess = "true"))
+    UStaticMeshComponent* StaticMesh = nullptr;
     //-------------------------------------------
 
 
 
     /* ---   Non-scene Components   --- */
 
-    // Компонент Подбора данного Актора
+    /** Компонент Подбора данного Актора */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         Category = Components,
         meta = (AllowPrivateAccess = "true"))
-    UInteractiveComponent* InteractiveComponent;
+    UInteractiveComponent* InteractiveComponent = nullptr;
     //-------------------------------------------
 
 
@@ -68,4 +73,10 @@ protected:
 
 
 public:
+
+    /* ---   Interaction   --- */
+
+    /** Инициализация компонента Интерактивности */
+    void InitInteractiveComponent() override;
+    //-------------------------------------------
 };

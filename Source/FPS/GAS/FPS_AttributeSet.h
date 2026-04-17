@@ -35,7 +35,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroHealth);
 
 // Делегат: При Нулевой Броне
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnZeroArmor);
-// ----------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 
 
 
@@ -78,16 +78,18 @@ public:
 
     /* ---   Attribute Set   --- */
 
-    /** Вызывается непосредственно перед выполнения какого-либо GameplayEffect */
+    /** Вызывается непосредственно перед исполнением какого-либо 'GameplayEffect' */
     virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data);
 
-    /** Вызывается непосредственно после выполнения какого-либо GameplayEffect, изменяющего базовое значение атрибута */
+    /** Вызывается непосредственно после выполнения какого-либо 'GameplayEffect', изменяющего базовое значение атрибута */
     virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 
-    /** Вызывается непосредственно перед изменением значения "Current Value" какого-либо атрибута */
+    /** Вызывается непосредственно перед изменением значения "Current Value" какого-либо атрибута.
+    Например: Получение урона */
     virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 
-    /** Вызывается непосредственно перед изменением значения "Base Value" какого-либо атрибута */
+    /** Вызывается непосредственно перед изменением значения "Base Value" какого-либо атрибута.
+    Например: Установка первоначальных стартовых значений */
     virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
     //-------------------------------------------
 

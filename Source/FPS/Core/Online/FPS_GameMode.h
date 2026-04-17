@@ -168,7 +168,7 @@ public:
     /** Регистрация уничтожения Актора, имеющего Атрибут количества жизней
     @param  TargetASC - Компонент 'AbilitySystem' цели, что был уничтожен
     @param  Spec - Спецификация игрового Эффекта */
-    void DestructionRegistration(const UAbilitySystemComponent& TargetASC, const FGameplayEffectSpec& Spec);
+    void DestructionRegistration(const UAbilitySystemComponent& TargetASC);
     //-------------------------------------------
 
 

@@ -16,6 +16,9 @@
 
 /* ---   Delegates   --- */
 
+// Делегат: При Нажатии на Компонент (при нажатии клавиш из списка 'Click Event Keys' на какой-нибудь компонент)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnClickingOnComponent, const UPrimitiveComponent*, ClickedPrimitive, FKey, Key);
+
 // Делегат: При изменении выбранной Роли
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectedRoleChange, bool, bIsPlayer);
 
@@ -29,6 +32,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerReadinessChange, bool, bRea
 
 // Interaction:
 class AFPS_GameState;
+class UInteractiveComponent;
 //--------------------------------------------------------------------------------------
 
 
@@ -41,6 +45,10 @@ class FPS_API AFPS_PlayerController : public APlayerController
 public:
 
     /* ---   Delegates   --- */
+
+    // Делегат: При Нажатии на Компонент (при нажатии клавиш из списка 'Click Event Keys' на какой-нибудь компонент)
+    UPROPERTY(BlueprintAssignable)
+    FOnClickingOnComponent OnClickingOnComponent;
 
     // Делегат: При изменении выбранной Роли
     UPROPERTY(BlueprintAssignable)
@@ -81,13 +89,48 @@ public:
 
 
 
-    /* ---   Mouse To Center   --- */
+    /* ---   Mouse   --- */
 
-    // Флаг контроля Мыши в центре Экрана
+    /** Вызывается при нажатии клавиши */
+    virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
+
+    /** Включить события мыши */
+    FORCEINLINE void EnableMouseEvents(bool bControl)
+    {
+        // Выключение реакций от наведения мыши данным контроллером
+        bEnableMouseOverEvents = bControl;
+
+        // Выключение реакций от нажатия мыши данным контроллером
+        bEnableClickEvents = bControl;
+    };
+
+    UFUNCTION(BlueprintCallable,
+        Category = "FPS Player Controller|Mouse")
+    void SetMouseControlToCenter(bool Value)
+    {
+        bMouseToCenter = Value;
+    };
+    //-------------------------------------------
+
+
+
+    /* ---   Action   --- */
+
+    // Выбранные группы Действий
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "FPS Player Controller|Mouse To Center",
-        meta = (DisplayName = "Hold Mouse in Center?"))
-    bool bMouseToCenter = true;
+        Category = "FPS Player Controller|Action",
+        meta = (GetOptions = "GetActionNames"))
+    TArray<FName> SelectedActionGroups;
+
+    //
+
+    /** Получить группы клавиш воздействия контроллера */
+    TArray<FName> GetActionsGroup(FKey Key);
+
+    bool ToInteract(UInteractiveComponent* InteractionComponent);
+
+    UFUNCTION(Server, Reliable)
+    void Server_ToInteract(UInteractiveComponent* InteractionComponent);
     //-------------------------------------------
 
 
@@ -166,6 +209,9 @@ private:
     // Текущий центр экрана по оси Y
     int32 SizeCenterY = 0;
 
+    // Флаг контроля Мыши в центре Экрана
+    bool bMouseToCenter = true;
+
     //
 
     /** Установить Мышь в центр экрана */
@@ -192,4 +238,34 @@ private:
     UFUNCTION(Server, Reliable)
     void Server_SetMatchReadiness(bool bReadiness) const;
     //-------------------------------------------
+
+
+
+    /* ===   For EDITOR only   === */
+
+#if WITH_EDITOR
+
+public:
+
+    /* ---   Debugs   --- */
+
+    /** Вызывается, когда свойство этого объекта было изменено извне */
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+    //-------------------------------------------
+
+
+
+private:
+
+    /* ---   Actions   --- */
+
+    /* Предварительная инициализация Клавиш, используемых с прицеливанием (наведение мышью и нажатие клавиши) */
+    void InitActionGroup();
+
+    /* Получить имена всех Функций-Предикатов Актора-Владельца */
+    UFUNCTION()
+    TArray<FName> GetActionNames();
+    //-------------------------------------------
+#endif
+    //===========================================
 };

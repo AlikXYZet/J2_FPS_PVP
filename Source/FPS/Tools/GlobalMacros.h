@@ -93,7 +93,7 @@ FPS_LOG(Error, "lNewSpeed == %s",
 
 FPS_LOG(Warning, "'%s' is NOT 'AFPS_GameState'",
     GetWorld()->GetGameState<AGameStateBase>()
-    ? *GetWorld()->GetGameState<AGameStateBase>()->GetFName().ToString()
+    ? *GetWorld()->GetGameState<AGameStateBase>()->GetName()
     : *FString("None"));
 
 FPS_LOG_Static(Error, "lInputComponent is NOT");

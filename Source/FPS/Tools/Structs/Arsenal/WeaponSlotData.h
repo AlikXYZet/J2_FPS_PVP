@@ -19,6 +19,13 @@ struct FWeaponSlotData
 {
     GENERATED_BODY()
 
+    /* ---   Constructors   --- */
+
+    FWeaponSlotData() {};
+    FWeaponSlotData(const FName& iWeaponType) : WeaponType(iWeaponType) {};
+    //-------------------------------------------
+
+
     /* ---   Slot Data   --- */
 
     // Тип Оружия, занимаемый данный Слот
@@ -41,6 +48,20 @@ struct FWeaponSlotData
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Slot Data")
     bool bIsWeaponLoaded = false;
+    //-------------------------------------------
+
+
+    /* ---   Operators | ==   --- */
+
+    FORCEINLINE bool operator==(const FWeaponSlotData& Second) const
+    {
+        return WeaponType == Second.WeaponType;
+    }
+
+    FORCEINLINE bool operator==(const FName& SecondWeaponType) const
+    {
+        return WeaponType == SecondWeaponType;
+    }
     //-------------------------------------------
 };
 //--------------------------------------------------------------------------------------

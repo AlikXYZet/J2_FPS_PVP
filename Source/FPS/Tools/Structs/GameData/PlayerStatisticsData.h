@@ -30,7 +30,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostAddingItems, const TArray<in
 
 // Делегат: Изменены элементы Массива
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPostChangingArrayData);
-// ----------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 
 
 

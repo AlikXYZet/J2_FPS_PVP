@@ -229,6 +229,12 @@ public:
 
     /** Получить данные текущего Слота */
     FORCEINLINE const FWeaponSlotData* GetCurrentSlotData() const { return CurrentSlot; };
+
+    /** Добавить Количество Патронов в резерв (например, подобраны патроны) */
+    UFUNCTION(BlueprintCallable,
+        Category = "Weapon Control|Data",
+        meta = (ExpandBoolAsExecs = "ReturnValue"))
+    bool AddCartridgesToReserve(const FName& WeaponType, const int32 Number);
     //-------------------------------------------
 
 
@@ -515,8 +521,8 @@ public:
     @note   Используется для проверки изменённых переменных */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
-    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
-    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
+    /** Альтернативная версия PostEditChange, вызываемая при изменении свойств внутри структур */
+    //virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
     //-------------------------------------------
 
 

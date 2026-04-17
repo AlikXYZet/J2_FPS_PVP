@@ -14,11 +14,22 @@
 
 
 
+/* ---   Pre-declaration of classes   --- */
+
+// Interaction:
+class APlayerCharacter;
+//--------------------------------------------------------------------------------------
+
+
+
 /* ---   Delegates   --- */
 
-// Делегат: При срабатывании действия на Актор
+// Делегат: При Локальном срабатывании действия на Актор
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOwnerWasClicked, const FKey&, ButtonReleased);
-// ----------------------------------------------------------------------------------------------------
+
+// Делегат: При реакции Сервера на действия на Актор
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReactionToActions, ACharacter*, Instigator);
+//--------------------------------------------------------------------------------------
 
 
 
@@ -29,11 +40,16 @@ struct FComponentRendering
 {
     GENERATED_BODY()
 
-    // Используемый Компонент
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    UPrimitiveComponent* Component = nullptr;
+    // Имена используемого Компонента
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (GetOptions = "GetNamesOfHighlightedComponents"))
+    FName ComponentName;
 
     // Используемый Компонент
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    UPrimitiveComponent* Component = nullptr;
+
+    // Значение глубины Выделения
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     uint8 DepthStencilValue = 0;
     //-------------------------------------------
@@ -62,9 +78,17 @@ public:
 
     /* ---   Delegates   --- */
 
-    // Делегат: При срабатывании действия на Актор
+    /* Делегат: При Локальном срабатывании действия на Актор */
     UPROPERTY(BlueprintAssignable)
     FOnOwnerWasClicked OnOwnerWasClicked;
+
+    /* Делегат: При реакции Сервера на действия на Актор */
+    UPROPERTY(BlueprintAssignable)
+    FOnReactionToActions OnServerReactionToActions;
+
+    /* Делегат: При реакции Клиента на действия на Актор */
+    UPROPERTY(BlueprintAssignable)
+    FOnReactionToActions OnClientReactionToActions;
     //-------------------------------------------
 
 
@@ -91,19 +115,17 @@ public:
 
     /* ---   Highlighting   --- */
 
-    // Имена используемых Компонентов, которые требуется выделять
-    // @warning  Присваивание значений следует проводить в BeginPlay() до вызова Super::BeginPlay()
-    //           Иначе: Повторно вызывать InitializationUsedComponents()
+    /** Имена используемых Компонентов, которые требуют взаимодействие
+    @warning    Присваивание значений следует проводить в BeginPlay() до вызова Super::BeginPlay()
+                Иначе: Повторно вызывать InitUsedComponents() */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Interactive|Highlighting",
         meta = (TitleProperty = "Component"))
     TArray<FComponentRendering> UsedComponents;
 
     /* Имена Функций-Предикатов, которые используются для критерия выделения
-    *
-    * @warning  Только const/pure функции с возвращаемым bool или uin8 (Byte)
-    *           Все функции через логическое &&
-    */
+    @warning    Только const/pure функции с возвращаемым bool или uin8 (Byte)
+                Все функции через логическое '&&' */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Interactive|Highlighting",
         meta = (GetOptions = "GetNamesOfPredicateFunctions"))
@@ -124,13 +146,19 @@ public:
 
 
 
-    /* ---   Action   --- */
+    /* ---   Actions   --- */
 
     // Выбранные группы Действий
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Interactive|Action",
         meta = (GetOptions = "GetActionGroupsNames"))
     FName SelectedActionGroups;
+
+    //
+
+    /* Событие нажатия на Актора */
+    UFUNCTION()
+    void ReactionActionsOnServer(ACharacter* Instigator);
     //-------------------------------------------
 
 
@@ -138,11 +166,6 @@ public:
 private:
 
     /* ---   Highlighting   --- */
-
-    // Используемые Компоненты, которые требуется выделять
-    TArray<UPrimitiveComponent*> ComponentsUsed;
-
-    //
 
     /* Событие выделения Актора при наведении */
     UFUNCTION()
@@ -175,6 +198,10 @@ private:
     /* Событие нажатия на Актора */
     UFUNCTION()
     void OwnerWasClicked(AActor* TouchedActor, FKey ButtonReleased);
+
+    /* Multicast: Событие нажатия на Актора */
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OwnerWasClicked(ACharacter* Instigator);
     //-------------------------------------------
 
 
@@ -188,12 +215,11 @@ public:
     /* ---   Base: Debugs   --- */
 
     /** Вызывается, когда какое-либо свойство этого объекта было изменено
-    * @note Используется для проверки изменённых переменных
-    */
+    @note   Используется для проверки изменённых переменных */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
-    /** Эта альтернативная версия PostEditChange вызывается при изменении свойств внутри структур */
-    virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
+    /** Альтернативная версия PostEditChange, вызываемая при изменении свойств внутри структур */
+    //virtual void PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedEvent) override;
     //-------------------------------------------
 
 
@@ -220,7 +246,7 @@ private:
     TArray<FName> GetActionGroupsNames();
 
     /* Повторная инициализация используемых Клавиш */
-    void ReinitActionGroup();
+    void ReInitActionGroup();
     //-------------------------------------------
 
 #endif // WITH_EDITOR
