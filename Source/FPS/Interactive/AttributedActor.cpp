@@ -37,9 +37,13 @@ AAttributedActor::AAttributedActor()
 
     /* ---   Components   --- */
 
+    // Корневой компонент
+    RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+
     // Меш визуализации
-    Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FP Camera"));
-    RootComponent = Mesh;
+    StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
+    StaticMesh->SetupAttachment(RootComponent);
+    StaticMesh->SetCollisionProfileName(ProfileName_Destructible);
     //-------------------------------------------
 
 

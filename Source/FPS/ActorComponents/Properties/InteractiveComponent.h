@@ -8,6 +8,10 @@
 // Base:
 #include "Components/ActorComponent.h"
 
+// Structs:
+#include "FPS/Tools/Structs/Network/NetworkInteractionType.h"
+#include "FPS/Tools/Structs/Properties/ComponentRendering.h"
+
 // Generated:
 #include "InteractiveComponent.generated.h"
 //--------------------------------------------------------------------------------------
@@ -18,6 +22,7 @@
 
 // Interaction:
 class APlayerCharacter;
+class IInteractiveInterface;
 //--------------------------------------------------------------------------------------
 
 
@@ -33,43 +38,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReactionToActions, ACharacter*, I
 
 
 
-/* ---   Structs   --- */
-
-USTRUCT(BlueprintType)
-struct FComponentRendering
-{
-    GENERATED_BODY()
-
-    // Имена используемого Компонента
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (GetOptions = "GetNamesOfHighlightedComponents"))
-    FName ComponentName;
-
-    // Используемый Компонент
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    UPrimitiveComponent* Component = nullptr;
-
-    // Значение глубины Выделения
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    uint8 DepthStencilValue = 0;
-    //-------------------------------------------
-
-
-    /* ---   Operators | ==   --- */
-
-    FORCEINLINE bool operator==(const FComponentRendering& Second) const
-    {
-        return Component == Second.Component
-            && DepthStencilValue == Second.DepthStencilValue;
-    }
-    //-------------------------------------------
-};
-//--------------------------------------------------------------------------------------
-
-
-
 // Компонент интерактивности для подсвечивания Актора через изменение трафаретного буфера (Stencil Buffer) рендеринга
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class FPS_API UInteractiveComponent : public UActorComponent
 {
     GENERATED_BODY()
@@ -101,17 +71,18 @@ public:
 
 
 
-protected:
+public:
 
     /* ---   Base   --- */
 
-    // Called when the game starts
+    /** Инициализация компонента до вызова "BeginPlay()" */
+    virtual void InitializeComponent() override;
+
+    /** Called when the game starts */
     virtual void BeginPlay() override;
     //-------------------------------------------
 
 
-
-public:
 
     /* ---   Highlighting   --- */
 
@@ -121,44 +92,35 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Interactive|Highlighting",
         meta = (TitleProperty = "Component"))
-    TArray<FComponentRendering> UsedComponents;
-
-    /* Имена Функций-Предикатов, которые используются для критерия выделения
-    @warning    Только const/pure функции с возвращаемым bool или uin8 (Byte)
-                Все функции через логическое '&&' */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Interactive|Highlighting",
-        meta = (GetOptions = "GetNamesOfPredicateFunctions"))
-    TArray<FName> PredicateFunctionNames;
-
-    //
-
-    /* Добавить Наименование Предиката с проверкой его Типа */
-    UFUNCTION(BlueprintCallable,
-        Category = "Interactive|Highlighting")
-    bool AddNamePredicate(const FName& NameFunction);
-
-    /* Предварительная инициализация используемых Компонентов */
-    UFUNCTION(BlueprintCallable,
-        Category = "Interactive|Highlighting")
-    void InitUsedComponents();
+    TArray<FComponentRendering> HighlightedComponents;
     //-------------------------------------------
 
 
 
     /* ---   Actions   --- */
 
-    // Выбранные группы Действий
+    /** Контейнер с быстрым поиском Клавиши
+    @note   Автоматически заполняется в Редакторе при изменении переменной 'Selected Action Groups' */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Interactive|Action",
-        meta = (GetOptions = "GetActionGroupsNames"))
-    FName SelectedActionGroups;
+        Category = "Interactive|Actions",
+        meta = (DisplayAfter = "SelectedActionGroups"))
+    TSet<FKey> ActionKeys;
+
+    // Тип Сетевого взаимодействия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Interactive|Actions")
+    ENetworkInteractionType NetworkInteractionType = ENetworkInteractionType::ToMulticast;
 
     //
 
     /* Событие нажатия на Актора */
     UFUNCTION()
-    void ReactionActionsOnServer(ACharacter* Instigator);
+    void ReactionInteractionOnServer(ACharacter* Instigator);
+
+    /** Событие нажатия на Актора */
+    UFUNCTION(BlueprintCallable,
+        Category = "Interactive|Actions")
+    void OwnerWasClicked(AActor* TouchedActor, FKey ButtonReleased);
     //-------------------------------------------
 
 
@@ -167,39 +129,31 @@ private:
 
     /* ---   Highlighting   --- */
 
-    /* Событие выделения Актора при наведении */
+    /** Событие выделения Актора при наведении */
     UFUNCTION()
     void CursorWasBeginOverOwner(AActor* TouchedActor);
 
-    /* Событие прекращения выделения Актора при прекращении наведения */
+    /** Событие прекращения выделения Актора при прекращении наведения */
     UFUNCTION()
     void CursorWasEndFromOwner(AActor* TouchedActor);
 
-    /* Проверка функции в данном Акторе
-    @return 0 == OK */
-    uint8 CheckFunction(UObject* Owner, UFunction* Function);
+    /** Предварительная инициализация используемых Компонентов */
+    UFUNCTION()
+    void InitHighlightedComponents();
     //-------------------------------------------
 
 
 
     /* ---   Actions   --- */
 
-    // Контейнер с быстрым поиском Клавиши
-    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly,
-        Category = "Interactive|Action|Check",
-        meta = (AllowPrivateAccess = true))
-    TSet<FKey> ActionKeys;
-
-    //
-
-    /* Предварительная инициализация используемых Клавиш */
+    /** Предварительная инициализация используемых Клавиш */
     void InitActionGroup();
 
-    /* Событие нажатия на Актора */
-    UFUNCTION()
-    void OwnerWasClicked(AActor* TouchedActor, FKey ButtonReleased);
+    /** Client: Событие нажатия на Актора */
+    UFUNCTION(Client, Reliable)
+    void Client_OwnerWasClicked(ACharacter* Instigator);
 
-    /* Multicast: Событие нажатия на Актора */
+    /** Multicast: Событие нажатия на Актора */
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_OwnerWasClicked(ACharacter* Instigator);
     //-------------------------------------------
@@ -208,7 +162,7 @@ private:
 
     /* ===   For EDITOR only   === */
 
-#if WITH_EDITOR
+#if WITH_EDITORONLY_DATA
 
 public:
 
@@ -226,29 +180,24 @@ public:
 
 private:
 
-    /* ---   Highlighting   --- */
-
-    /* Получить имена всех Компонентов, что способны к выделению */
-    UFUNCTION()
-    TArray<FName> GetNamesOfHighlightedComponents();
-
-    /* Получить имена всех Функций-Предикатов Актора-Владельца */
-    UFUNCTION()
-    TArray<FName> GetNamesOfPredicateFunctions();
-    //-------------------------------------------
-
-
-
     /* ---   Actions   --- */
 
+    /** Выбранные группы Действий */
+    UPROPERTY(EditDefaultsOnly,
+        Category = "Interactive|Actions",
+        meta = (GetOptions = "GetActionGroupsNames"))
+    FName SelectedActionGroups;
+
+    //
+
     /* Получить имена всех Функций-Предикатов Актора-Владельца */
     UFUNCTION()
-    TArray<FName> GetActionGroupsNames();
+    TArray<FName> GetActionGroupsNames() const;
 
     /* Повторная инициализация используемых Клавиш */
     void ReInitActionGroup();
     //-------------------------------------------
 
-#endif // WITH_EDITOR
+#endif // WITH_EDITORONLY_DATA
     //===========================================
 };

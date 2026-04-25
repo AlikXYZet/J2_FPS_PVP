@@ -216,6 +216,22 @@ const FWeaponSlotData& UWeaponLocalController::BP_GetCurrentSlotData() const
     return *GetCurrentSlotData();
 }
 
+bool UWeaponLocalController::CanTakeCartridges(const FName& WeaponType) const
+{
+    int32 lIndex = WeaponSlots.Find(WeaponType);
+
+    if (lIndex != INDEX_NONE)
+    {
+        // Найденный индекс в следующих массивах валиден всегда
+        if (GetWeaponControlNetComp()->WeaponDataSlots[lIndex]->MaxStoredCartridges > WeaponSlots[lIndex].NumAllCartridge)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool UWeaponLocalController::AddCartridgesToReserve(const FName& WeaponType, const int32 Number)
 {
     int32 lIndex = WeaponSlots.Find(WeaponType);
@@ -232,9 +248,12 @@ bool UWeaponLocalController::AddCartridgesToReserve(const FName& WeaponType, con
                 lWeaponDataSlot->MaxStoredCartridges,
                 lWeaponSlot.NumAllCartridge + Number);
 
+            GetWeaponControlNetComp()->OnReloadingWeapon.Broadcast();
+
             return true;
         }
     }
+
     return false;
 }
 

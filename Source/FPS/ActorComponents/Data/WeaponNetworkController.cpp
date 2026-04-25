@@ -60,9 +60,9 @@ const FActorSpawnParameters UWeaponNetworkController::SpawnParameters = GetSpawn
 const TArray<TEnumAsByte<EObjectTypeQuery>> UWeaponNetworkController::ObjectTypesForHitscan
 {
     // Соответствие проверено опытным путём:
-    EObjectTypeQuery::ObjectTypeQuery3, // [2]: for ECollisionChannel::ECC_Pawn, [2]
-    EObjectTypeQuery::ObjectTypeQuery5, // [4]: for ECollisionChannel::ECC_Vehicle, [6]
-    EObjectTypeQuery::ObjectTypeQuery6, // [5]: for ECollisionChannel::ECC_Destructible, [7]
+    EOT_Pawn,
+    EOT_Vehicle,
+    EOT_Destructible,
 
     // Следующий метод инициализации данных вызывает блокировку запуска любого билда без какого-либо уведомления:
     //UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn),

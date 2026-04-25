@@ -3,6 +3,9 @@
 // Base:
 #include "Projectile.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // UE:
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -30,7 +33,7 @@ AProjectile::AProjectile()
     SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere Collision"));
     RootComponent = SphereComponent;
     SphereComponent->SetRelativeScale3D(FVector(0.2f));
-    SphereComponent->SetCollisionProfileName(TEXT("InvisibleWallDynamic"));
+    SphereComponent->SetCollisionProfileName(ProfileName_InvisibleWallDynamic);
     SphereComponent->SetUseCCD(true);
 
     // Корневой компонент

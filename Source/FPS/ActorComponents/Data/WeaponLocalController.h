@@ -231,6 +231,11 @@ public:
     FORCEINLINE const FWeaponSlotData* GetCurrentSlotData() const { return CurrentSlot; };
 
     /** Добавить Количество Патронов в резерв (например, подобраны патроны) */
+    UFUNCTION(BlueprintCallable, BlueprintPure,
+        Category = "Weapon Control|Data")
+    bool CanTakeCartridges(const FName& WeaponType) const;
+
+    /** Добавить Количество Патронов в резерв (например, подобраны патроны) */
     UFUNCTION(BlueprintCallable,
         Category = "Weapon Control|Data",
         meta = (ExpandBoolAsExecs = "ReturnValue"))
@@ -540,7 +545,7 @@ private:
 
     /* ---   Inputs   --- */
 
-    /* Получить имена зарегистрированных Групп Действий */
+    /** Получить имена зарегистрированных Групп Действий */
     UFUNCTION()
     TArray<FName> GetActionGroupsNames() const;
 
@@ -552,7 +557,7 @@ private:
 
     /* ---   Data   --- */
 
-    /** Получение Названия строк из таблицы WeaponsDataTable */
+    /** Получение Названия строк из таблицы 'Weapons Data Table' */
     UFUNCTION()
     TArray<FName> GetAllWeaponsNames() const;
     //-------------------------------------------

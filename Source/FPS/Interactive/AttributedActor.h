@@ -45,11 +45,11 @@ public:
 
     /* ---   Components   --- */
 
-    // Меш визуализации
-    UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        Category = "Components",
+    /** Меш визуализации */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+        Category = Components,
         meta = (AllowPrivateAccess = "true"))
-    UStaticMeshComponent* Mesh = nullptr;
+    UStaticMeshComponent* StaticMesh = nullptr;
     //-------------------------------------------
 
 

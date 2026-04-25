@@ -14,6 +14,9 @@
 // UE:
 #include "GameFramework/InputSettings.h"
 
+// Interface:
+#include "FPS/Tools/Interfaces/Properties/InteractiveInterface.h"
+
 // Interaction:
 #include "FPS/Characters/PlayerCharacter.h"
 #include "FPS/Core/Online/FPS_PlayerController.h"
@@ -29,6 +32,9 @@ UInteractiveComponent::UInteractiveComponent()
     // Set this component to be initialized when the game starts, and to be ticked every frame.
     // You can turn these features off to improve performance if you don't need them.
     PrimaryComponentTick.bCanEverTick = false; // Предварительно
+
+    // Используем InitializeComponent()
+    bWantsInitializeComponent = true;
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -37,46 +43,17 @@ UInteractiveComponent::UInteractiveComponent()
 
 /* ---   Base   --- */
 
-// Called when the game starts
+void UInteractiveComponent::InitializeComponent()
+{
+    Super::InitializeComponent();
+}
+
 void UInteractiveComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-
-    /* ---   Highlighting   --- */
-
-    InitUsedComponents();
+    InitHighlightedComponents();
     InitActionGroup();
-    //-------------------------------------------
-}
-//--------------------------------------------------------------------------------------
-
-
-
-/* ---   Global   --- */
-
-/* Проверка безопасности функции через попытку её вызова
-@return   Безопасна ли функция
-*/
-static bool SafeProcessEvent(UObject* Owner, UFunction* Function)
-{
-    if (!IsValid(Owner) || !Function)
-    {
-        FPS_LOG_Empty(Error, "Invalid object or function!");
-        return false;
-    }
-
-    __try
-    {
-        bool bResult = false;
-        // Вызов опасной функции с уже валидными Owner и Function
-        Owner->ProcessEvent(Function, &bResult);
-        return true;
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-        return false;
-    }
 }
 //--------------------------------------------------------------------------------------
 
@@ -86,26 +63,10 @@ static bool SafeProcessEvent(UObject* Owner, UFunction* Function)
 
 void UInteractiveComponent::CursorWasBeginOverOwner(AActor* TouchedActor)
 {
-    bool bChecker = true;
-    AActor* lOwner = GetOwner();
-    UFunction* Function = nullptr;
-
-    for (FName& Name : PredicateFunctionNames)
+    if (IInteractiveInterface::CheckImplementation(GetOwner())
+        && IInteractiveInterface::Execute_CheckHighlightCondition(GetOwner()))
     {
-        Function = lOwner->FindFunction(Name);
-
-        if (Function)
-        {
-            lOwner->ProcessEvent(Function, &bChecker);
-
-            if (!bChecker)
-                break;
-        }
-    }
-
-    if (bChecker)
-    {
-        for (FComponentRendering& Data : UsedComponents)
+        for (FComponentRendering& Data : HighlightedComponents)
         {
             if (Data.Component)
             {
@@ -117,7 +78,7 @@ void UInteractiveComponent::CursorWasBeginOverOwner(AActor* TouchedActor)
 
 void UInteractiveComponent::CursorWasEndFromOwner(AActor* TouchedActor)
 {
-    for (FComponentRendering& Data : UsedComponents)
+    for (FComponentRendering& Data : HighlightedComponents)
     {
         if (Data.Component)
         {
@@ -126,98 +87,42 @@ void UInteractiveComponent::CursorWasEndFromOwner(AActor* TouchedActor)
     }
 }
 
-bool UInteractiveComponent::AddNamePredicate(const FName& NameFunction)
+void UInteractiveComponent::InitHighlightedComponents()
 {
-    UFunction* lFunction = GetOwner()->FindFunction(NameFunction);
-
-    uint8 CheckError = CheckFunction(GetOwner(), lFunction);
-
-    if (lFunction)
+    if (GetOwner())
     {
-        if (!CheckError)
+        if (IInteractiveInterface::CheckImplementation(GetOwner()))
         {
-            PredicateFunctionNames.AddUnique(lFunction->GetFName());
-            return true;
-        }
-#if WITH_EDITOR
-        else
-        {
-            FPS_LOG_Component(Warning, "%s is Unsuitable Function:",
-                *NameFunction.ToString());
-
-            if (CheckError & 0b0001)
-                FPS_LOG_Empty(Warning, "* Input parameters more than 1");
-            if (CheckError & 0b0010)
-                FPS_LOG_Empty(Warning, "* Is NOT constant (not const or pure)");
-            if (CheckError & 0b0100)
-                FPS_LOG_Empty(Warning, "* Return value is NOT bool or Byte (uint8)");
-            if (CheckError & 0b1000)
-                FPS_LOG_Empty(Warning, "* SafeProcessEvent() failed");
-        }
-    }
-    else
-    {
-        FPS_LOG_Component(Warning, "%s() function NOT found:",
-            *NameFunction.ToString());
-#endif // WITH_EDITOR
-    }
-
-    return false;
-}
-
-void UInteractiveComponent::InitUsedComponents()
-{
-    AActor* lOwner = GetOwner();
-
-    if (lOwner
-        && UsedComponents.IsValidIndex(0)
-        && UsedComponents[0].ComponentName.IsValid())
-    {
-        TArray<UPrimitiveComponent*> lPComponents;
-        lOwner->GetComponents<UPrimitiveComponent>(lPComponents);
-
-        if (lPComponents.Num())
-        {
-            for (FComponentRendering& Data : UsedComponents)
+            TArray<FComponentRendering> lPrimComp = IInteractiveInterface::Execute_GetUsedComponents(GetOwner());
+            if (lPrimComp.Num())
             {
-                if (Data.ComponentName.IsValid())
+                HighlightedComponents.Reserve(HighlightedComponents.Num() + lPrimComp.Num());
+
+                for (FComponentRendering PrimComp : lPrimComp)
                 {
-                    // Поиск компонента по его Имени
-                    if (UPrimitiveComponent** lpComp = lPComponents.FindByPredicate([Data](const UPrimitiveComponent* Item)
-                        { return Item && Item->GetFName() == Data.ComponentName; }))
+                    if (IsValid(PrimComp.Component))
                     {
-                        // Заполнение недостающего указателя на выделяемый компонент
-                        Data.Component = *lpComp;
-                        // Включение контура подсветки для выделяемого компонента
-                        Data.Component->SetCustomDepthStencilValue(Data.DepthStencilValue);
+                        HighlightedComponents.Add(PrimComp);
                     }
                 }
             }
         }
 
-        lOwner->OnBeginCursorOver.AddDynamic(this, &UInteractiveComponent::CursorWasBeginOverOwner);
-        lOwner->OnEndCursorOver.AddDynamic(this, &UInteractiveComponent::CursorWasEndFromOwner);
+        if (HighlightedComponents.IsValidIndex(0))
+        {
+            for (FComponentRendering& Data : HighlightedComponents)
+            {
+                if (IsValid(Data.Component))
+                {
+                    // Настройка канала (цвета) контура подсветки для выделяемого компонента
+                    Data.Component->SetCustomDepthStencilValue(Data.DepthStencilValue);
+                }
+            }
+        }
+
+        GetOwner()->OnBeginCursorOver.AddDynamic(this, &UInteractiveComponent::CursorWasBeginOverOwner);
+        GetOwner()->OnEndCursorOver.AddDynamic(this, &UInteractiveComponent::CursorWasEndFromOwner);
     }
-}
-
-uint8 UInteractiveComponent::CheckFunction(UObject* Owner, UFunction* Function)
-{
-    uint8 lBitsResult = 0b1000;
-
-    // Проверяем, что функция нет входных параметров
-    lBitsResult |= (Function->NumParms != 1) << 0;
-    // Проверка, что функция константная (const или pure)
-    lBitsResult |= (!Function->HasAnyFunctionFlags(FUNC_Const | FUNC_BlueprintPure)) << 1;
-    // Проверка, что возвращаемое значение bool или Byte (uint8 и его вариации ENUM-список)
-    lBitsResult |= (Function->GetPropertiesSize() != 1) << 2;
-
-    if (lBitsResult == 0b1000)
-    {
-        // Проверка безопасности функции через попытку её вызова
-        lBitsResult ^= (SafeProcessEvent(Owner, Function)) << 3;
-    }
-
-    return lBitsResult;
 }
 //--------------------------------------------------------------------------------------
 
@@ -230,23 +135,46 @@ void UInteractiveComponent::InitActionGroup()
     GetOwner()->OnClicked.AddDynamic(this, &UInteractiveComponent::OwnerWasClicked);
 }
 
+void UInteractiveComponent::ReactionInteractionOnServer(ACharacter* Instigator)
+{
+    OnServerReactionToActions.Broadcast(Instigator);
+
+    switch (NetworkInteractionType)
+    {
+    case ENetworkInteractionType::ToOwner:
+        Client_OwnerWasClicked(Instigator);
+        break;
+
+    case ENetworkInteractionType::ToMulticast:
+        Multicast_OwnerWasClicked(Instigator);
+        break;
+
+    default:
+        break;
+    }
+}
+
 void UInteractiveComponent::OwnerWasClicked(AActor* TouchedActor, FKey ButtonReleased)
 {
-    if (ActionKeys.Find(ButtonReleased))
+    if (ActionKeys.Find(ButtonReleased)
+        && IInteractiveInterface::CheckImplementation(GetOwner())
+        && IInteractiveInterface::Execute_CheckActionConditions(GetOwner(), ButtonReleased))
     {
         OnOwnerWasClicked.Broadcast(ButtonReleased);
 
-        if (AFPS_PlayerController* lPC = Cast<AFPS_PlayerController>(GetWorld()->GetFirstPlayerController()))
+        if (NetworkInteractionType != ENetworkInteractionType::Local)
         {
-            lPC->ToInteract(this);
+            if (AFPS_PlayerController* lPC = Cast<AFPS_PlayerController>(GetWorld()->GetFirstPlayerController()))
+            {
+                lPC->ToInteract(this);
+            }
         }
     }
 }
 
-void UInteractiveComponent::ReactionActionsOnServer(ACharacter* Instigator)
+void UInteractiveComponent::Client_OwnerWasClicked_Implementation(ACharacter* Instigator)
 {
-    OnServerReactionToActions.Broadcast(Instigator);
-    Multicast_OwnerWasClicked(Instigator);
+    OnClientReactionToActions.Broadcast(Instigator);
 }
 
 void UInteractiveComponent::Multicast_OwnerWasClicked_Implementation(ACharacter* Instigator)
@@ -259,7 +187,7 @@ void UInteractiveComponent::Multicast_OwnerWasClicked_Implementation(ACharacter*
 
 /* ===   For EDITOR only   === */
 
-#if WITH_EDITOR
+#if WITH_EDITORONLY_DATA
 
 /* ---   Base: Debugs   --- */
 
@@ -282,64 +210,9 @@ void UInteractiveComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 
 
 
-/* ---   Highlighting   --- */
-
-TArray<FName> UInteractiveComponent::GetNamesOfHighlightedComponents()
-{
-    if (AActor* lOwner = GetOwner())
-    {
-        TArray<UPrimitiveComponent*> lPComp;
-        lOwner->GetComponents<UPrimitiveComponent>(lPComp);
-
-        if (lPComp.Num())
-        {
-            TArray<FName> lResult;
-            lResult.Reserve(lPComp.Num());
-
-            for (UActorComponent* lComp : lPComp)
-            {
-                lResult.Add(lComp->GetFName());
-            }
-
-            return lResult;
-        }
-    }
-
-    return TArray<FName>{NAME_None};
-}
-
-TArray<FName> UInteractiveComponent::GetNamesOfPredicateFunctions()
-{
-    if (AActor* lOwner = GetOwner())
-    {
-        UFunction* lFunction = nullptr;
-        TArray<FName> lResult;
-
-        for (TFieldIterator<UFunction> It(lOwner->GetClass(), EFieldIteratorFlags::IncludeSuper); It; ++It)
-        {
-            lFunction = *It;
-
-            if (!CheckFunction(lOwner, lFunction))
-            {
-                lResult.Add(lFunction->GetFName());
-            }
-        }
-
-        if (lResult.Num())
-        {
-            return lResult;
-        }
-    }
-
-    return TArray<FName>{NAME_None};
-}
-//--------------------------------------------------------------------------------------
-
-
-
 /* ---   Actions   --- */
 
-TArray<FName> UInteractiveComponent::GetActionGroupsNames()
+TArray<FName> UInteractiveComponent::GetActionGroupsNames() const
 {
     TArray<FName> ActionNames;
 
@@ -363,5 +236,5 @@ void UInteractiveComponent::ReInitActionGroup()
 }
 //--------------------------------------------------------------------------------------
 
-#endif // WITH_EDITOR
+#endif // WITH_EDITORONLY_DATA
 //======================================================================================

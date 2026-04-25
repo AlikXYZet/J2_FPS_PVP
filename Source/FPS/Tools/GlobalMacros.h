@@ -20,10 +20,50 @@ FPS_API DECLARE_LOG_CATEGORY_EXTERN(LogFPS, All, All);
 
 
 
-/* ---   Collision Channels   --- */
+/* ---   Collision   --- */
 
-// Канал трассировки, соответствующий новому каналу "Projectiles"
-#define ECC_Projectiles ECC_GameTraceChannel1
+#define ECC_Projectiles ECC_GameTraceChannel1 // Канал трассировки "Projectiles"
+#define ECC_Pickables   ECC_GameTraceChannel2 // Канал трассировки "Pickables"
+
+#define ProfileName_Destructible            TEXT("Destructible")
+#define ProfileName_InvisibleWallDynamic    TEXT("InvisibleWallDynamic")
+#define ProfileName_Trigger                 TEXT("Trigger")
+#define ProfileName_InvisibleWall           TEXT("InvisibleWall")
+#define ProfileName_Pickables               TEXT("Pickables")
+
+// Соответствие проверено опытным путём :
+#define EOT_Pawn            EObjectTypeQuery::ObjectTypeQuery3 // [2]: for ECollisionChannel::ECC_Pawn, [2]
+#define EOT_Vehicle         EObjectTypeQuery::ObjectTypeQuery5 // [4]: for ECollisionChannel::ECC_Vehicle, [6]
+#define EOT_Destructible    EObjectTypeQuery::ObjectTypeQuery6 // [5]: for ECollisionChannel::ECC_Destructible, [7]
+/* PS: Следующий метод инициализации данных вызывает блокировку запуска любого Билда без какого-либо уведомления:
+* UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn),
+* UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Vehicle),
+* UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Destructible) */
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   ENums   --- */
+
+#define ENUM_COMPARISON_OPERATORS(Enum) \
+    inline constexpr bool operator  >   (Enum Lhs, Enum Rhs)    { return ((__underlying_type(Enum))Lhs  >   (__underlying_type(Enum))Rhs); } \
+    inline constexpr bool operator  >=  (Enum Lhs, Enum Rhs)    { return ((__underlying_type(Enum))Lhs  >=  (__underlying_type(Enum))Rhs); } \
+    inline constexpr bool operator  <   (Enum Lhs, Enum Rhs)    { return ((__underlying_type(Enum))Lhs  <   (__underlying_type(Enum))Rhs); } \
+    inline constexpr bool operator  <=  (Enum Lhs, Enum Rhs)    { return ((__underlying_type(Enum))Lhs  <=  (__underlying_type(Enum))Rhs); } \
+\
+    inline constexpr bool operator  >   (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  >   Rhs); } \
+    inline constexpr bool operator  >=  (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  >=  Rhs); } \
+    inline constexpr bool operator  <   (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  <   Rhs); } \
+    inline constexpr bool operator  <=  (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  <=  Rhs); } \
+    inline constexpr bool operator  ==  (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  ==  Rhs); } \
+    inline constexpr bool operator  !=  (Enum Lhs, __underlying_type(Enum) Rhs) { return ((__underlying_type(Enum))Lhs  !=  Rhs); } \
+\
+    inline constexpr bool operator  >   (uint8 Lhs, Enum Rhs) { return (Lhs  >   (uint8)Rhs); } \
+    inline constexpr bool operator  >=  (uint8 Lhs, Enum Rhs) { return (Lhs  >=  (uint8)Rhs); } \
+    inline constexpr bool operator  <   (uint8 Lhs, Enum Rhs) { return (Lhs  <   (uint8)Rhs); } \
+    inline constexpr bool operator  <=  (uint8 Lhs, Enum Rhs) { return (Lhs  <=  (uint8)Rhs); } \
+    inline constexpr bool operator  ==  (uint8 Lhs, Enum Rhs) { return (Lhs  ==  (uint8)Rhs); } \
+    inline constexpr bool operator  !=  (uint8 Lhs, Enum Rhs) { return (Lhs  !=  (uint8)Rhs); }
 //--------------------------------------------------------------------------------------
 
 

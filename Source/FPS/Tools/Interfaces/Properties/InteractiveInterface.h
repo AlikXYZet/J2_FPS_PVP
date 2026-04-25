@@ -3,7 +3,7 @@
 #pragma once
 
 // Core:
-#include "CoreMinimal.h"
+//#include "CoreMinimal.h"
 
 // Base:
 #include "UObject/Interface.h"
@@ -15,8 +15,8 @@
 
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI)
-class UInteractiveInterface : public UInterface
+UINTERFACE(Blueprintable)
+class FPS_API UInteractiveInterface : public UInterface
 {
     GENERATED_BODY()
 };
@@ -24,42 +24,57 @@ class UInteractiveInterface : public UInterface
 
 
 /* Интерфейс Интерактивности Актора
-* @note Используется как шаблон для взаимодействия с "UInteractiveComponent"
-*/
+* @note Используется как шаблон для взаимодействия с "UInteractiveComponent" */
 class FPS_API IInteractiveInterface
 {
     GENERATED_BODY()
 
 public:
 
-    /* ---   Interactive : Base   --- */
+    /* ---   Base   --- */
 
-    /** Инициализация компонента Интерактивности */
-    virtual void InitInteractiveComponent() = 0;
-    //{
-        // Пример:
-        //InteractiveComponent->UsedComponents.AddUnique({ BlockMesh, 0 });
-        //InteractiveComponent->AddNamePredicate("CheckHighlighting");
-        //InteractiveComponent->OnOwnerWasClickedLocally.AddDynamic(this, &IInteractiveInterface::ProcessInteractiveAction);
-    //};
+    /** Проверка Объекта на реализацию данного Интерфейса */
+    FORCEINLINE static bool CheckImplementation(const UObject* O)
+    {
+        return O->GetClass()->ImplementsInterface(UInteractiveInterface::StaticClass());
+    };
     //-------------------------------------------
 
 
 
-    /* ---   Interactive : Highlighting   --- */
+    /* ---   Highlighting   --- */
 
-    /** Предикат условия выделения */
-    UFUNCTION()
-    virtual bool CheckHighlighting() const { return true; };
+    /** Получить компоненты, которые требуется подсветить */
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable,
+        Category = "Interactive|Highlighting")
+    TArray<FComponentRendering> GetUsedComponents();
+
+    virtual TArray<FComponentRendering> GetUsedComponents_Implementation() { return TArray<FComponentRendering>(); };
+
+    /** Предикат условия выделения (подсвечивания) Компонента */
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable,
+        Category = "Interactive|Highlighting")
+    bool CheckHighlightCondition();
+
+    virtual bool CheckHighlightCondition_Implementation() { return true; };
     //-------------------------------------------
 
 
 
-    /* ---   Interactive : Actions   --- */
+    /* ---   Actions   --- */
 
-    /** Обработка интерактивного действия (клик по Актеру) */
-    UFUNCTION()
-    virtual void ProcessInteractiveAction(const FKey& ButtonReleased) {};
+    /** Предикат условия взаимодействия с Актором */
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable,
+        Category = "Interactive|Actions")
+    bool CheckActionConditions(const FKey& ButtonReleased);
+
+    virtual bool CheckActionConditions_Implementation(const FKey& ButtonReleased)
+    {
+        return true;
+        // PS:  Вызов метода 'CheckHighlightCondition' из среды 'Blueprint' на данном этапе НЕ возможен,
+        //      поэтому 'CheckActionConditions' не может дублировать его по умолчанию.
+        //      В других случаях - вызов осуществляется через 'Execute_CheckHighlightCondition(UObject* O)'
+    };
     //-------------------------------------------
 };
 

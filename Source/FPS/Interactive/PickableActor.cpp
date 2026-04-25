@@ -33,9 +33,11 @@ APickableActor::APickableActor()
     // Корневой компонент
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
-    // Главный Меш
+    // Меш визуализации
     StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
     StaticMesh->SetupAttachment(RootComponent);
+    StaticMesh->SetCollisionProfileName(ProfileName_Pickables);
+    StaticMesh->SetCastShadow(false);
     //-------------------------------------------
 
 
@@ -52,23 +54,33 @@ APickableActor::APickableActor()
 
 /* ---   Base   --- */
 
-// Called when the game starts or when spawned
 void APickableActor::BeginPlay()
 {
-    InitInteractiveComponent();
-
     Super::BeginPlay();
 }
 //--------------------------------------------------------------------------------------
 
 
 
-/* ---   Interaction   --- */
+/* ---   Interactive | Highlighting   --- */
 
-void APickableActor::InitInteractiveComponent()
+TArray<FComponentRendering> APickableActor::GetUsedComponents_Implementation()
 {
-    //InteractiveComponent->UsedComponents.AddUnique({ StaticMesh->GetFName(), StaticMesh, 0});
-    InteractiveComponent->AddNamePredicate("CheckHighlighting");
-    //InteractiveComponent->OnOwnerWasClicked.AddDynamic(this, &IInteractiveInterface::ProcessInteractiveAction);
+    return TArray<FComponentRendering>{FComponentRendering(StaticMesh)};
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Activity   --- */
+
+void APickableActor::StartInactiveState()
+{
+    GetWorld()->GetTimerManager().SetTimer(
+        Timer_ActivityControl,
+        this,
+        &APickableActor::Event_OnRestartingActivityState,
+        InactiveState_Time,
+        false);
 }
 //--------------------------------------------------------------------------------------

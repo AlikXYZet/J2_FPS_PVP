@@ -190,7 +190,7 @@ void AFPS_PlayerController::Server_ToInteract_Implementation(UInteractiveCompone
 {
     if (IsValid(InteractionComponent))
     {
-        InteractionComponent->ReactionActionsOnServer(GetCharacter());
+        InteractionComponent->ReactionInteractionOnServer(GetCharacter());
     }
 }
 //--------------------------------------------------------------------------------------
