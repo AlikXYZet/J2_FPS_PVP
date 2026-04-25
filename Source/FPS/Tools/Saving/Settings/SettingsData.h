@@ -22,7 +22,7 @@ struct FSettingsData
 
     /* ---   Gameplay   --- */
 
-    // Флаг отображения Крови
+    /** Флаг отображения Крови */
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool bBloodIsShown = false;
     //-------------------------------------------
@@ -30,7 +30,7 @@ struct FSettingsData
 
     /* ---   Sounds   --- */
 
-    // Общая громкость Звуков
+    /** Общая громкость Звуков */
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float OverallSoundsVolume = 0.3f;
 

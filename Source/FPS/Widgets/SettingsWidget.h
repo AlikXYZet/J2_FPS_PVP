@@ -47,7 +47,7 @@ public:
         meta = (DisplayName = "Is Video Settings Dirty?"))
     bool bIsVideoSettingsDirty = false;
 
-    // Новые (изменённые) Настроеки
+    // Новые (изменённые) Настройки
     UPROPERTY(BlueprintReadWrite,
         Category = "Settings System|Saving")
     FSettingsData NewSettingsData;
