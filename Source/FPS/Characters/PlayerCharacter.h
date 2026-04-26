@@ -105,7 +105,7 @@ protected:
 
     /* ---   Base   --- */
 
-    // Вызывается при Запуске игры или при Спавне в уже запущенной игре
+    /** Вызывается при Запуске игры или при Спавне в уже запущенной игре */
     virtual void BeginPlay() override;
     //-------------------------------------------
 
@@ -114,6 +114,9 @@ protected:
 public:
 
     /* ---   Base   --- */
+
+    /** Реакция на Выпадение из Мира (ниже KillZ и тому подобного) */
+    virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
 
     /** Функция, вызываемая каждый кадр в этом Акторе, если не назначена другая частота */
     //virtual void Tick(float DeltaSeconds) override;
@@ -129,7 +132,7 @@ public:
     @param  NewController - Контроллер, захвативший владение данным Игроком (Пешкой) */
     virtual void PossessedBy(AController* NewController) override;
 
-    // Получить параметры Коллизии для Трассировки
+    /** Получить параметры Коллизии для Трассировки */
     FORCEINLINE const FCollisionQueryParams& GetCollisionParamsForTrace() const
     {
         return CollisionParamsForTrace;

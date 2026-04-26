@@ -128,6 +128,11 @@ void APlayerCharacter::BeginPlay()
 //    Super::Tick(DeltaSeconds);
 //}
 
+void APlayerCharacter::FellOutOfWorld(const UDamageType& dmgType)
+{
+    Super::FellOutOfWorld(dmgType);
+}
+
 void APlayerCharacter::PreInitializeComponents()
 {
     Super::PreInitializeComponents();
