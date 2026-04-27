@@ -94,7 +94,7 @@ public:
     UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
 
     // Скрытый Набор Атрибутов (для GAS)
-    UPROPERTY(BlueprintReadOnly,
+    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_AttributeSet,
         Category = "Components")
     UFPS_AttributeSet* AttributeSet = nullptr;
     //-------------------------------------------
@@ -168,6 +168,10 @@ public:
 
     /** При Репликации: PlayerState */
     virtual void OnRep_PlayerState() override;
+
+    /** При Репликации: AttributeSet */
+    UFUNCTION()
+    virtual void OnRep_AttributeSet();
     //-------------------------------------------
 
 

@@ -219,7 +219,6 @@ FPS_LOG_Static(Error, "lInputComponent is NOT");
     и дополнительную информацию о экземплярах класса-владельца и текущего класса-компонента,
     а также о методе класса, где было вызвано сообщение
 
-@param  Color - Цвет текста
 @param  Format - Формат текста */
 #define FPS_Message_Component(Format, ...) FPS_ColorMessage_Component(FColor::Red, Format, ##__VA_ARGS__)
 //--------------------------------------------------------------------------------------

@@ -3,6 +3,9 @@
 // Base:
 #include "FPS_AttributeSet.h"
 
+// Macros:
+#include "FPS/Tools/GlobalMacros.h"
+
 // Net:
 #include "Net/UnrealNetwork.h"
 

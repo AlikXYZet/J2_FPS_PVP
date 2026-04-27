@@ -108,6 +108,8 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
+    InitAbilitySystemComp();
+
     if (!HasAuthority())
     {
         /* Чистка на стороне Клиентов:
@@ -138,10 +140,11 @@ void APlayerCharacter::PreInitializeComponents()
     Super::PreInitializeComponents();
 
     // Скрытый Набор Атрибутов (для GAS)
-    if (!AttributeSet)
+    if (HasAuthority() && !AttributeSet)
     {
         AttributeSet = NewObject<UFPS_AttributeSet>(this, TEXT("Attributes"));
         AbilitySystemComp->AddAttributeSetSubobject(AttributeSet);
+        // PS: Warning! Данный метод автоматически Реплицирует "AttributeSet" на стороне Клиентов
     }
     // PS: Создание здесь экземпляра AttributeSet через NewObject<T>(*),
     // а не в конструкторе через CreateDefaultSubobject<T>(*),
@@ -185,7 +188,6 @@ FORCEINLINE void APlayerCharacter::InitForLocally()
 
     CollisionParamsForTrace.AddIgnoredActor(this);
 
-    InitAbilitySystemComp();
     InitSpeedControl();
 
     DisableInput(GetController<APlayerController>());
@@ -225,6 +227,7 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     /* ---   Weapon Control   --- */
 
     DOREPLIFETIME(APlayerCharacter, WeaponControlNetComp);
+    DOREPLIFETIME(APlayerCharacter, AttributeSet);
     //-------------------------------------------
 }
 //--------------------------------------------------------------------------------------
@@ -238,6 +241,11 @@ void APlayerCharacter::OnRep_PlayerState()
     Super::OnRep_PlayerState();
 
     AbilitySystemComp->InitAbilityActorInfo(this, this);
+}
+
+void APlayerCharacter::OnRep_AttributeSet()
+{
+    InitAbilitySystemComp();
 }
 //--------------------------------------------------------------------------------------
 
@@ -413,9 +421,8 @@ FORCEINLINE void APlayerCharacter::InitSpeedControl()
 
 /* ---   GAS   --- */
 
-FORCEINLINE void APlayerCharacter::InitAbilitySystemComp()
+void APlayerCharacter::InitAbilitySystemComp()
 {
-    // @note    'FORCEINLINE' действует в пределах данного '.cpp'
     if (AbilitySystemComp)
     {
         if (AttributeSet)
@@ -427,10 +434,6 @@ FORCEINLINE void APlayerCharacter::InitAbilitySystemComp()
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::Event_OnZeroHealth);
             AttributeSet->OnZeroArmor.AddDynamic(this, &APlayerCharacter::Event_OnZeroArmor);
-        }
-        else
-        {
-            FPS_Error("AttributeSet is NOT");
         }
     }
     else

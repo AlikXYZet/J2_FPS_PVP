@@ -6,6 +6,9 @@
 // Macros:
 #include "FPS/Tools/GlobalMacros.h"
 
+// Net:
+#include "Net/UnrealNetwork.h"
+
 // GAS:
 #include "FPS/GAS/FPS_AttributeSet.h"
 //--------------------------------------------------------------------------------------
@@ -72,7 +75,7 @@ void AAttributedActor::PreInitializeComponents()
     Super::PreInitializeComponents();
 
     // Скрытый Набор Атрибутов (для GAS)
-    if (!AttributeSet)
+    if (HasAuthority() && !AttributeSet)
     {
         AttributeSet = NewObject<UFPS_AttributeSet>(this, TEXT("Attributes"));
         AbilitySystemComp->AddAttributeSetSubobject(AttributeSet);
@@ -81,6 +84,39 @@ void AAttributedActor::PreInitializeComponents()
     // а не в конструкторе через CreateDefaultSubobject<T>(*),
     // является решением ошибки, описанной в UE-81109:
     // "уничтожение сборщиком AttributeSet у дубликатов актора-владельца"
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Net   --- */
+
+// Излишне
+//bool APlayerCharacter::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
+//{
+//    return Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+//}
+
+void AAttributedActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    //-------------------------------------------
+
+
+    /* ---   Weapon Control   --- */
+
+    DOREPLIFETIME(AAttributedActor, AttributeSet);
+    //-------------------------------------------
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   Net | OnRep   --- */
+
+void AAttributedActor::OnRep_AttributeSet()
+{
+    InitAbilitySystemComp();
 }
 //--------------------------------------------------------------------------------------
 
@@ -103,10 +139,6 @@ void AAttributedActor::InitAbilitySystemComp()
 
             AttributeSet->OnZeroHealth.AddDynamic(this, &AAttributedActor::Event_OnZeroHealth);
             AttributeSet->OnZeroArmor.AddDynamic(this, &AAttributedActor::Event_OnZeroArmor);
-        }
-        else
-        {
-            FPS_Error("AttributeSet is NOT");
         }
     }
     else

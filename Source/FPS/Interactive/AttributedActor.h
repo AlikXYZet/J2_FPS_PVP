@@ -63,7 +63,7 @@ public:
     UFPS_AbilitySystemComponent* AbilitySystemComp = nullptr;
 
     // Скрытый Набор Атрибутов (для GAS)
-    UPROPERTY(BlueprintReadOnly,
+    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_AttributeSet,
         Category = "Components")
     UFPS_AttributeSet* AttributeSet = nullptr;
     //-------------------------------------------
@@ -86,6 +86,26 @@ public:
 
     /** Вызывается перед инициализацией всех компонентов */
     virtual void PreInitializeComponents() override;
+    //-------------------------------------------
+
+
+
+    /* ---   Net   --- */
+
+    /** Метод, позволяющий субъекту реплицировать подобъекты в своем Актор-канале */
+    //virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
+    /** Используется для регистрации реплицируемых Переменных и Компонентов */
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    //-------------------------------------------
+
+
+
+    /* ---   Net | OnRep   --- */
+
+    /** При Репликации: AttributeSet */
+    UFUNCTION()
+    virtual void OnRep_AttributeSet();
     //-------------------------------------------
 
 
