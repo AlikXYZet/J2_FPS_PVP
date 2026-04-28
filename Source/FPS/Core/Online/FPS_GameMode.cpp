@@ -191,17 +191,20 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
 {
     if (IsMatchInProgress())
     {
+        // Игроки-"вредители" для указанной Цели
         TSet<APlayerController*> lPlayerWreckers;
 
         // Получить Игроков, что вызвали текущие активные Эффекты
         if (int32 lNum = TargetASC.GetNumActiveGameplayEffects())
         {
             TArray<FGameplayEffectSpec> OutSpecCopies;
+
             // Резервирование памяти
             OutSpecCopies.Reserve(lNum);
-            // Копирование данных о всех Активных Эффектов.
-            // PS: Данный метод почему-то НЕ имеет предварительного резервирования памяти
+
+            // Копирование данных о всех Активных Эффектов:
             TargetASC.GetAllActiveGameplayEffectSpecs(OutSpecCopies);
+            // PS: Данный метод почему-то НЕ имеет предварительного резервирования памяти
 
             GetAllInstigatorPlayers(OutSpecCopies, lPlayerWreckers);
         }
@@ -226,24 +229,41 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                     GetPlayersStatistics().AddDeaths(**lTargetStats);
                 }
 
-                auto lIterator = lPlayerWreckers.CreateIterator();
-                FPlayerStatisticsData** lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
+                // Итератор Массива игроков-"вредителей"
+                auto lIterator = lPlayerWreckers.CreateConstIterator();
+                // Указатель-Итератор с найденной Статистикой Игроков-"вредителей"
+                FPlayerStatisticsData** lWreckerStats = nullptr;
+                // Индекс последнего элемента
+                int32 LastIndex = lPlayerWreckers.Num() - 1;
 
-                // Увеличить счётчик Убийств для первого 'Вредителя'
-                if (lWreckerStats
-                    && *lIterator != lPlayer->GetController())
+                for (; lIterator; ++lIterator)
                 {
-                    GetPlayersStatistics().AddKills(**lWreckerStats);
-                }
-
-                // Увеличить счётчик Помощи для остальных 'Вредителей'
-                for (++lIterator; lIterator; ++lIterator)
-                {
+                    // Поиск статистики Игрока-"вредителя"
                     lWreckerStats = PlayersStatisticsMap.Find((*lIterator)->PlayerState);
-                    if (lWreckerStats
-                        && *lIterator != lPlayer->GetController())
+
+                    if (lIterator.ElementIt.GetIndex() == LastIndex)
                     {
-                        GetPlayersStatistics().AddAssists(**lWreckerStats);
+                        // Увеличить счётчик Убийств для последнего 'Вредителя'
+                        if (lWreckerStats
+                            && *lIterator != lPlayer->GetController())
+                        {
+                            GetPlayersStatistics().AddKills(**lWreckerStats);
+                        }
+
+                        FPS_ColorMessage_Empty(FColor::Purple, "      * Last Iter: '%llu';   Controller: '%llu';   'BOOL' is %s",
+                            &*lIterator, *lIterator, BoolToString(*lIterator != lPlayer->GetController()));
+                    }
+                    else
+                    {
+                        // Увеличить счётчик Помощи для остальных 'Вредителей'
+                        if (lWreckerStats
+                            && *lIterator != lPlayer->GetController())
+                        {
+                            GetPlayersStatistics().AddAssists(**lWreckerStats);
+                        }
+
+                        FPS_ColorMessage_Empty(FColor::Purple, "      * Second Iter: '%llu';   Controller: '%llu'",
+                            &*lIterator, *lIterator);
                     }
                 }
 
@@ -287,6 +307,8 @@ void AFPS_GameMode::InitDestructionAccounting()
 
 void AFPS_GameMode::GetAllInstigatorPlayers(const TArray<FGameplayEffectSpec>& iSpecs, TSet<APlayerController*>& oPlayers)
 {
+    oPlayers.Reserve(iSpecs.Num());
+
     for (const FGameplayEffectSpec& lSpec : iSpecs)
     {
         GetAllInstigatorPlayers(lSpec, oPlayers);
@@ -295,23 +317,31 @@ void AFPS_GameMode::GetAllInstigatorPlayers(const TArray<FGameplayEffectSpec>& i
 
 void AFPS_GameMode::GetAllInstigatorPlayers(const FGameplayEffectSpec& iSpec, TSet<APlayerController*>& oPlayers)
 {
-    // Актор-Подстрекатель, что вызвал Эффект
-    // @note    Может быть НЕ Валидным, но имеет адрес памяти [ != 0x(0) ]
-    const AActor* lInstigator = iSpec.GetEffectContext().Get()->GetInstigator();
-
-    if (TSet<APlayerController*>* lOriginalWreckers = AllAttributedActor.Find((const AAttributedActor*)lInstigator))
+    for (const FGameplayEffectModifiedAttribute& Data : iSpec.ModifiedAttributes)
     {
-        // Если данный "Разрушитель" был Атрибутированным Актором,
-        // то скопировать его список
-        oPlayers.Append(*lOriginalWreckers);
-    }
-    else if (const APlayerCharacter* lPC = Cast<APlayerCharacter>(lInstigator))
-    {
-        if (PlayersStatisticsMap.Find(lPC->GetPlayerState()))
+        // Фильтрация по Величине изменения и Типу Атрибута
+        if (Data.TotalMagnitude < 0
+            && Data.Attribute.AttributeName == "Health")
         {
-            // Если данный "Разрушитель" был Игроком,
-            // то добавить его в список
-            oPlayers.Add((APlayerController*)lPC->GetController());
+            // Актор-Подстрекатель, что вызвал Эффект
+            // @note    Может быть НЕ Валидным, но имеет адрес памяти [ != 0x(0) ]
+            const AActor* lInstigator = iSpec.GetEffectContext().Get()->GetInstigator();
+
+            if (TSet<APlayerController*>* lOriginalWreckers = AllAttributedActor.Find((const AAttributedActor*)lInstigator))
+            {
+                // Если данный "Разрушитель" был Атрибутированным Актором,
+                // то скопировать его список
+                oPlayers.Append(*lOriginalWreckers);
+            }
+            else if (const APlayerCharacter* lPC = Cast<APlayerCharacter>(lInstigator))
+            {
+                if (PlayersStatisticsMap.Find(lPC->GetPlayerState()))
+                {
+                    // Если данный "Разрушитель" был Игроком,
+                    // то добавить его в список
+                    oPlayers.Add((APlayerController*)lPC->GetController());
+                }
+            }
         }
     }
 }

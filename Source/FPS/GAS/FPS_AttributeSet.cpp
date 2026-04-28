@@ -56,6 +56,16 @@ bool UFPS_AttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData&
 void UFPS_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
     Super::PostGameplayEffectExecute(Data);
+
+    if (bIsZeroHealth)
+    {
+        if (GetFPSGameMode())
+        {
+            GetFPSGameMode()->DestructionRegistration(*GetOwningAbilitySystemComponent());
+        }
+
+        bIsZeroHealth = false;
+    }
 }
 
 void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -91,10 +101,7 @@ void UFPS_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 
             OnZeroHealth.Broadcast();
 
-            if (GetFPSGameMode())
-            {
-                GetFPSGameMode()->DestructionRegistration(*GetOwningAbilitySystemComponent());
-            }
+            bIsZeroHealth = true;
         }
     }
 
