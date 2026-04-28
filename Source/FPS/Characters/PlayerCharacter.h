@@ -115,6 +115,13 @@ public:
 
     /* ---   Base   --- */
 
+    /** Вызывается, когда этот субъект явно уничтожается во время игрового процесса или в редакторе,
+    * но не вызывается во время трансляции уровней или завершения игрового процесса */
+    virtual void Destroyed() override;
+
+    /** Вызывается, когда истекает срок службы актера (если он у него есть). */
+    virtual void LifeSpanExpired() override;
+
     /** Реакция на Выпадение из Мира (ниже KillZ и тому подобного) */
     virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
 
@@ -397,6 +404,18 @@ private:
 
     /** Инициализация данных AbilitySystemComp */
     void InitAbilitySystemComp();
+    //-------------------------------------------
+
+
+
+    /* ---   GAS Events   --- */
+
+    /** Событие: При Нулевом Здоровье */
+    UFUNCTION()
+    void OnZeroHealth();
+
+    /** При смерти Игрока */
+    void AsPlayerDies();
     //-------------------------------------------
 
 

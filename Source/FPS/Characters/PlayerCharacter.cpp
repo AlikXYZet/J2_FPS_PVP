@@ -22,6 +22,7 @@
 #include "FPS/ActorComponents/Control/FPS_CharacterMovementComponent.h"
 #include "FPS/ActorComponents/Data/WeaponLocalController.h"
 #include "FPS/ActorComponents/Data/WeaponNetworkController.h"
+#include "FPS/Core/Online/FPS_GameMode.h"
 #include "FPS/Core/Online/FPS_GameState.h"
 #include "FPS/Core/Online/FPS_PlayerController.h"
 //--------------------------------------------------------------------------------------
@@ -130,9 +131,34 @@ void APlayerCharacter::BeginPlay()
 //    Super::Tick(DeltaSeconds);
 //}
 
+void APlayerCharacter::Destroyed()
+{
+    if (AttributeSet)
+    {
+        AttributeSet->ConditionalBeginDestroy();
+    }
+
+    Super::Destroyed();
+}
+
+void APlayerCharacter::LifeSpanExpired()
+{
+    AController* lPlayer = GetController();
+
+    Super::LifeSpanExpired();
+
+    if (HasAuthority()
+        && GetFPSGameMode()
+        && lPlayer)
+    {
+        GetFPSGameMode()->RestartPlayer(lPlayer);
+        // @note    Вызываем "Restart Player" только после уничтожения "Пешки" (после вызова 'Destroy()')
+    }
+}
+
 void APlayerCharacter::FellOutOfWorld(const UDamageType& dmgType)
 {
-    Super::FellOutOfWorld(dmgType);
+    AttributeSet->SetHealth(0);
 }
 
 void APlayerCharacter::PreInitializeComponents()
@@ -190,9 +216,12 @@ FORCEINLINE void APlayerCharacter::InitForLocally()
 
     InitSpeedControl();
 
-    DisableInput(GetController<APlayerController>());
+    if (!GetFPSGameState()->IsMatchInProgress())
+    {
+        DisableInput(GetController<APlayerController>());
+    }
 
-    GetController<AFPS_PlayerController>()->SetMouseControlToCenter(true);
+    //GetController<AFPS_PlayerController>()->SetMouseControlToCenter(true);
 
     GetFPSGameState()->OnMatchStateChange.AddDynamic(this, &APlayerCharacter::ControlInputsBasedOnMatchStatus);
 
@@ -432,7 +461,7 @@ void APlayerCharacter::InitAbilitySystemComp()
             GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(Armor);
             GAMEPLAYATTRIBUTE_VALUE_Delegating_APlayerCharacter(MaxArmor);
 
-            AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::Event_OnZeroHealth);
+            AttributeSet->OnZeroHealth.AddDynamic(this, &APlayerCharacter::OnZeroHealth);
             AttributeSet->OnZeroArmor.AddDynamic(this, &APlayerCharacter::Event_OnZeroArmor);
         }
     }
@@ -440,6 +469,70 @@ void APlayerCharacter::InitAbilitySystemComp()
     {
         FPS_Error("AbilitySystemComp is NOT");
     }
+}
+//--------------------------------------------------------------------------------------
+
+
+
+/* ---   GAS Events   --- */
+
+void APlayerCharacter::OnZeroHealth()
+{
+    AsPlayerDies();
+    Event_OnZeroHealth();
+}
+
+void APlayerCharacter::AsPlayerDies()
+{
+    // @note    Убераем всё лишнее
+
+    // Ragdoll
+    if (IsLocallyControlled())
+    {
+        if (FPMesh)
+        {
+            FPMesh->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+            FPMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+            FPMesh->SetSimulatePhysics(true);
+            FPMesh->UnHideBoneByName(HiddenBoneInFPMesh);
+        }
+
+        if (GetMesh())
+        {
+            GetMesh()->DestroyComponent();
+        }
+
+        if (WeaponControlLocComp)
+        {
+            WeaponControlLocComp->DestroyComponent();
+        }
+    }
+    else
+    {
+        if (GetMesh())
+        {
+            GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+            GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+            GetMesh()->SetSimulatePhysics(true);
+        }
+    }
+
+    if (GetCharacterMovement())
+    {
+        GetCharacterMovement()->DisableMovement();
+    }
+
+    if (WeaponControlNetComp)
+    {
+        WeaponControlNetComp->DestroyComponent();
+    }
+
+    if (GetCapsuleComponent())
+    {
+        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
+    SetLifeSpan(GetFPSGameState()->PlayerRestartTime);
 }
 //--------------------------------------------------------------------------------------
 

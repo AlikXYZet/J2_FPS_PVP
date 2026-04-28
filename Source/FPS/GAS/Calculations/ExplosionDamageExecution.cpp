@@ -18,20 +18,22 @@ struct FDamageStatics
 {
     /* ---   Source   --- */
     DECLARE_ATTRIBUTE_CAPTUREDEF(Health);
+    DECLARE_ATTRIBUTE_CAPTUREDEF(Armor);
     //-------------------------------------------
 
     /* ---   Target   --- */
-    //DECLARE_ATTRIBUTE_CAPTUREDEF(Armor);
+    //DECLARE_ATTRIBUTE_CAPTUREDEF(Type);
     //-------------------------------------------
 
     FDamageStatics()
     {
         /* ---   Source   --- */
         DEFINE_ATTRIBUTE_CAPTUREDEF(UFPS_AttributeSet, Health, Source, true);
+        DEFINE_ATTRIBUTE_CAPTUREDEF(UFPS_AttributeSet, Armor, Source, true);
         //-------------------------------------------
 
         /* ---   Target   --- */
-        //DEFINE_ATTRIBUTE_CAPTUREDEF(UFPS_AttributeSet, Armor, Target, false);
+        //DEFINE_ATTRIBUTE_CAPTUREDEF(UFPS_AttributeSet, Type, Target, false);
         //-------------------------------------------
     }
 };
@@ -94,7 +96,7 @@ void UExplosionDamageExecution::Execute_Implementation(const FGameplayEffectCust
         const FVector TargetLocation = TargetActor->GetActorLocation();
 
         const float Distance = FVector::Dist(SourceLocation, TargetLocation);
-        
+
         if (Distance <= EffectiveRadius
             || (Distance <= MaxRadius
                 && EffectiveRadius >= MaxRadius))
@@ -112,7 +114,10 @@ void UExplosionDamageExecution::Execute_Implementation(const FGameplayEffectCust
     }
 
     // Применяем модификатор
-    FGameplayModifierEvaluatedData EvaluatedData(DamageStatics().HealthProperty, EGameplayModOp::Additive, -FinalDamage);
-    OutExecutionOutput.AddOutputModifier(EvaluatedData);
+    FGameplayModifierEvaluatedData HealthEvaluatedData(DamageStatics().HealthProperty, EGameplayModOp::Additive, -FinalDamage);
+    FGameplayModifierEvaluatedData ArmorEvaluatedData(DamageStatics().ArmorProperty, EGameplayModOp::Additive, -FinalDamage);
+
+    OutExecutionOutput.AddOutputModifier(HealthEvaluatedData);
+    OutExecutionOutput.AddOutputModifier(ArmorEvaluatedData);
 }
 //--------------------------------------------------------------------------------------

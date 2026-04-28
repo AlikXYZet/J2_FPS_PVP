@@ -76,7 +76,7 @@ TArray<FComponentRendering> APickableActor::GetUsedComponents_Implementation()
 
 void APickableActor::StartInactiveState()
 {
-    GetWorld()->GetTimerManager().SetTimer(
+    GetWorldTimerManager().SetTimer(
         Timer_ActivityControl,
         this,
         &APickableActor::Event_OnRestartingActivityState,

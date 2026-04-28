@@ -258,13 +258,13 @@ public:
 
     /* ---   Match Management : Elapsed Time   --- */
 
-    // Время Долгого ожидания начала Матча
+    // Время Долгого ожидания начала Матча, когда готов хотябы Один Игрок
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
         Category = "FPS Game State|Match Management",
         meta = (ForceUnits = Seconds))
     uint8 LongWaitTimeForMatchToStart = 60;
 
-    // Время Короткого ожидания начала Матча (Готовы все Игрок)
+    // Время Короткого ожидания начала Матча, когда готовы все Игроки
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
         Category = "FPS Game State|Match Management",
         meta = (ForceUnits = Seconds))
@@ -287,6 +287,12 @@ public:
         Category = "FPS Game State|Match Management",
         meta = (ForceUnits = Seconds))
     int32 MatchEndingDelayTime = 10;
+
+    // Время задержки перезапуска Игрока после уничтожения
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
+        Category = "FPS Game State|Match Management",
+        meta = (ForceUnits = Seconds))
+    int32 PlayerRestartTime = 5;
 
     //
 
