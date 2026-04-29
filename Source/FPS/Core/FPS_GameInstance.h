@@ -19,6 +19,9 @@
 
 /* ---   Pre-declaration of classes   --- */
 
+// Static Functions:
+static UFPS_GameInstance* const GetFPSGameInstance();
+
 // Interaction:
 class USaveSettings;
 //--------------------------------------------------------------------------------------
@@ -100,6 +103,20 @@ public:
 
 
 private:
+
+    /* ---   Statics   --- */
+
+    /** Получить текущий экземпляр класса 'UFPS_GameInstance' в среде 'Blueprint' */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game",
+        meta = (DisplayName = "Get FPS Game Instance"))
+    static class UFPS_GameInstance* BP_GetFPSGameInstance()
+    {
+        return GetFPSGameInstance();
+    };
+    //-------------------------------------------
+
+
 
     /* ---   Settings System | Saving   --- */
 

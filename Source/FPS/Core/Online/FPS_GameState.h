@@ -526,6 +526,20 @@ private:
 
 
 
+    /* ---   Statics   --- */
+
+    /** Получить текущий экземпляр класса 'AFPS_GameState' в среде 'Blueprint' */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game",
+        meta = (DisplayName = "Get FPS Game State"))
+    static class AFPS_GameState* BP_GetFPSGameState()
+    {
+        return GetFPSGameState();
+    };
+    //-------------------------------------------
+
+
+
     /* ---   Match Management : Match State   --- */
 
     // Текущее состояние матча

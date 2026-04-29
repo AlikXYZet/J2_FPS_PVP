@@ -25,6 +25,9 @@
 
 /* ---   Pre-declaration of classes   --- */
 
+// Static Functions:
+static AFPS_GameMode* const GetFPSGameMode();
+
 // Interaction:
 class AAttributedActor;
 class APlayerCharacter;
@@ -199,6 +202,20 @@ private:
 
     /** Инициализация базовых Данных */
     void BaseInit();
+    //-------------------------------------------
+
+
+
+    /* ---   Statics   --- */
+
+    /** Получить текущий экземпляр класса 'AFPS_GameMode' в среде 'Blueprint' */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game",
+        meta = (DisplayName = "Get FPS Game Mode"))
+    static class AFPS_GameMode* BP_GetFPSGameMode()
+    {
+        return GetFPSGameMode();
+    };
     //-------------------------------------------
 
 
