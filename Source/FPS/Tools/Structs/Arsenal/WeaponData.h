@@ -57,11 +57,17 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Visualization   --- */
 
-    // Образец Оружия
+    /* Образец Оружия */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Visualization",
         meta = (BlueprintBaseOnly = ""))
     TSubclassOf<AFirstPersonWeaponFrame> WeaponTemplate;
+
+    // Иконка отображения Типа Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
+        Category = "Visualization",
+        meta = (BlueprintBaseOnly = ""))
+    UTexture2D* WeaponIcon = nullptr;
 
     // Локация Оружия в положении от Бедра
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -78,7 +84,7 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Dropping   --- */
 
-    // Тип выпадающей Гильзы
+    /* Тип выпадающей Гильзы */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping",
         meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable))
@@ -95,7 +101,7 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Dropping: Projectile   --- */
 
-    // Эффект поражения данным снарядом
+    /* Эффект поражения данным снарядом */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Dropping: Projectile",
         meta = (BlueprintBaseOnly = ""))
@@ -118,26 +124,31 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Person Animations   --- */
 
+    /* Анимации Игрока при использовании Оружия */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations",
         meta = (ShowOnlyInnerProperties))
     FPersonAnimData PersonAnimations;
 
+    // Время между Выстрелами Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations: Shooting",
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float ShootingWeapon_Time = 0.2f;
 
+    // Время Перезарядки Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations: Reloading",
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float ReloadingWeapon_Time = 2.f;
 
+    // Время Снятия (убирания) Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations: Changing",
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float RemoveWeapon_Time = 2.f;
 
+    // Время Подняти Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations: Changing",
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
@@ -148,6 +159,7 @@ struct FWeaponData : public FTableRowBase
 
     /* ---   Weapon Animations   --- */
 
+    /* Анимации Оружия при использовании */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Weapon Animations",
         meta = (ShowOnlyInnerProperties))

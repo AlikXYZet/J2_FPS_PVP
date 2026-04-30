@@ -235,20 +235,26 @@ public:
     virtual void HandleMatchHasEnded() override;
 
     /** Возвращает значение true, если состояние матча находится 'WaitingToStart' ('Ожидание Начала') */
-    FORCEINLINE virtual bool IsMatchInWaitingToStart() const
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game State|Match Management|Match State")
+    virtual bool IsMatchInWaitingToStart() const
     {
         return GetCurrentMatchState() == EMatchState::WaitingToStart;
     }
 
-    /** Возвращает значение true, если состояние матча находится 'InProgress' ('В Процессе') */
-    FORCEINLINE virtual bool IsMatchInProgress() const override
+    /** Возвращает значение true, если состояние матча находится в 'PreProgress' ('Пред Процесс') или в 'InProgress' ('В Процессе') */
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game State|Match Management|Match State")
+    virtual bool IsMatchInProgress() const override
     {
         return GetCurrentMatchState() == EMatchState::PreProgress
             || GetCurrentMatchState() == EMatchState::InProgress;
     }
 
     /** Получить Текущее состояние матча */
-    FORCEINLINE EMatchState GetCurrentMatchState() const
+    UFUNCTION(BlueprintPure,
+        Category = "FPS Game State|Match Management|Match State")
+    EMatchState GetCurrentMatchState() const
     {
         return CurrentMatchState;
     };
@@ -258,40 +264,40 @@ public:
 
     /* ---   Match Management : Elapsed Time   --- */
 
-    // Время Долгого ожидания начала Матча, когда готов хотябы Один Игрок
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
+    // Время Долгого ожидания начала Матча, когда готов хотя бы Один Игрок
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
         meta = (ForceUnits = Seconds))
     uint8 LongWaitTimeForMatchToStart = 60;
 
     // Время Короткого ожидания начала Матча, когда готовы все Игроки
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
         meta = (ForceUnits = Seconds))
     uint8 ShortWaitTimeForMatchToStart = 5;
 
     // Время задержки начала Матча, используемая для сетевой инициализации в момент запуска Матча
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     int32 MatchStartDelayTime = 5;
 
     // Время продолжительности Матча
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     int32 MatchDurationTime = 300;
 
     // Время задержки окончания Матча, используемая для отображения результатов
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     int32 MatchEndingDelayTime = 10;
 
     // Время задержки перезапуска Игрока после уничтожения
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite,
-        Category = "FPS Game State|Match Management",
-        meta = (ForceUnits = Seconds))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+        Category = "FPS Game State|Match Management|Elapsed Time",
+        meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     int32 PlayerRestartTime = 5;
 
     //
