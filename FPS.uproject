@@ -11,8 +11,7 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"UMG",
-				"GameplayAbilities",
-				"Blutility"
+				"GameplayAbilities"
 			]
 		}
 	],

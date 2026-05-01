@@ -24,7 +24,7 @@ void APickableAmmo::BeginPlay()
 
 /* ===   For EDITOR only   === */
 
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 
 /* ---   Interactive   --- */
 
@@ -39,5 +39,5 @@ TArray<FName> APickableAmmo::GetAllWeaponsNames() const
 }
 //--------------------------------------------------------------------------------------
 
-#endif // WITH_EDITORONLY_DATA
+#endif // WITH_EDITOR
 //======================================================================================

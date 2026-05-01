@@ -187,8 +187,14 @@ private:
         Category = "Interactive|Actions",
         meta = (GetOptions = "GetActionGroupsNames"))
     FName SelectedActionGroups;
+    //-------------------------------------------
 
-    //
+#endif // WITH_EDITORONLY_DATA
+
+
+#if WITH_EDITOR
+
+    /* ---   Actions   --- */
 
     /* Получить имена всех Функций-Предикатов Актора-Владельца */
     UFUNCTION()
@@ -198,6 +204,6 @@ private:
     void ReInitActionGroup();
     //-------------------------------------------
 
-#endif // WITH_EDITORONLY_DATA
+#endif // WITH_EDITOR
     //===========================================
 };

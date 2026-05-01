@@ -187,7 +187,7 @@ void UInteractiveComponent::Multicast_OwnerWasClicked_Implementation(ACharacter*
 
 /* ===   For EDITOR only   === */
 
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 
 /* ---   Base: Debugs   --- */
 
@@ -236,5 +236,5 @@ void UInteractiveComponent::ReInitActionGroup()
 }
 //--------------------------------------------------------------------------------------
 
-#endif // WITH_EDITORONLY_DATA
+#endif // WITH_EDITOR
 //======================================================================================

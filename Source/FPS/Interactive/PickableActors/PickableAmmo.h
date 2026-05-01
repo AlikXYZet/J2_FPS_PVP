@@ -78,14 +78,20 @@ private:
         Category = "Interactive|Data",
         meta = (RequiredAssetDataTags = "RowStructure=WeaponData"))
     UDataTable* WeaponSelectionDataTable = nullptr;
+    //-------------------------------------------
 
-    //
+#endif // WITH_EDITORONLY_DATA
+
+
+#if WITH_EDITOR
+
+    /* ---   Interactive | Data   --- */
 
     /** Получение Названия строк из таблицы 'Weapon Selection Data Table' */
     UFUNCTION()
     TArray<FName> GetAllWeaponsNames() const;
     //-------------------------------------------
 
-#endif // WITH_EDITORONLY_DATA
+#endif // WITH_EDITOR
     //===========================================
 };

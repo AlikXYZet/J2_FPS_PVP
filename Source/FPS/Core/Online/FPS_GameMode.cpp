@@ -209,26 +209,17 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
             GetAllInstigatorPlayers(OutSpecCopies, lPlayerWreckers);
         }
 
-        if (lPlayerWreckers.Num())
+        // Если Цель является Игроком:
+        if (APlayerCharacter* lPlayer = Cast<APlayerCharacter>(TargetASC.GetOwnerActor()))
         {
-            // Если Цель является Атрибутированным Актором:
-            if (Cast<AAttributedActor>(TargetASC.GetOwnerActor()))
+            // Увеличить счётчик Смертей для Цели, вне зависимости от причины Смерти
+            if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find(lPlayer->GetPlayerState()))
             {
-                // Заполнить массив его 'Вредителей'
-                if (TSet<APlayerController*>* lAllWreckers = AllAttributedActor.Find((AAttributedActor*)TargetASC.GetOwnerActor()))
-                {
-                    lAllWreckers->Append(lPlayerWreckers);
-                }
+                GetPlayersStatistics().AddDeaths(**lTargetStats);
             }
-            // Если Цель является Игроком:
-            else if (APlayerCharacter* lPlayer = Cast<APlayerCharacter>(TargetASC.GetOwnerActor()))
-            {
-                // Увеличить счётчик Смертей для Цели
-                if (FPlayerStatisticsData** lTargetStats = PlayersStatisticsMap.Find(lPlayer->GetPlayerState()))
-                {
-                    GetPlayersStatistics().AddDeaths(**lTargetStats);
-                }
 
+            if (lPlayerWreckers.Num())
+            {
                 // Итератор Массива игроков-"вредителей"
                 auto lIterator = lPlayerWreckers.CreateConstIterator();
                 // Указатель-Итератор с найденной Статистикой Игроков-"вредителей"
@@ -249,9 +240,6 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                         {
                             GetPlayersStatistics().AddKills(**lWreckerStats);
                         }
-
-                        FPS_ColorMessage_Empty(FColor::Purple, "      * Last Iter: '%llu';   Controller: '%llu';   'BOOL' is %s",
-                            &*lIterator, *lIterator, BoolToString(*lIterator != lPlayer->GetController()));
                     }
                     else
                     {
@@ -261,13 +249,21 @@ void AFPS_GameMode::DestructionRegistration(const UAbilitySystemComponent& Targe
                         {
                             GetPlayersStatistics().AddAssists(**lWreckerStats);
                         }
-
-                        FPS_ColorMessage_Empty(FColor::Purple, "      * Second Iter: '%llu';   Controller: '%llu'",
-                            &*lIterator, *lIterator);
                     }
                 }
+            }
 
-                GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
+            GetPlayersStatistics().OnPostChangingArrayData.Broadcast();
+        }
+
+        // Если Цель является Атрибутированным Актором:
+        else if (lPlayerWreckers.Num()
+            && Cast<AAttributedActor>(TargetASC.GetOwnerActor()))
+        {
+            // Заполнить массив его 'Вредителей'
+            if (TSet<APlayerController*>* lAllWreckers = AllAttributedActor.Find((AAttributedActor*)TargetASC.GetOwnerActor()))
+            {
+                lAllWreckers->Append(lPlayerWreckers);
             }
         }
     }

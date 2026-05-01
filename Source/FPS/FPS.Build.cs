@@ -31,9 +31,15 @@ public class FPS : ModuleRules
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
+        });
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.AddRange(new string[] {
 
             // Scripting
             "EditorScriptingUtilitiesExpansion",
-        });
+            });
+        }
     }
 }
