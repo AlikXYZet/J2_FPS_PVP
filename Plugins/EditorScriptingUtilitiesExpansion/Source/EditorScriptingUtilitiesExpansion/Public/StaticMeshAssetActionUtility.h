@@ -31,7 +31,8 @@ public:
     @param  StaticMesh -- Ассет типа "UStaticMesh", для которого требуется сменить Физику Материала
     @param  PhysMaterial -- Физика Материала для данного Ассета */
     UFUNCTION(BlueprintCallable, CallInEditor,
+        Category = "Asset Action Utility|Static Mesh",
         meta = (DefaultToSelf, HideSelfPin = true))
-    bool SetSimpleCollisionPhysicalMaterial(UStaticMesh* StaticMesh, UPhysicalMaterial* PhysMaterial);
+    static bool SetSimpleCollisionPhysicalMaterial(UStaticMesh* StaticMesh, UPhysicalMaterial* PhysMaterial);
     //-------------------------------------------
 };

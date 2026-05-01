@@ -27,16 +27,24 @@
 
 /* ---   Macros   --- */
 
-/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
-#define DELEGATE_METHOD_Broadcast_cpp(PropertyName) \
+/** DELEGATE: Метод вызова делегата с Ретрансляцией на Сервер */
+#define DELEGATE_METHOD_ServerBroadcast_cpp(PropertyName) \
 void UWeaponNetworkController::Server_##PropertyName##_Implementation() \
 { \
     Multicast_##PropertyName(); \
-} \
+}
+
+/** DELEGATE: Метод вызова делегата с Ретрансляцией для Всех */
+#define DELEGATE_METHOD_MulticastBroadcast_cpp(PropertyName) \
 void UWeaponNetworkController::Multicast_##PropertyName##_Implementation() \
 { \
     ##PropertyName.Broadcast(*CurrentWeaponData); \
 }
+
+/** DELEGATE: Метод вызова делегата с Ретрансляцией по Сети */
+#define DELEGATE_METHOD_Broadcast_cpp(PropertyName) \
+    DELEGATE_METHOD_ServerBroadcast_cpp(PropertyName)\
+    DELEGATE_METHOD_MulticastBroadcast_cpp(PropertyName)
 //--------------------------------------------------------------------------------------
 
 
@@ -94,10 +102,12 @@ UWeaponNetworkController::UWeaponNetworkController()
 
 /* ---   Delegates   --- */
 
-//DELEGATE_METHOD_Broadcast_cpp(OnShootingWeapon); // Заменяется на RPC 'DropProjectile' с вызовом '.Broadcast()'
-//DELEGATE_METHOD_Broadcast_cpp(OnReloadingWeapon); // Заменяется на RPC 'DropSleeve' с вызовом '.Broadcast()'
-DELEGATE_METHOD_Broadcast_cpp(OnStartChangingWeapon);
-//DELEGATE_METHOD_Broadcast_cpp(OnChangingWeapon); // Заменяется на RPC 'SetCurrentWeaponDataByNum' с вызовом '.Broadcast()'
+//DELEGATE_METHOD_Broadcast_cpp(OnShootingWeapon);      // Заменяется на RPC 'DropProjectile' с вызовом '.Broadcast()'
+//DELEGATE_METHOD_Broadcast_cpp(OnReloadingWeapon);     // Заменяется на RPC 'DropSleeve' с вызовом '.Broadcast()'
+//DELEGATE_METHOD_Broadcast_cpp(OnStartChangingWeapon); // Заменяется на 'DELEGATE_METHOD_ServerBroadcast_cpp'
+//DELEGATE_METHOD_Broadcast_cpp(OnChangingWeapon);      // Заменяется на RPC 'SetCurrentWeaponDataByNum' с вызовом '.Broadcast()'
+
+DELEGATE_METHOD_ServerBroadcast_cpp(OnStartChangingWeapon)
 //--------------------------------------------------------------------------------------
 
 
@@ -254,6 +264,13 @@ bool UWeaponNetworkController::CheckActions(EActionVariations Action, ...) const
 
 /* ---   Actions | Switching   --- */
 
+void UWeaponNetworkController::Multicast_OnStartChangingWeapon_Implementation()
+{
+    PlaySound(GetCurrentWeaponData()->RemoveSound, GetCurrentWeaponFrame()->GetActorLocation());
+    OnStartChangingWeapon.Broadcast(*CurrentWeaponData);
+}
+
+
 void UWeaponNetworkController::SetCurrentWeaponDataByNum(uint8 iNum)
 {
     if (WeaponDataSlots.IsValidIndex(iNum))
@@ -274,6 +291,7 @@ void UWeaponNetworkController::Multicast_SetCurrentWeaponDataByNum_Implementatio
     {
         GetCurrentWeaponFrame()->UpdateWeaponOnSelectedData(GetCurrentWeaponData());
     }
+    PlaySound(GetCurrentWeaponData()->TakeSound, GetCurrentWeaponFrame()->GetActorLocation());
     OnChangingWeapon.Broadcast(*GetCurrentWeaponData());
 }
 //--------------------------------------------------------------------------------------
@@ -315,6 +333,8 @@ void UWeaponNetworkController::Multicast_DropProjectile_Implementation(const FVe
         }
     }
 
+    PlaySound(GetCurrentWeaponData()->ShootingSound, Location);
+
     OnShootingWeapon.Broadcast(*GetCurrentWeaponData());
 }
 
@@ -353,15 +373,19 @@ void UWeaponNetworkController::Server_TraceProjectile_Implementation(const FVect
 
     FRotator lRotator = UKismetMathLibrary::FindLookAtRotation(StartLocation, EndLocation);
 
-    Multicast_TraceProjectile(StartLocation, lRotator);
+    Multicast_TraceProjectile(StartLocation, EndLocation);
 }
 
-void UWeaponNetworkController::Multicast_TraceProjectile_Implementation(const FVector& Location, const FRotator& Rotation)
+void UWeaponNetworkController::Multicast_TraceProjectile_Implementation(const FVector& StartLocation, const FVector& EndLocation)
 {
     if (GetCurrentWeaponData()->FXTracer)
     {
-        DropActor(GetCurrentWeaponData()->FXTracer.Get(), Location, Rotation);
+        FRotator lRotator = UKismetMathLibrary::FindLookAtRotation(StartLocation, EndLocation);
+        DropActor(GetCurrentWeaponData()->FXTracer.Get(), StartLocation, lRotator);
     }
+
+    PlaySound(GetCurrentWeaponData()->ShootingSound, StartLocation);
+    PlaySound(GetCurrentWeaponData()->HitSound, EndLocation);
 
     OnShootingWeapon.Broadcast(*GetCurrentWeaponData());
 }
@@ -378,6 +402,8 @@ void UWeaponNetworkController::OnProjectileHitForServer(
 void UWeaponNetworkController::OnProjectileHit(
     AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
 {
+    PlaySound(GetCurrentWeaponData()->HitSound, Hit.Location);
+
     if (SelfActor)
     {
         SelfActor->Destroy();

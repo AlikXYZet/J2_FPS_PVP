@@ -11,6 +11,9 @@
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 
+// UE:
+#include "Kismet/GameplayStatics.h"
+
 // Generated:
 #include "WeaponNetworkController.generated.h"
 //--------------------------------------------------------------------------------------
@@ -272,7 +275,7 @@ private:
 
     /** Создание и выброс Астора согласно его Типу, Локации и Ротации
     @note   Более быстрый вызов для простого Актора */
-    AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation)
+    FORCEINLINE AActor* DropActor(const TSubclassOf<AActor>& ActorType, const FVector& Location, const FRotator& Rotation)
     {
         if (ActorType.Get())
         {
@@ -289,7 +292,7 @@ private:
     /** Создание и выброс Наследника от Астора согласно его Подтипу, Локации и Ротации
     @note   Более быстрый вызов для наследника Актора */
     template<class T>
-    T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation)
+    FORCEINLINE T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation)
     {
         if (ActorType.Get())
         {
@@ -301,6 +304,15 @@ private:
         }
 
         return nullptr;
+    };
+
+    /** Воспроизвести Звук в указанной Локации */
+    FORCEINLINE void PlaySound(USoundBase* Sound, FVector Location) const
+    {
+        if(Sound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
+        }
     };
     //-------------------------------------------
 
@@ -347,7 +359,7 @@ private:
 
     /** Провести Трассировку Снаряда с указанными Локациями и Визуализацией */
     UFUNCTION(NetMulticast, Unreliable)
-    void Multicast_TraceProjectile(const FVector& Location, const FRotator& Rotation);
+    void Multicast_TraceProjectile(const FVector& StartLocation, const FVector& EndLocation);
 
 
     /** Метод Реакции на прикосновение снаряда */

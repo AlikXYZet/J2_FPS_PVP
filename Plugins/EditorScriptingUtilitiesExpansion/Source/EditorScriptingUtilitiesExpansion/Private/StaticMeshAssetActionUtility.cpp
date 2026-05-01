@@ -13,8 +13,12 @@ bool UStaticMeshAssetActionUtility::SetSimpleCollisionPhysicalMaterial(UStaticMe
     if (StaticMesh
         && StaticMesh->GetBodySetup())
     {
-        StaticMesh->GetBodySetup()->PhysMaterial = PhysMaterial;
-        StaticMesh->MarkPackageDirty();
+        if (StaticMesh->GetBodySetup()->PhysMaterial != PhysMaterial)
+        {
+            StaticMesh->GetBodySetup()->PhysMaterial = PhysMaterial;
+            StaticMesh->MarkPackageDirty();
+        }
+
         return true;
     }
     return false;

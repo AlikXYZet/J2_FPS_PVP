@@ -82,6 +82,31 @@ struct FWeaponData : public FTableRowBase
 
 
 
+    /* ---   Audialization   --- */
+
+    // Звук Стрельбы Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Audialization")
+    USoundBase* ShootingSound = nullptr;
+
+    // Звук Перезарядки Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Audialization")
+    USoundBase* ReloadingSound = nullptr;
+
+    // Звук Снятия (убирания) Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Audialization")
+    USoundBase* RemoveSound = nullptr;
+
+    // Звук Поднятия Оружия
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Audialization")
+    USoundBase* TakeSound = nullptr;
+    //-------------------------------------------
+
+
+
     /* ---   Dropping   --- */
 
     /* Тип выпадающей Гильзы */
@@ -110,14 +135,19 @@ struct FWeaponData : public FTableRowBase
     // Тип используемого Снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NoClear,
         Category = "Dropping: Projectile",
-        meta = (BlueprintBaseOnly = "", EditCondition = "!bUseHitscanMethod"))
+        meta = (BlueprintBaseOnly = "", EditCondition = "!bUseHitscanMethod", DisplayAfter = "bUseHitscanMethod"))
     TSubclassOf<AProjectile> ProjectileType;
 
     // FX Трассировки снаряда
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Dropping: Projectile",
-        meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable, EditCondition = "bUseHitscanMethod"))
+        meta = (BlueprintBaseOnly = "", ShowTreeView, OnlyPlaceable, EditCondition = "bUseHitscanMethod", DisplayAfter = "bUseHitscanMethod"))
     TSubclassOf<AActor> FXTracer = nullptr;
+
+    // Звук Попадания Снаряда или Перекрытия 'Hitscan'
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        Category = "Dropping: Projectile")
+    USoundBase* HitSound = nullptr;
     //-------------------------------------------
 
 
@@ -148,7 +178,7 @@ struct FWeaponData : public FTableRowBase
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
     float RemoveWeapon_Time = 2.f;
 
-    // Время Подняти Оружия
+    // Время Поднятия Оружия
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         Category = "Person Animations: Changing",
         meta = (ForceUnits = Seconds, ClampMin = "0", UIMin = "0"))
@@ -172,15 +202,13 @@ struct FWeaponData : public FTableRowBase
 
     // Флаг: Использовать ли Hitscan-метод расчёта попадания
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Dropping: Projectile",
-        meta = (DisplayAfter = "DamageEffect"))
+        Category = "Dropping: Projectile")
     uint8 bUseHitscanMethod : 1;
 
     // Флаг: Заряжаемо ли Оружие
     // Например: возможность +1 патрон в патроннике
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Specifications",
-        meta = (DisplayAfter = "DamageEffect"))
+        Category = "Specifications")
     uint8 bIsWeaponChargeable : 1;
     //-------------------------------------------
 };
