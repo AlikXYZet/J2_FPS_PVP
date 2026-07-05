@@ -484,7 +484,7 @@ void APlayerCharacter::OnZeroHealth()
 
 void APlayerCharacter::AsPlayerDies()
 {
-    // @note    Убераем всё лишнее
+    // @note    Убираем всё лишнее
 
     // Ragdoll
     if (IsLocallyControlled())

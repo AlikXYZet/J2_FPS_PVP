@@ -8,6 +8,9 @@
 // Base:
 #include "Components/ChildActorComponent.h"
 
+// Global:
+#include "FPS/Tools/GlobalFunctions.h"
+
 // Structs:
 #include "FPS/Tools/Structs/Arsenal/WeaponData.h"
 
@@ -291,7 +294,8 @@ private:
 
     /** Создание и выброс Наследника от Астора согласно его Подтипу, Локации и Ротации
     @note   Более быстрый вызов для наследника Актора */
-    template<class T>
+    template<class T,
+        class = std::enable_if_t<is_Actor<T>>>
     FORCEINLINE T* DropActor(const TSubclassOf<T>& ActorType, const FVector& Location, const FRotator& Rotation)
     {
         if (ActorType.Get())
@@ -309,7 +313,7 @@ private:
     /** Воспроизвести Звук в указанной Локации */
     FORCEINLINE void PlaySound(USoundBase* Sound, FVector Location) const
     {
-        if(Sound)
+        if (Sound)
         {
             UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
         }
